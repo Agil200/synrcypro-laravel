@@ -47,200 +47,250 @@ svg {
     display: block;
 }
 
-/* Login */
+/* =========================================================
+   LOGIN SYNRCYPRO — layout mengikuti acuan Figma
+   ========================================================= */
+
 .login-page {
+    position: relative;
+    min-height: 100vh;
     overflow: hidden;
-    background: #030711;
+    background: #020611;
 }
 
-.login-background {
+/* Semua gambar dekoratif berada di lapisan bawah dan tidak memblokir klik. */
+.auth-login-background {
     position: fixed;
-    inset: -18px;
+    inset: 0;
     z-index: 0;
-    background: url("../images/control-room.jpg") center / cover no-repeat;
-    filter: blur(1px);
-    transform: scale(1.03);
+    background:
+        url("../images/control-room-bg.jpg")
+        center center / cover no-repeat;
+    pointer-events: none;
+    user-select: none;
 }
 
-.login-overlay {
+.auth-login-overlay {
     position: fixed;
     inset: 0;
     z-index: 1;
     background:
-        radial-gradient(circle at 52% 48%, rgba(9, 24, 44, .20), rgba(2, 6, 14, .78) 68%),
-        linear-gradient(180deg, rgba(3, 8, 16, .34), rgba(3, 8, 16, .72));
-    box-shadow: inset 0 0 120px rgba(0, 0, 0, .65);
+        radial-gradient(
+            circle at 50% 48%,
+            rgba(5, 13, 27, .10) 0%,
+            rgba(3, 9, 20, .30) 52%,
+            rgba(1, 5, 13, .70) 100%
+        ),
+        linear-gradient(
+            180deg,
+            rgba(1, 5, 12, .18) 0%,
+            rgba(1, 5, 12, .42) 100%
+        );
+    box-shadow: inset 0 0 145px rgba(0, 0, 0, .54);
+    pointer-events: none;
 }
 
-.login-company {
+/* Logo perusahaan di kiri atas. */
+.auth-login-company {
     position: fixed;
-    z-index: 3;
-    top: 42px;
-    left: 54px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    text-shadow: 0 2px 10px #000;
+    top: clamp(30px, 4.5vw, 58px);
+    left: clamp(30px, 4vw, 62px);
+    z-index: 4;
 }
 
-.company-mark {
-    width: 48px;
-    height: 48px;
-    color: #fff;
-}
-
-.login-company strong,
-.login-company span {
+.auth-login-company img {
     display: block;
+    width: clamp(285px, 22vw, 405px);
+    max-width: calc(100vw - 60px);
+    height: auto;
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, .55));
 }
 
-.login-company strong {
-    letter-spacing: .035em;
-    font-size: 19px;
-}
-
-.login-company span {
-    margin-top: 4px;
-    color: rgba(255, 255, 255, .64);
-    font-size: 10px;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-}
-
-.login-shell {
+/* Panel tengah dibuat tanpa card agar sama seperti Figma. */
+.auth-login-shell {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     display: grid;
     min-height: 100vh;
     place-items: center;
-    padding: 110px 24px 70px;
+    padding:
+        clamp(132px, 15vh, 182px)
+        24px
+        clamp(44px, 7vh, 78px);
 }
 
-.login-card {
-    width: min(100%, 420px);
-    padding: 34px 34px 28px;
-    border: 1px solid rgba(255, 255, 255, .10);
-    border-radius: 24px;
-    background: linear-gradient(180deg, rgba(7, 14, 27, .56), rgba(5, 11, 22, .75));
-    box-shadow: 0 30px 90px rgba(0, 0, 0, .45);
-    backdrop-filter: blur(12px);
+.auth-login-panel {
+    width: min(100%, 390px);
     text-align: center;
+    transform: translateY(clamp(18px, 4vh, 48px));
 }
 
-.brand-symbol {
-    width: 92px;
-    margin: 0 auto -4px;
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, .35));
+.auth-login-app-logo {
+    display: block;
+    width: min(100%, 340px);
+    height: auto;
+    margin: 0 auto;
+    filter: drop-shadow(0 12px 25px rgba(0, 0, 0, .32));
 }
 
-.brand-copy h1 {
-    margin: 0;
-    color: #ff2d51;
-    font-size: 32px;
-    letter-spacing: .015em;
-    line-height: 1;
-}
-
-.brand-copy p {
-    margin: 8px 0 4px;
-    color: rgba(255, 255, 255, .76);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: .26em;
-}
-
-.brand-copy > span {
-    color: rgba(255, 255, 255, .64);
+.auth-login-version {
+    margin: 2px 0 0;
+    color: rgba(255, 255, 255, .75);
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: .055em;
 }
 
-.login-alert {
-    margin-top: 18px;
-    padding: 11px 14px;
-    border: 1px solid rgba(255, 92, 116, .36);
-    border-radius: 11px;
-    color: #ffc1cb;
-    background: rgba(255, 92, 116, .10);
-    font-size: 12px;
-    line-height: 1.5;
+.auth-login-alert {
+    margin: 16px 0 0;
+    padding: 10px 13px;
+    border: 1px solid rgba(255, 92, 116, .50);
+    border-radius: 8px;
+    color: #ffd9df;
+    background: rgba(82, 7, 24, .90);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .32);
+    font-size: 11px;
+    line-height: 1.45;
 }
 
-.login-actions {
+.auth-login-actions {
     display: grid;
     gap: 12px;
-    margin-top: 26px;
+    margin-top: 25px;
 }
 
-.login-actions form {
+.auth-login-actions form {
+    width: 100%;
     margin: 0;
 }
 
-.login-button {
+.auth-login-button {
+    position: relative;
+    z-index: 5;
     display: flex;
     width: 100%;
     min-height: 52px;
     align-items: center;
     justify-content: center;
     gap: 12px;
+    padding: 0 18px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 8px;
     cursor: pointer;
+    pointer-events: auto;
     font-size: 11px;
     font-weight: 850;
-    letter-spacing: .03em;
+    letter-spacing: .02em;
     text-decoration: none;
-    transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    transition:
+        transform .18s ease,
+        filter .18s ease,
+        box-shadow .18s ease;
 }
 
-.login-button:hover {
+.auth-login-button:hover {
     transform: translateY(-2px);
     filter: brightness(1.04);
 }
 
-.login-button:active {
+.auth-login-button:active {
     transform: translateY(0);
 }
 
-.login-google {
-    color: #192238;
-    background: #fff;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, .22);
+.auth-login-button:focus-visible {
+    outline: 3px solid rgba(91, 166, 255, .96);
+    outline-offset: 3px;
 }
 
-.login-google svg {
+.auth-login-google {
+    color: #151d31;
+    background: #fff;
+    box-shadow: 0 11px 25px rgba(0, 0, 0, .24);
+}
+
+.auth-login-google svg {
     width: 22px;
     height: 22px;
+    flex: 0 0 auto;
 }
 
-.login-guest {
+.auth-login-guest {
     color: #fff;
-    background: linear-gradient(135deg, #8099f1, #617de0);
-    box-shadow: 0 12px 28px rgba(74, 103, 207, .34);
+    background: linear-gradient(180deg, #8299ef 0%, #6f88e6 100%);
+    box-shadow: 0 12px 28px rgba(66, 95, 196, .34);
 }
 
-.login-help {
-    margin: 24px 0 0;
-    color: rgba(255, 255, 255, .55);
+.auth-login-help {
+    margin: 23px 0 0;
+    color: rgba(255, 255, 255, .63);
     font-size: 9px;
-    font-weight: 700;
-    line-height: 1.7;
-    letter-spacing: .025em;
+    font-weight: 750;
+    line-height: 1.65;
+    letter-spacing: .012em;
+    white-space: nowrap;
 }
 
-.login-help a {
-    color: #5da5ff;
+.auth-login-help a {
+    position: relative;
+    z-index: 5;
+    color: #4ba3ff;
+    pointer-events: auto;
     text-decoration: none;
 }
 
-.login-footer {
-    position: fixed;
-    z-index: 3;
-    right: 28px;
-    bottom: 22px;
-    color: rgba(255, 255, 255, .45);
-    font-size: 10px;
+.auth-login-help a:hover,
+.auth-login-help a:focus-visible {
+    text-decoration: underline;
 }
+
+.login-footer {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .auth-login-company {
+        top: 22px;
+        left: 22px;
+    }
+
+    .auth-login-company img {
+        width: min(270px, calc(100vw - 44px));
+    }
+
+    .auth-login-shell {
+        padding: 126px 20px 38px;
+    }
+
+    .auth-login-panel {
+        width: min(100%, 360px);
+        transform: translateY(24px);
+    }
+
+    .auth-login-app-logo {
+        width: min(100%, 300px);
+    }
+
+    .auth-login-help {
+        font-size: 8px;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 430px) {
+    .auth-login-company img {
+        width: min(235px, calc(100vw - 40px));
+    }
+
+    .auth-login-panel {
+        width: 100%;
+    }
+
+    .auth-login-button {
+        min-height: 50px;
+        font-size: 10px;
+    }
+}
+
 
 /* Dashboard */
 .dashboard-page {
