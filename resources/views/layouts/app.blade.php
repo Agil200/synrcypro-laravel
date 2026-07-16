@@ -2,14 +2,25 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>@yield('title', 'SYNRCYPRO')</title>
-    <meta name="description" content="SYNRCYPRO monitoring and operations dashboard">
-    <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}">
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('assets/css/app.css') }}?v={{ filemtime(public_path('assets/css/app.css')) }}"
+    >
+
+    @stack('styles')
 </head>
+
 <body class="@yield('body-class')">
     @yield('content')
-    <script src="{{ asset('assets/js/dashboard.js') }}" defer></script>
+
+    @stack('scripts')
 </body>
 </html>
