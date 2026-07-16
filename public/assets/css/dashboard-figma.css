@@ -1,1 +1,324 @@
-*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;font-family:Arial,Helvetica,sans-serif}.syn-dashboard-page{min-height:100vh;color:#111;background:#f4f4f4}.syn-dashboard-header{display:grid;grid-template-columns:176px minmax(0,1fr) auto;min-height:74px;border:1px solid #d2d2d2;background:#fff}.syn-dashboard-brand{display:flex;align-items:center;justify-content:center;padding:8px 10px;background:#fff}.syn-dashboard-brand img{display:block;width:155px;max-height:56px;object-fit:contain}.syn-dashboard-header-fill{min-width:0;background:linear-gradient(90deg,#333,#111 62%,#030303)}.syn-dashboard-actions{display:flex;align-items:center;gap:14px;padding:0 17px;background:#fff}.syn-dashboard-logout-form{margin:0}.syn-dashboard-icon-button{display:grid;width:38px;height:38px;place-items:center;padding:0;overflow:hidden;border:0;border-radius:50%;background:transparent;cursor:pointer;text-decoration:none;transition:.16s}.syn-dashboard-icon-button:hover{transform:translateY(-2px);opacity:.82}.syn-dashboard-icon-button img{display:block;width:34px;height:34px;border-radius:50%;object-fit:contain}.syn-dashboard-main{display:flex;min-height:calc(100vh - 122px);flex-direction:column;align-items:center;padding:56px 36px 34px}.syn-dashboard-menu{display:grid;width:min(100%,905px);grid-template-columns:repeat(4,minmax(145px,1fr));gap:54px;padding:60px 22px 68px;border-radius:31px;background:#fff}.syn-dashboard-card{display:flex;min-height:134px;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:14px;border-radius:4px;color:#fff;background:#0d0b0b;box-shadow:0 2px 4px rgba(0,0,0,.13);text-align:center;text-decoration:none;transition:.18s}.syn-dashboard-card:hover{transform:translateY(-5px);box-shadow:0 10px 24px rgba(0,0,0,.2)}.syn-dashboard-card img{display:block;width:82px;height:72px;object-fit:contain}.syn-dashboard-card span{font-size:12px;font-weight:800;line-height:1.15}.syn-dashboard-help{margin-top:43px;color:#e11923;font-size:11px;font-weight:700;text-decoration:none}.syn-dashboard-footer{min-height:48px;color:#777;font-size:11px;font-weight:700;text-align:center}@media(max-width:900px){.syn-dashboard-menu{grid-template-columns:repeat(2,minmax(150px,1fr));gap:30px}}@media(max-width:620px){.syn-dashboard-header{grid-template-columns:150px 1fr}.syn-dashboard-header-fill{display:none}.syn-dashboard-brand img{width:132px}.syn-dashboard-actions{justify-content:flex-end;gap:9px;padding:0 12px}.syn-dashboard-main{padding:30px 18px}.syn-dashboard-menu{grid-template-columns:1fr;gap:18px;padding:28px}}
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+}
+
+.syn-dashboard-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    color: #111;
+    background: #e9e9e9;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+}
+
+/*
+ * Frame selalu mempertahankan rasio 16:9.
+ * Pada layar 1920 × 1080 ukurannya tepat memenuhi layar.
+ */
+.syn-dashboard-viewport {
+    display: grid;
+    width: 100vw;
+    min-height: 100vh;
+    min-height: 100dvh;
+    place-items: center;
+    overflow: hidden;
+}
+
+.syn-dashboard-frame {
+    display: grid;
+    width: min(100vw, 177.7778vh);
+    height: min(100vh, 56.25vw);
+    grid-template-rows: 13.7% 77.4% 8.9%;
+    background: #f4f4f4;
+}
+
+/* ===================== HEADER ===================== */
+
+.syn-dashboard-header {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 18.33% minmax(0, 1fr) 16.57%;
+    border: 1px solid #d2d2d2;
+    background: #fff;
+}
+
+.syn-dashboard-brand {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 5.5% 6%;
+    background: #fff;
+}
+
+.syn-dashboard-brand img {
+    display: block;
+    width: 90%;
+    max-height: 78%;
+    object-fit: contain;
+}
+
+.syn-dashboard-header-fill {
+    min-width: 0;
+    background:
+        linear-gradient(
+            90deg,
+            #353535 0%,
+            #111 58%,
+            #030303 100%
+        );
+}
+
+.syn-dashboard-actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 9%;
+    padding: 0 8%;
+    background: #fff;
+}
+
+.syn-dashboard-logout-form {
+    display: contents;
+    margin: 0;
+}
+
+.syn-dashboard-icon-button {
+    display: grid;
+    width: 23%;
+    max-width: 70px;
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 50%;
+    color: #000;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+        transform .18s ease,
+        opacity .18s ease;
+}
+
+.syn-dashboard-icon-button:hover {
+    transform: translateY(-4px);
+    opacity: .82;
+}
+
+.syn-dashboard-icon-button:focus-visible {
+    outline: 3px solid #6f89e8;
+    outline-offset: 3px;
+}
+
+.syn-dashboard-icon-button img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: contain;
+}
+
+.syn-dashboard-fallback-icon {
+    width: 78%;
+    height: 78%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ===================== MAIN MENU ===================== */
+
+.syn-dashboard-main {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+}
+
+.syn-dashboard-menu {
+    display: grid;
+    width: 93.96%;
+    height: 62.9%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: 6%;
+    margin-top: 6.6%;
+    padding: 0 6.65%;
+    border-radius: 3.25%;
+    background: #fff;
+}
+
+.syn-dashboard-card {
+    display: flex;
+    width: 100%;
+    height: 51%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5%;
+    padding: 7%;
+    border-radius: 2.4%;
+    color: #fff;
+    background: #0d0b0b;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, .16);
+    text-align: center;
+    text-decoration: none;
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease;
+}
+
+.syn-dashboard-card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, .23);
+}
+
+.syn-dashboard-card:focus-visible {
+    outline: 4px solid #6f89e8;
+    outline-offset: 4px;
+}
+
+.syn-dashboard-card img {
+    display: block;
+    width: 64%;
+    height: 56%;
+    object-fit: contain;
+}
+
+.syn-dashboard-card span {
+    display: block;
+    font-size: clamp(11px, 1.12vw, 22px);
+    font-weight: 800;
+    line-height: 1.12;
+}
+
+.syn-dashboard-help {
+    margin-top: 5.2%;
+    color: #e11923;
+    font-size: clamp(10px, .83vw, 16px);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.syn-dashboard-help:hover,
+.syn-dashboard-help:focus-visible {
+    text-decoration: underline;
+}
+
+/* ===================== FOOTER ===================== */
+
+.syn-dashboard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+    font-size: clamp(9px, .72vw, 14px);
+    font-weight: 700;
+    text-align: center;
+}
+
+/* ===================== RESPONSIVE ===================== */
+
+/*
+ * Di layar bukan 16:9, frame tetap proporsional dan berada di tengah.
+ * Untuk layar kecil/ponsel, layout berubah menjadi satu kolom.
+ */
+@media (max-width: 760px), (max-aspect-ratio: 4 / 3) {
+    .syn-dashboard-page {
+        overflow: auto;
+    }
+
+    .syn-dashboard-viewport {
+        display: block;
+        min-height: 100vh;
+        overflow: visible;
+    }
+
+    .syn-dashboard-frame {
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        grid-template-rows: 82px auto 48px;
+    }
+
+    .syn-dashboard-header {
+        grid-template-columns: 145px 1fr;
+    }
+
+    .syn-dashboard-header-fill {
+        display: none;
+    }
+
+    .syn-dashboard-brand {
+        padding: 10px;
+    }
+
+    .syn-dashboard-brand img {
+        width: 128px;
+        max-height: 58px;
+    }
+
+    .syn-dashboard-actions {
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 0 14px;
+    }
+
+    .syn-dashboard-icon-button {
+        width: 42px;
+        max-width: none;
+    }
+
+    .syn-dashboard-main {
+        overflow: visible;
+        padding: 30px 18px;
+    }
+
+    .syn-dashboard-menu {
+        width: 100%;
+        height: auto;
+        grid-template-columns: 1fr;
+        gap: 18px;
+        margin-top: 0;
+        padding: 28px;
+        border-radius: 24px;
+    }
+
+    .syn-dashboard-card {
+        height: 170px;
+        padding: 18px;
+    }
+
+    .syn-dashboard-card img {
+        width: 110px;
+        height: 95px;
+    }
+
+    .syn-dashboard-card span {
+        font-size: 15px;
+    }
+
+    .syn-dashboard-help {
+        margin-top: 28px;
+        font-size: 13px;
+    }
+}

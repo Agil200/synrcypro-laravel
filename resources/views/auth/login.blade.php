@@ -83,14 +83,18 @@
 
         </div>
 
-        <p class="auth-login-help">
-            JIKA TERDAPAT PERTANYAAN ATAU MEMBUTUHKAN SESUATU?
-            <a
-                href="mailto:it.support@ppa.co.id?subject=SYNRCYPRO%20Support"
-            >
-                CONTACT US
-            </a>
-        </p>
+     <p class="auth-login-help">
+    JIKA TERDAPAT PERTANYAAN ATAU MEMBUTUHKAN SESUATU?
+
+<a
+    href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode(config('access.contact_email', 'mpe.ppaba@ppa.co.id')) }}&su=SYNRCYPRO%20Support"
+    target="_blank"
+    rel="noopener noreferrer"
+>
+    CONTACT US
+</a>
+
+</p>
 
     </section>
 </main>

@@ -32,34 +32,63 @@ class AuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function handleGoogleCallback(): RedirectResponse
-    {
-        try {
-            $googleUser = Socialite::driver('google')->user();
+public function handleGoogleCallback(): RedirectResponse
+{
+    try {
+        $googleUser = Socialite::driver('google')->user();
 
-            $user = User::query()->updateOrCreate(
-                ['email' => $googleUser->getEmail()],
-                [
-                    'name' => $googleUser->getName() ?: 'Operator',
-                    'google_id' => $googleUser->getId(),
-                    'avatar' => $googleUser->getAvatar(),
-                    'role' => 'Operator',
-                    'email_verified_at' => now(),
-                ]
-            );
+        $email = Str::lower(
+            trim((string) $googleUser->getEmail())
+        );
 
-            Auth::login($user, remember: true);
-            request()->session()->regenerate();
+        $allowedEmails = config(
+            'access.allowed_emails',
+            []
+        );
 
-            return redirect()->intended(route('dashboard'));
-        } catch (Throwable $exception) {
-            report($exception);
-
+        if (
+            $email === '' ||
+            ! in_array($email, $allowedEmails, true)
+        ) {
             return redirect()
                 ->route('login')
-                ->with('error', 'Autentikasi Google gagal. Periksa kredensial dan callback URL.');
+                ->with(
+                    'error',
+                    'Email Anda tidak terdaftar sebagai pengguna SYNRCYPRO harap menghubungi call center manpower.'
+                );
         }
+
+        $user = User::query()->updateOrCreate(
+            [
+                'email' => $email,
+            ],
+            [
+                'name' => $googleUser->getName() ?: 'Operator',
+                'google_id' => $googleUser->getId(),
+                'avatar' => $googleUser->getAvatar(),
+                'role' => 'Operator',
+                'email_verified_at' => now(),
+            ]
+        );
+
+        Auth::login($user, remember: true);
+
+        request()->session()->regenerate();
+
+        return redirect()->intended(
+            route('dashboard')
+        );
+    } catch (Throwable $exception) {
+        report($exception);
+
+        return redirect()
+            ->route('login')
+            ->with(
+                'error',
+                'Login Google gagal. Periksa konfigurasi OAuth Google.'
+            );
     }
+}
 
     public function loginAsGuest(Request $request): RedirectResponse
     {
