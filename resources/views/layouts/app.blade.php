@@ -8,7 +8,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>@yield('title', 'SYNRCYPRO')</title>
+    <title>@yield('title', 'SYNRGYPRO')</title>
 
     <link
         rel="stylesheet"
