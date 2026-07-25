@@ -212,6 +212,112 @@
             display: none;
         }
     }
+
+    /* =====================================================
+       TRANSISI DUA SISI SAAT MEMBUKA MENU
+       ===================================================== */
+
+    .syn-two-side-transition {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        visibility: hidden;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .syn-two-side-transition.is-visible {
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .syn-two-side-panel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50.1%;
+        background:
+            linear-gradient(
+                135deg,
+                #080808 0%,
+                #1d1d1d 55%,
+                #421d16 82%,
+                #d65d22 100%
+            );
+        transition:
+            transform 0.68s cubic-bezier(0.77, 0, 0.18, 1);
+        will-change: transform;
+    }
+
+    .syn-two-side-panel-left {
+        left: 0;
+        transform: translateX(-100%);
+    }
+
+    .syn-two-side-panel-right {
+        right: 0;
+        transform: translateX(100%);
+    }
+
+    .syn-two-side-transition.is-covered
+        .syn-two-side-panel-left,
+    .syn-two-side-transition.is-covered
+        .syn-two-side-panel-right {
+        transform: translateX(0);
+    }
+
+    .syn-two-side-transition-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        opacity: 0;
+        color: #ffffff;
+        pointer-events: none;
+        transform: translate(-50%, -50%) scale(0.94);
+        transition:
+            opacity 0.24s ease 0.2s,
+            transform 0.24s ease 0.2s;
+    }
+
+    .syn-two-side-transition.is-covered
+        .syn-two-side-transition-center {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .syn-two-side-transition-center img {
+        display: block;
+        width: clamp(120px, 15vw, 190px);
+        max-height: 90px;
+        object-fit: contain;
+        filter: drop-shadow(0 7px 16px rgba(0, 0, 0, 0.45));
+    }
+
+    .syn-two-side-transition-center span {
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        text-align: center;
+    }
+
+    .syn-dashboard-card.is-transitioning {
+        border-color: #e26325;
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+        transform: translateY(-5px) scale(1.025);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .syn-two-side-panel,
+        .syn-two-side-transition-center {
+            transition-duration: 0.01ms;
+        }
+    }
+
 </style>
 @endpush
 
@@ -387,6 +493,7 @@
 <a
     class="syn-dashboard-card"
     href="{{ route('manpower') }}"
+    data-two-side-transition
 >
     <img
         src="{{ asset('assets/images/LOGO MANPOWER.png') }}"
@@ -396,7 +503,7 @@
     <span>MANPOWER</span>
 </a>
 
-                <a class="syn-dashboard-card" href="#">
+                <a class="syn-dashboard-card" href="#" data-two-side-transition>
                     <img
                         src="{{ asset('assets/images/LOGO PEOPLE DEVELOPMENT.png') }}"
                         alt="People Development"
@@ -404,7 +511,7 @@
                     <span>PEOPLE DEVELOPMENT</span>
                 </a>
 
-                <a class="syn-dashboard-card" href="#">
+                <a class="syn-dashboard-card" href="#" data-two-side-transition>
                     <img
                         src="{{ asset('assets/images/DATABASE.png') }}"
                         alt="Database"
@@ -412,7 +519,7 @@
                     <span>DATABASE</span>
                 </a>
 
-                <a class="syn-dashboard-card" href="#">
+                <a class="syn-dashboard-card" href="#" data-two-side-transition>
                     <img
                         src="{{ asset('assets/images/LOGO ADMIN ALL.png') }}"
                         alt="Admin All"
@@ -440,40 +547,70 @@
 
     </div>
 </div>
+
+{{-- Transisi layar dari sisi kiri dan kanan --}}
+<div
+    class="syn-two-side-transition"
+    id="twoSideTransition"
+    aria-hidden="true"
+>
+    <div
+        class="syn-two-side-panel syn-two-side-panel-left"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="syn-two-side-panel syn-two-side-panel-right"
+        aria-hidden="true"
+    ></div>
+
+    <div class="syn-two-side-transition-center">
+        <img
+            src="{{ asset('assets/images/synrgypro-logo.png') }}"
+            alt="SYNRCYPRO"
+        >
+        <span>MEMBUKA MENU...</span>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        /* =====================================================
+           DROPDOWN PROFIL
+           ===================================================== */
+
         const profileTrigger =
             document.getElementById('profileTrigger');
 
         const profileDropdown =
             document.getElementById('profileDropdown');
 
-        if (!profileTrigger || !profileDropdown) {
-            return;
-        }
-
         function openProfile() {
-            profileDropdown.hidden = false;
+            if (!profileTrigger || !profileDropdown) {
+                return;
+            }
 
-            profileTrigger.setAttribute(
-                'aria-expanded',
-                'true'
-            );
+            profileDropdown.hidden = false;
+            profileTrigger.setAttribute('aria-expanded', 'true');
         }
 
         function closeProfile() {
-            profileDropdown.hidden = true;
+            if (!profileTrigger || !profileDropdown) {
+                return;
+            }
 
-            profileTrigger.setAttribute(
-                'aria-expanded',
-                'false'
-            );
+            profileDropdown.hidden = true;
+            profileTrigger.setAttribute('aria-expanded', 'false');
         }
 
         function toggleProfile() {
+            if (!profileDropdown) {
+                return;
+            }
+
             if (profileDropdown.hidden) {
                 openProfile();
             } else {
@@ -481,22 +618,23 @@
             }
         }
 
-        profileTrigger.addEventListener(
-            'click',
-            function (event) {
-                event.preventDefault();
-                event.stopPropagation();
+        if (profileTrigger && profileDropdown) {
+            profileTrigger.addEventListener(
+                'click',
+                function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleProfile();
+                }
+            );
 
-                toggleProfile();
-            }
-        );
-
-        profileDropdown.addEventListener(
-            'click',
-            function (event) {
-                event.stopPropagation();
-            }
-        );
+            profileDropdown.addEventListener(
+                'click',
+                function (event) {
+                    event.stopPropagation();
+                }
+            );
+        }
 
         document.addEventListener(
             'click',
@@ -505,12 +643,114 @@
             }
         );
 
+        /* =====================================================
+           TRANSISI DUA SISI
+           ===================================================== */
+
+        const twoSideTransition =
+            document.getElementById('twoSideTransition');
+
+        const transitionLinks =
+            document.querySelectorAll('[data-two-side-transition]');
+
+        const transitionDuration = 680;
+        let transitionRunning = false;
+
+        function isValidDestination(link, event) {
+            const destination = link.getAttribute('href');
+
+            return Boolean(
+                destination &&
+                destination !== '#' &&
+                !destination.startsWith('javascript:') &&
+                link.target !== '_blank' &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.shiftKey &&
+                !event.altKey
+            );
+        }
+
+        function runTwoSideTransition(link) {
+            if (!twoSideTransition || transitionRunning) {
+                window.location.href = link.href;
+                return;
+            }
+
+            transitionRunning = true;
+            link.classList.add('is-transitioning');
+
+            twoSideTransition.classList.add('is-visible');
+            twoSideTransition.setAttribute('aria-hidden', 'false');
+
+            // Memaksa browser membaca posisi awal panel.
+            void twoSideTransition.offsetWidth;
+
+            requestAnimationFrame(function () {
+                twoSideTransition.classList.add('is-covered');
+            });
+
+            window.setTimeout(function () {
+                sessionStorage.setItem(
+                    'synTwoSideTransition',
+                    'open-on-load'
+                );
+
+                window.location.href = link.href;
+            }, transitionDuration);
+        }
+
+        transitionLinks.forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                if (!isValidDestination(link, event)) {
+                    return;
+                }
+
+                event.preventDefault();
+                closeProfile();
+                runTwoSideTransition(link);
+            });
+        });
+
+        /*
+         * Saat kembali ke Dashboard, panel membuka kembali
+         * ke sisi kiri dan kanan.
+         */
+        if (
+            twoSideTransition &&
+            sessionStorage.getItem('synTwoSideTransition') ===
+                'open-on-load'
+        ) {
+            sessionStorage.removeItem('synTwoSideTransition');
+
+            twoSideTransition.classList.add(
+                'is-visible',
+                'is-covered'
+            );
+
+            twoSideTransition.setAttribute('aria-hidden', 'false');
+
+            void twoSideTransition.offsetWidth;
+
+            requestAnimationFrame(function () {
+                twoSideTransition.classList.remove('is-covered');
+            });
+
+            window.setTimeout(function () {
+                twoSideTransition.classList.remove('is-visible');
+                twoSideTransition.setAttribute('aria-hidden', 'true');
+            }, transitionDuration);
+        }
+
         document.addEventListener(
             'keydown',
             function (event) {
                 if (event.key === 'Escape') {
                     closeProfile();
-                    profileTrigger.focus();
+
+                    if (profileTrigger) {
+                        profileTrigger.focus();
+                    }
                 }
             }
         );
