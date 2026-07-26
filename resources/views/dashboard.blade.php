@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard — SYNRCYPRO')
+@section('title', 'Dashboard — SYNRGYPRO')
 @section('body-class', 'syn-dashboard-page')
 
 @push('styles')
@@ -331,11 +331,11 @@
             <a
                 class="syn-dashboard-brand"
                 href="{{ route('dashboard') }}"
-                aria-label="Dashboard SYNRCYPRO"
+                aria-label="Dashboard SYNRGYPRO"
             >
                 <img
                     src="{{ asset('assets/images/synrgypro-logo.png') }}"
-                    alt="SYNRCYPRO Production Monitoring"
+                    alt="SYNRGYPRO Production Monitoring"
                 >
             </a>
 
@@ -406,7 +406,7 @@
                             </div>
 
                             <strong>
-                                {{ Auth::user()?->name ?? 'Pengguna SYNRCYPRO' }}
+                                {{ Auth::user()?->name ?? 'Pengguna SYNRGYPRO' }}
                             </strong>
 
                             <span class="syn-profile-role">
@@ -503,7 +503,11 @@
     <span>MANPOWER</span>
 </a>
 
-                <a class="syn-dashboard-card" href="#" data-two-side-transition>
+                <a
+                    class="syn-dashboard-card"
+                    href="{{ route('people-development') }}"
+                    data-two-side-transition
+                >
                     <img
                         src="{{ asset('assets/images/LOGO PEOPLE DEVELOPMENT.png') }}"
                         alt="People Development"
@@ -511,7 +515,11 @@
                     <span>PEOPLE DEVELOPMENT</span>
                 </a>
 
-                <a class="syn-dashboard-card" href="#" data-two-side-transition>
+                <a
+                    class="syn-dashboard-card"
+                    href="{{ route('database') }}"
+                    data-two-side-transition
+                >
                     <img
                         src="{{ asset('assets/images/DATABASE.png') }}"
                         alt="Database"
@@ -519,7 +527,11 @@
                     <span>DATABASE</span>
                 </a>
 
-                <a class="syn-dashboard-card" href="#" data-two-side-transition>
+                <a
+                    class="syn-dashboard-card"
+                    href="{{ route('admin-all') }}"
+                    data-two-side-transition
+                >
                     <img
                         src="{{ asset('assets/images/LOGO ADMIN ALL.png') }}"
                         alt="Admin All"
@@ -532,7 +544,7 @@
             {{-- Bantuan melalui Gmail --}}
             <a
                 class="syn-dashboard-help"
-                href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode(config('access.contact_email', 'mpe.ppaba@ppa.co.id')) }}&su=SYNRCYPRO%20Support"
+                href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode(config('access.contact_email', 'mpe.ppaba@ppa.co.id')) }}&su=SYNRGYPRO%20Support"
                 target="_blank"
                 rel="noopener noreferrer"
             >
@@ -567,7 +579,7 @@
     <div class="syn-two-side-transition-center">
         <img
             src="{{ asset('assets/images/synrgypro-logo.png') }}"
-            alt="SYNRCYPRO"
+            alt="SYNRGYPRO"
         >
         <span>MEMBUKA MENU...</span>
     </div>
