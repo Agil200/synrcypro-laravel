@@ -3,6 +3,115 @@
 @section('title', 'Database — SYNRGYPRO')
 @section('body-class', 'syn-database-page')
 
+
+@php
+    /*
+    |--------------------------------------------------------------------------
+    | DATA DASHBOARD
+    |--------------------------------------------------------------------------
+    | Nanti controller/API cukup mengirim variabel berikut:
+    | $summaryData, $messDistribution, $statusDistribution, dan $employeeRows.
+    | Data di bawah adalah fallback agar halaman tetap tampil sebelum API aktif.
+    */
+
+    $summaryData = $summaryData ?? [
+        'total_karyawan' => 870,
+        'tinggal_mess' => 360,
+        'tinggal_non_mess' => 510,
+    ];
+
+    $messDistribution = collect($messDistribution ?? [
+        ['label' => 'A1', 'value' => 78],
+        ['label' => 'A2', 'value' => 63],
+        ['label' => 'B1', 'value' => 83],
+        ['label' => 'B2', 'value' => 52],
+        ['label' => 'B3', 'value' => 55],
+        ['label' => 'B4', 'value' => 57],
+        ['label' => 'B5', 'value' => 62],
+        ['label' => 'B6', 'value' => 48],
+        ['label' => 'B7', 'value' => 59],
+        ['label' => 'B8', 'value' => 65],
+        ['label' => 'B9', 'value' => 72],
+        ['label' => 'B10', 'value' => 83],
+        ['label' => 'C03', 'value' => 65],
+        ['label' => 'Mess', 'value' => 28],
+    ])->map(function ($item) {
+        return [
+            'label' => (string) ($item['label'] ?? '-'),
+            'value' => max(0, (int) ($item['value'] ?? 0)),
+        ];
+    })->values();
+
+    $statusDistribution = collect($statusDistribution ?? [
+        [
+            'label' => 'Tinggal di Mess',
+            'value' => (int) ($summaryData['tinggal_mess'] ?? 0),
+            'color' => '#22c55e',
+        ],
+        [
+            'label' => 'Tinggal Non Mess',
+            'value' => (int) ($summaryData['tinggal_non_mess'] ?? 0),
+            'color' => '#14b8a6',
+        ],
+    ])->map(function ($item, $index) {
+        $palette = ['#22c55e', '#14b8a6', '#3b82f6', '#f59e0b', '#ef4444'];
+
+        return [
+            'label' => (string) ($item['label'] ?? '-'),
+            'value' => max(0, (int) ($item['value'] ?? 0)),
+            'color' => (string) ($item['color'] ?? $palette[$index % count($palette)]),
+        ];
+    })->values();
+
+    $employeeRows = collect($employeeRows ?? [
+        [
+            'nrp' => '10001',
+            'nama' => 'Contoh Karyawan 1',
+            'status_tinggal' => 'Mess',
+            'gedung_kamar' => 'A1 / 01',
+            'kontak' => '0812-0000-0001',
+        ],
+        [
+            'nrp' => '10002',
+            'nama' => 'Contoh Karyawan 2',
+            'status_tinggal' => 'Non Mess',
+            'gedung_kamar' => '-',
+            'kontak' => 'karyawan2@example.com',
+        ],
+        [
+            'nrp' => '10003',
+            'nama' => 'Contoh Karyawan 3',
+            'status_tinggal' => 'Mess',
+            'gedung_kamar' => 'B2 / 07',
+            'kontak' => '0812-0000-0003',
+        ],
+    ])->values();
+
+    $maxMessValue = max(1, (int) $messDistribution->max('value'));
+    $statusTotal = max(1, (int) $statusDistribution->sum('value'));
+
+    $pieStart = 0;
+    $pieSegments = [];
+
+    foreach ($statusDistribution as $statusItem) {
+        $pieEnd = $pieStart + (($statusItem['value'] / $statusTotal) * 360);
+        $pieSegments[] = sprintf(
+            '%s %.2fdeg %.2fdeg',
+            $statusItem['color'],
+            $pieStart,
+            $pieEnd
+        );
+        $pieStart = $pieEnd;
+    }
+
+    $pieGradient = implode(', ', $pieSegments);
+
+    $databaseSubmenuIcon = asset('assets/images/database-submenu.png');
+    $atrSubmenuIcon = file_exists(public_path('assets/images/ATR-submenu.png'))
+        ? asset('assets/images/ATR-submenu.png')
+        : asset('assets/images/ATR- submenu.png');
+@endphp
+
 @push('styles')
 <style>
     * { box-sizing: border-box; }
@@ -50,11 +159,12 @@
         padding: 7px;
     }
 
-    .db-sidebar-logo img {
-        width: 64px;
-        height: 50px;
-        object-fit: contain;
-    }
+.db-sidebar-logo img {
+    display: block;
+    width: 58px;
+    height: 52px;
+    object-fit: contain;
+}
 
     .db-sidebar-toggle {
         display: grid;
@@ -168,11 +278,21 @@
         background: rgba(255,255,255,.72);
     }
 
-    .db-sidebar-bottom { padding: 9px 7px 12px; }
+    .db-sidebar-bottom {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 9px 7px 12px;
+        text-align: center;
+    }
 
     .db-bottom-link {
         display: flex;
+        width: 100%;
         align-items: center;
+        justify-content: center;
         gap: 5px;
         padding: 4px 0;
         color: #111;
@@ -402,11 +522,87 @@
         padding-top: 5px;
     }
 
+    .db-donut-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        width: 100%;
+    }
+
     .db-donut {
+        position: relative;
         width: 100px;
         height: 100px;
+        flex: 0 0 100px;
         border-radius: 50%;
-        background: #d4d4d4;
+    }
+
+    .db-donut::after {
+        position: absolute;
+        inset: 27px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #222222;
+        content: attr(data-total);
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .db-donut-legend {
+        display: grid;
+        gap: 7px;
+        min-width: 125px;
+    }
+
+    .db-donut-legend-item {
+        display: grid;
+        grid-template-columns: 9px minmax(0, 1fr) auto;
+        gap: 6px;
+        align-items: center;
+        font-size: 7px;
+    }
+
+    .db-donut-legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+    }
+
+    .db-bar-value {
+        position: absolute;
+        top: -11px;
+        right: 0;
+        left: 0;
+        color: #444444;
+        font-size: 6px;
+        font-weight: 800;
+        text-align: center;
+    }
+
+    .db-table-empty {
+        padding: 18px !important;
+        color: #777777;
+        font-size: 8px;
+        text-align: center !important;
+    }
+
+    .db-table-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 20px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 5px;
+        color: #ffffff;
+        background: #1478e8;
+        cursor: pointer;
+        font-size: 7px;
+        font-weight: 800;
+        text-decoration: none;
     }
 
     .db-table-title {
@@ -714,10 +910,12 @@
 <div class="db-page" id="databasePage">
     <aside class="db-sidebar">
         <div class="db-sidebar-head">
-            <div class="db-sidebar-logo">
-                <img src="{{ asset('assets/images/database-submenu.png') }}" alt="Database">
-            </div>
-
+<div class="db-sidebar-logo">
+    <img
+        src="{{ asset('assets/images/DATABASE.png') }}"
+        alt="Database"
+    >
+</div>
             <button type="button" class="db-sidebar-toggle" id="databaseSidebarToggle" aria-label="Buka atau tutup sidebar">☰</button>
         </div>
 
@@ -730,7 +928,7 @@
             <div class="db-menu-group is-open">
                 <button type="button" class="db-menu-toggle" aria-expanded="true">
                     <span class="db-menu-icon">
-                        <img src="{{ asset('assets/images/database-submenu.png') }}" alt="">
+                        <img src="{{ $databaseSubmenuIcon }}" alt="Database">
                     </span>
                     <span class="db-menu-label">Database</span>
                     <span class="db-menu-arrow">›</span>
@@ -746,7 +944,7 @@
             <div class="db-menu-group is-open">
                 <button type="button" class="db-menu-toggle" aria-expanded="true">
                     <span class="db-menu-icon">
-                        <img src="{{ asset('assets/images/ATR-submenu.png') }}" alt="">
+                        <img src="{{ $atrSubmenuIcon }}" alt="ATR Karyawan">
                     </span>
                     <span class="db-menu-label">ATR Karyawan</span>
                     <span class="db-menu-arrow">›</span>
@@ -812,26 +1010,89 @@
 
             <div class="db-panel db-summary-panel">
                 <div class="db-stat-grid">
-                    <div class="db-stat-card"><small>Total Karyawan</small><div class="db-stat-value">870</div></div>
-                    <div class="db-stat-card"><small>Tinggal di Mess</small><div class="db-stat-value">360</div></div>
-                    <div class="db-stat-card"><small>Tinggal Non Mess</small><div class="db-stat-value">510</div></div>
+                    <div class="db-stat-card">
+                        <small>Total Karyawan</small>
+                        <div class="db-stat-value">
+                            {{ number_format((int) ($summaryData['total_karyawan'] ?? 0)) }}
+                        </div>
+                    </div>
+
+                    <div class="db-stat-card">
+                        <small>Tinggal di Mess</small>
+                        <div class="db-stat-value">
+                            {{ number_format((int) ($summaryData['tinggal_mess'] ?? 0)) }}
+                        </div>
+                    </div>
+
+                    <div class="db-stat-card">
+                        <small>Tinggal Non Mess</small>
+                        <div class="db-stat-value">
+                            {{ number_format((int) ($summaryData['tinggal_non_mess'] ?? 0)) }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="db-chart-grid">
                     <div>
                         <div class="db-chart-title">CHART: Distribusi Penghuni Mess</div>
+
                         <div class="db-chart-box">
                             <div class="db-bars">
-                                @foreach ([['A1',78],['A2',63],['B1',83],['B2',52],['B3',55],['B4',57],['B5',62],['B6',48],['B7',59],['B8',65],['B9',72],['B10',83],['C03',65],['MESS',28]] as [$label, $height])
-                                    <div class="db-bar" style="height: {{ $height }}%;"><span>{{ $label }}</span></div>
-                                @endforeach
+                                @forelse ($messDistribution as $messItem)
+                                    @php
+                                        $barHeight = max(
+                                            3,
+                                            round(($messItem['value'] / $maxMessValue) * 100, 2)
+                                        );
+                                    @endphp
+
+                                    <div
+                                        class="db-bar"
+                                        style="height: {{ $barHeight }}%;"
+                                        title="{{ $messItem['label'] }}: {{ $messItem['value'] }}"
+                                    >
+                                        <strong class="db-bar-value">
+                                            {{ $messItem['value'] }}
+                                        </strong>
+
+                                        <span>{{ $messItem['label'] }}</span>
+                                    </div>
+                                @empty
+                                    <div class="db-table-empty">
+                                        Data distribusi mess belum tersedia.
+                                    </div>
+                                @endforelse
                             </div>
                         </div>
                     </div>
 
                     <div>
                         <div class="db-chart-title">CHART: Status Karyawan</div>
-                        <div class="db-chart-box db-donut-wrap"><div class="db-donut"></div></div>
+
+                        <div class="db-chart-box db-donut-wrap">
+                            <div class="db-donut-content">
+                                <div
+                                    class="db-donut"
+                                    data-total="{{ number_format($statusTotal) }}"
+                                    style="background: conic-gradient({{ $pieGradient }});"
+                                    aria-label="Status karyawan"
+                                ></div>
+
+                                <div class="db-donut-legend">
+                                    @foreach ($statusDistribution as $statusItem)
+                                        <div class="db-donut-legend-item">
+                                            <span
+                                                class="db-donut-legend-dot"
+                                                style="background: {{ $statusItem['color'] }};"
+                                            ></span>
+
+                                            <span>{{ $statusItem['label'] }}</span>
+                                            <strong>{{ number_format($statusItem['value']) }}</strong>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -840,13 +1101,42 @@
                 <table class="db-table">
                     <thead>
                         <tr>
-                            <th>No</th><th>NRP</th><th>Nama Karyawan</th><th>Status Tinggal</th><th>Gedung/Kamar</th><th>No. HP / Email</th><th>Action</th>
+                            <th>No</th>
+                            <th>NRP</th>
+                            <th>Nama Karyawan</th>
+                            <th>Status Tinggal</th>
+                            <th>Gedung/Kamar</th>
+                            <th>No. HP / Email</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        @for ($row = 1; $row <= 3; $row++)
-                            <tr><td>{{ $row }}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-                        @endfor
+                        @forelse ($employeeRows as $index => $employeeRow)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $employeeRow['nrp'] ?? '-' }}</td>
+                                <td>{{ $employeeRow['nama'] ?? '-' }}</td>
+                                <td>{{ $employeeRow['status_tinggal'] ?? '-' }}</td>
+                                <td>{{ $employeeRow['gedung_kamar'] ?? '-' }}</td>
+                                <td>{{ $employeeRow['kontak'] ?? '-' }}</td>
+                                <td>
+                                    <button
+                                        type="button"
+                                        class="db-table-action"
+                                        data-employee-nrp="{{ $employeeRow['nrp'] ?? '' }}"
+                                    >
+                                        Detail
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="db-table-empty">
+                                    Data karyawan belum tersedia.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
