@@ -20,39 +20,28 @@
         align-items: center;
     }
 
-.syn-profile-trigger {
-    display: inline-flex;
-    width: 54px;
-    height: 54px;
-    min-width: 54px;
-    flex: 0 0 54px;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    overflow: hidden;
-    border: 3px solid #111;
-    border-radius: 50%;
-    background: #fff;
-    box-sizing: border-box;
-}
+    .syn-profile-trigger {
+        display: inline-flex;
+        width: 54px;
+        height: 54px;
+        min-width: 54px;
+        flex: 0 0 54px;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        overflow: hidden;
+        border: 3px solid #111;
+        border-radius: 50%;
+        background: #fff;
+        box-sizing: border-box;
+        cursor: pointer;
+    }
 
-.syn-profile-default-icon {
-    width: 34px;
-    height: 34px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.syn-profile-trigger-avatar {
-    display: block;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
+    .syn-profile-trigger:hover,
+    .syn-profile-trigger[aria-expanded="true"] {
+        border-color: #d65d22;
+        background: #f7f7f7;
+    }
 
     .syn-profile-default-icon {
         width: 72%;
@@ -64,17 +53,25 @@
         stroke-linejoin: round;
     }
 
+    .syn-profile-trigger-avatar {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
     .syn-profile-dropdown {
         position: absolute;
-        top: calc(100% + 18px);
+        top: calc(100% + 14px);
         right: 0;
         z-index: 1000;
-        width: clamp(270px, 18vw, 330px);
-        overflow: hidden;
-        border: 1px solid #d6d6d6;
-        border-radius: 5px;
+        width: min(320px, calc(100vw - 28px));
+        overflow: visible;
+        border: 1px solid #d9dde3;
+        border-radius: 12px;
         background: #fff;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
     }
 
     .syn-profile-dropdown[hidden] {
@@ -83,39 +80,44 @@
 
     .syn-profile-dropdown::before {
         position: absolute;
-        top: -9px;
-        right: 27px;
-        width: 17px;
-        height: 17px;
-        border-top: 1px solid #d6d6d6;
-        border-left: 1px solid #d6d6d6;
-        background: #282828;
+        top: -8px;
+        right: 20px;
+        width: 14px;
+        height: 14px;
+        border-top: 1px solid #d9dde3;
+        border-left: 1px solid #d9dde3;
+        background: #fff;
         content: "";
         transform: rotate(45deg);
     }
 
+    .syn-profile-card {
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #fff;
+    }
+
     .syn-profile-header {
         display: flex;
-        min-height: 205px;
-        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        padding: 24px 18px;
-        color: #fff;
-        background: #282828;
-        text-align: center;
+        gap: 13px;
+        padding: 17px 16px;
+        background: #fff;
+        text-align: left;
     }
 
     .syn-profile-avatar {
         display: grid;
-        width: 82px;
-        height: 82px;
+        width: 58px;
+        height: 58px;
+        min-width: 58px;
         place-items: center;
-        margin-bottom: 13px;
         overflow: hidden;
-        border: 3px solid #e97820;
+        border: 2px solid #d65d22;
         border-radius: 50%;
-        background: #fff;
+        background: #f5f5f5;
     }
 
     .syn-profile-avatar img {
@@ -135,69 +137,114 @@
         stroke-linejoin: round;
     }
 
-    .syn-profile-header strong {
-        max-width: 100%;
-        overflow: hidden;
-        font-size: 14px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .syn-profile-role {
-        margin-top: 6px;
-        color: #f4f4f4;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .syn-profile-email {
-        max-width: 100%;
-        margin-top: 6px;
-        overflow: hidden;
-        color: #bdbdbd;
-        font-size: 10px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .syn-profile-footer {
+    .syn-profile-identity {
+        min-width: 0;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-        padding: 12px;
-        background: #f7f7f7;
+        flex-direction: column;
+        gap: 3px;
     }
 
-    .syn-profile-footer form {
+    .syn-profile-name {
+        max-width: 100%;
+        overflow: hidden;
+        color: #111827;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1.25;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .syn-profile-nrp,
+    .syn-profile-role {
+        max-width: 100%;
+        overflow: hidden;
+        color: #6b7280;
+        font-size: 12px;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .syn-profile-divider {
+        height: 1px;
+        margin: 0;
+        border: 0;
+        background: #e5e7eb;
+    }
+
+    .syn-profile-menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 8px;
+    }
+
+    .syn-profile-menu-list form {
+        width: 100%;
         margin: 0;
     }
 
     .syn-profile-action {
-        display: inline-flex;
-        min-height: 34px;
+        display: flex;
+        width: 100%;
+        min-height: 43px;
         align-items: center;
-        justify-content: center;
-        padding: 0 14px;
-        border: 1px solid #d5d5d5;
-        border-radius: 2px;
-        color: #666;
-        background: #fff;
+        gap: 11px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 8px;
+        color: #1f2937;
+        background: transparent;
         cursor: pointer;
+        box-sizing: border-box;
         font-family: inherit;
-        font-size: 11px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: left;
         text-decoration: none;
     }
 
-    .syn-profile-action:hover {
-        color: #111;
-        border-color: #999;
-        background: #eeeeee;
+    .syn-profile-action:hover,
+    .syn-profile-action:focus-visible {
+        color: #111827;
+        background: #f1f3f5;
+        outline: none;
+    }
+
+    .syn-profile-action-icon {
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        align-items: center;
+        justify-content: center;
+        color: #4b5563;
+    }
+
+    .syn-profile-action-icon svg {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .syn-profile-signout {
         color: #c71922;
+    }
+
+    .syn-profile-signout .syn-profile-action-icon {
+        color: #c71922;
+    }
+
+    .syn-profile-signout:hover,
+    .syn-profile-signout:focus-visible {
+        color: #a80f18;
+        background: #fff1f2;
     }
 
     @media (max-width: 760px), (max-aspect-ratio: 4 / 3) {
@@ -205,7 +252,7 @@
             position: fixed;
             top: 92px;
             right: 14px;
-            width: min(315px, calc(100vw - 28px));
+            width: min(320px, calc(100vw - 28px));
         }
 
         .syn-profile-dropdown::before {
@@ -385,62 +432,105 @@
                         id="profileDropdown"
                         hidden
                     >
-                        <div class="syn-profile-header">
+                        <div class="syn-profile-card">
 
-                            <div class="syn-profile-avatar">
-                                @if (Auth::user()?->avatar)
-                                    <img
-                                        src="{{ Auth::user()->avatar }}"
-                                        alt="Foto profil {{ Auth::user()->name }}"
-                                        referrerpolicy="no-referrer"
-                                    >
-                                @else
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        aria-hidden="true"
-                                    >
-                                        <circle cx="12" cy="8" r="4"></circle>
-                                        <path d="M4 21a8 8 0 0 1 16 0"></path>
-                                    </svg>
-                                @endif
+                            <div class="syn-profile-header">
+                                <div class="syn-profile-avatar">
+                                    @if (Auth::user()?->avatar)
+                                        <img
+                                            src="{{ Auth::user()->avatar }}"
+                                            alt="Foto profil {{ Auth::user()->name }}"
+                                            referrerpolicy="no-referrer"
+                                        >
+                                    @else
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            aria-hidden="true"
+                                        >
+                                            <circle cx="12" cy="8" r="4"></circle>
+                                            <path d="M4 21a8 8 0 0 1 16 0"></path>
+                                        </svg>
+                                    @endif
+                                </div>
+
+                                <div class="syn-profile-identity">
+                                    <strong class="syn-profile-name">
+                                        {{ Auth::user()?->name ?? 'Calvin Anggoro' }}
+                                    </strong>
+
+                                    <span class="syn-profile-nrp">
+                                        NRP: {{ Auth::user()?->nrp ?? '10001' }}
+                                    </span>
+
+                                    <span class="syn-profile-role">
+                                        {{ Auth::user()?->jabatan ?? Auth::user()?->role ?? 'Supervisor Produksi' }}
+                                    </span>
+                                </div>
                             </div>
 
-                            <strong>
-                                {{ Auth::user()?->name ?? 'Pengguna SYNRGYPRO' }}
-                            </strong>
+                            <hr class="syn-profile-divider">
 
-                            <span class="syn-profile-role">
-                                {{ Auth::user()?->role ?? 'Operator' }}
-                            </span>
-
-                            <small class="syn-profile-email">
-                                {{ Auth::user()?->email ?? 'Email tidak tersedia' }}
-                            </small>
-                        </div>
-
-                        <div class="syn-profile-footer">
-
-                            {{-- Ganti # dengan route profil jika sudah dibuat --}}
-                            <a
-                                href="#"
-                                class="syn-profile-action"
-                            >
-                                Profile
-                            </a>
-
-                            <form
-                                method="POST"
-                                action="{{ route('logout') }}"
-                            >
-                                @csrf
-
-                                <button
-                                    type="submit"
-                                    class="syn-profile-action syn-profile-signout"
+                            <div class="syn-profile-menu-list">
+                                <a
+                                    href="{{ url('/profil') }}"
+                                    class="syn-profile-action"
                                 >
-                                    Sign out
-                                </button>
-                            </form>
+                                    <span class="syn-profile-action-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <circle cx="12" cy="8" r="4"></circle>
+                                            <path d="M4 21a8 8 0 0 1 16 0"></path>
+                                        </svg>
+                                    </span>
+                                    <span>Profil Saya</span>
+                                </a>
+
+                                <a
+                                    href="{{ url('/pengaturan') }}"
+                                    class="syn-profile-action"
+                                >
+                                    <span class="syn-profile-action-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20.3h-3v-.08a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.56-1.03H5.3v-3h.14A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.08h3v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.14v3h-.14A1.7 1.7 0 0 0 19.4 15Z"></path>
+                                        </svg>
+                                    </span>
+                                    <span>Pengaturan Akun</span>
+                                </a>
+
+                                <a
+                                    href="{{ url('/ubah-email') }}"
+                                    class="syn-profile-action"
+                                >
+                                    <span class="syn-profile-action-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                            <path d="m3 7 9 6 9-6"></path>
+                                        </svg>
+                                    </span>
+                                    <span>Ubah Email</span>
+                                </a>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('logout') }}"
+                                >
+                                    @csrf
+
+                                    <button
+                                        type="submit"
+                                        class="syn-profile-action syn-profile-signout"
+                                    >
+                                        <span class="syn-profile-action-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24">
+                                                <path d="M10 17l5-5-5-5"></path>
+                                                <path d="M15 12H3"></path>
+                                                <path d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"></path>
+                                            </svg>
+                                        </span>
+                                        <span>Keluar</span>
+                                    </button>
+                                </form>
+                            </div>
 
                         </div>
                     </div>
