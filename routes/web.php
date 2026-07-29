@@ -47,9 +47,8 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::view('/dashboard', 'dashboard')
+        ->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -57,9 +56,8 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/manpower', function () {
-        return view('manpower');
-    })->name('manpower');
+    Route::view('/manpower', 'manpower')
+        ->name('manpower');
 
     /*
     |--------------------------------------------------------------------------
@@ -67,9 +65,8 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/people-development', function () {
-        return view('people-development');
-    })->name('people-development');
+    Route::view('/people-development', 'people-development')
+        ->name('people-development');
 
     /*
     |--------------------------------------------------------------------------
@@ -77,9 +74,8 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/database', function () {
-        return view('database');
-    })->name('database');
+    Route::view('/database', 'database')
+        ->name('database');
 
     /*
     |--------------------------------------------------------------------------
@@ -87,9 +83,23 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/admin-all', function () {
-        return view('admin-all');
-    })->name('admin-all');
+    Route::view('/admin-all', 'admin-all')
+        ->name('admin-all');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Profil Pengguna
+    |--------------------------------------------------------------------------
+    */
+
+    Route::view('/profil', 'profile.index')
+        ->name('profile.index');
+
+    Route::view('/pengaturan-akun', 'profile.settings')
+        ->name('profile.settings');
+
+    Route::view('/ubah-email', 'profile.change-email')
+        ->name('profile.change-email');
 
     /*
     |--------------------------------------------------------------------------

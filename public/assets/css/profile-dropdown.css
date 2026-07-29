@@ -1,0 +1,257 @@
+/* =============================================
+   PROFILE DROPDOWN GLOBAL
+============================================= */
+
+.syn-profile-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.syn-profile-trigger {
+    display: flex;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    overflow: hidden;
+    border: 2px solid #111111;
+    border-radius: 50%;
+    background: #ffffff;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.syn-profile-trigger:hover {
+    border-color: #e45d1f;
+    background: #f7f7f7;
+}
+
+.syn-profile-trigger-avatar {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.syn-profile-dropdown {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: 0;
+    z-index: 99999;
+
+    width: 285px;
+    overflow: visible;
+
+    border: 1px solid #d9dee5;
+    border-radius: 12px;
+    background: #ffffff;
+
+    box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.20),
+        0 4px 12px rgba(15, 23, 42, 0.08);
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+
+    transition:
+        opacity 0.18s ease,
+        visibility 0.18s ease,
+        transform 0.18s ease;
+}
+
+.syn-profile-wrapper.is-open .syn-profile-dropdown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.syn-profile-dropdown::before {
+    position: absolute;
+    top: -7px;
+    right: 18px;
+
+    width: 14px;
+    height: 14px;
+
+    border-top: 1px solid #d9dee5;
+    border-left: 1px solid #d9dee5;
+    background: #ffffff;
+
+    content: "";
+    transform: rotate(45deg);
+}
+
+.syn-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+
+.syn-profile-photo {
+    display: block;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+
+    border: 2px solid #e45d1f;
+    border-radius: 50%;
+
+    object-fit: cover;
+}
+
+.syn-profile-information {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.syn-profile-information strong {
+    max-width: 180px;
+    overflow: hidden;
+
+    color: #111827;
+    font-size: 14px;
+    font-weight: 800;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.syn-profile-information span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.syn-profile-line {
+    width: 100%;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.syn-profile-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px;
+}
+
+.syn-profile-item {
+    display: flex;
+    width: 100%;
+    min-height: 40px;
+    align-items: center;
+    gap: 10px;
+
+    padding: 9px 11px;
+
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+
+    color: #111827;
+    cursor: pointer;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    text-decoration: none;
+
+    box-sizing: border-box;
+}
+
+.syn-profile-item:hover {
+    color: #111827;
+    background: #eef1f4;
+}
+
+.syn-profile-item-icon {
+    display: inline-flex;
+    width: 20px;
+    align-items: center;
+    justify-content: center;
+
+    color: #475569;
+    font-size: 16px;
+}
+
+.syn-profile-logout-form {
+    width: 100%;
+    margin: 0;
+}
+
+.syn-profile-signout {
+    color: #dc2626;
+}
+
+.syn-profile-signout .syn-profile-item-icon {
+    color: #dc2626;
+}
+
+.syn-profile-signout:hover {
+    color: #b91c1c;
+    background: #fff1f2;
+}
+
+@media (max-width: 760px) {
+    .syn-profile-dropdown {
+        position: fixed;
+        top: 74px;
+        right: 12px;
+
+        width: min(285px, calc(100vw - 24px));
+    }
+
+    .syn-profile-dropdown::before {
+        display: none;
+    }
+}
+.syn-profile-wrapper {
+    position: relative;
+    z-index: 5000;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+.syn-profile-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 99999;
+}
+
+.syn-profile-dropdown[hidden] {
+    display: none !important;
+}
+
+/* Dropdown tidak tertutup header atau konten modul */
+.manpower-header,
+.pd-header,
+.db-header,
+.aa-header,
+.syn-dashboard-header {
+    position: relative;
+    z-index: 1000;
+    overflow: visible;
+}
+
+.manpower-header-actions,
+.pd-header-actions,
+.db-header-actions,
+.aa-header-actions,
+.syn-dashboard-actions {
+    position: relative;
+    overflow: visible;
+}

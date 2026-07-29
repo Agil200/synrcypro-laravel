@@ -785,6 +785,17 @@
         }
 
     }
+    /* Menyamakan ukuran dropdown profil dengan tombol header Manpower */
+.manpower-header-actions .syn-profile-trigger {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex: 0 0 44px;
+}
+
+.manpower-header-actions .syn-profile-wrapper {
+    flex: 0 0 44px;
+}
 
 </style>
 @endpush
@@ -1194,82 +1205,62 @@
         </div>
     </aside>
 
-    {{-- Header --}}
-    <header class="manpower-header">
+{{-- Header --}}
+<header class="manpower-header">
 
-        <div class="manpower-header-brand">
-            <img
-                src="{{ asset('assets/images/synrgypro-logo.png') }}"
-                alt="SYNRGYPRO"
-            >
-        </div>
-
-        <nav
-            class="manpower-header-actions"
-            aria-label="Shortcut pengguna"
+    <div class="manpower-header-brand">
+        <img
+            src="{{ asset('assets/images/synrgypro-logo.png') }}"
+            alt="SYNRGYPRO"
         >
-            {{-- Shortcut lintas modul --}}
-            <x-module-shortcut />
+    </div>
 
-            {{-- Home --}}
-            <a
-                href="{{ route('dashboard') }}"
-                class="manpower-header-button"
-                title="Dashboard"
-                aria-label="Dashboard"
+    <nav
+        class="manpower-header-actions"
+        aria-label="Shortcut pengguna"
+    >
+        {{-- Shortcut lintas modul --}}
+        <x-module-shortcut />
+
+        {{-- Home --}}
+        <a
+            href="{{ route('dashboard') }}"
+            class="manpower-header-button"
+            title="Dashboard"
+            aria-label="Dashboard"
+        >
+            <img
+                class="manpower-home-icon"
+                src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
+                alt="Dashboard"
+            >
+        </a>
+
+        {{-- Dropdown Profil --}}
+        <x-profile-dropdown />
+
+        {{-- Logout --}}
+        <form
+            method="POST"
+            action="{{ route('logout') }}"
+            class="manpower-logout-form"
+        >
+            @csrf
+
+            <button
+                type="submit"
+                class="manpower-header-button manpower-logout-button"
+                title="Logout"
+                aria-label="Logout"
             >
                 <img
-                    class="manpower-home-icon"
-                    src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
-                    alt=""
+                    src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
+                    alt="Logout"
                 >
-            </a>
-
-            {{-- Profil --}}
-            <button
-                type="button"
-                class="manpower-header-button"
-                title="Profil"
-                aria-label="Profil"
-            >
-                @if (Auth::user()?->avatar)
-                    <img
-                        class="manpower-profile-icon"
-                        src="{{ Auth::user()->avatar }}"
-                        alt="Foto profil {{ Auth::user()->name }}"
-                        referrerpolicy="no-referrer"
-                    >
-                @else
-                    <img
-                        class="manpower-profile-icon"
-                        src="{{ asset('assets/images/profile.png') }}"
-                        alt="Profil"
-                    >
-                @endif
             </button>
-
-            {{-- Logout --}}
-            <form
-                method="POST"
-                action="{{ route('logout') }}"
-                class="manpower-logout-form"
-            >
-                @csrf
-
-                <button
-                    type="submit"
-                    class="manpower-header-button manpower-logout-button"
-                    title="Logout"
-                    aria-label="Logout"
-                >
-                    <img
-                        src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
-                        alt=""
-                    >
-                </button>
-            </form>
-        </nav>
-    </header>
+        </form>
+    </nav>
+</header>
 
 {{-- Isi halaman --}}
     <main class="manpower-content">
@@ -1352,5 +1343,6 @@
             );
         });
     });
+
 </script>
 @endpush

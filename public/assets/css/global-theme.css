@@ -1,0 +1,209 @@
+html.syn-theme-dark {
+    color-scheme: dark;
+
+    --syn-dark-background: #0f172a;
+    --syn-dark-surface: #1f2937;
+    --syn-dark-surface-soft: #111827;
+    --syn-dark-border: #374151;
+    --syn-dark-text: #f9fafb;
+    --syn-dark-muted: #9ca3af;
+}
+
+/* =====================================================
+   AREA UTAMA SEMUA HALAMAN
+   ===================================================== */
+
+html.syn-theme-dark .syn-dashboard-main,
+html.syn-theme-dark .manpower-content,
+html.syn-theme-dark .pd-content,
+html.syn-theme-dark .db-content,
+html.syn-theme-dark .aa-content,
+html.syn-theme-dark .profile-page,
+html.syn-theme-dark .settings-page,
+html.syn-theme-dark .email-page {
+    color: var(--syn-dark-text) !important;
+    background: var(--syn-dark-background) !important;
+}
+
+/* =====================================================
+   SIDEBAR
+   ===================================================== */
+
+html.syn-theme-dark .manpower-sidebar,
+html.syn-theme-dark .pd-sidebar,
+html.syn-theme-dark .db-sidebar,
+html.syn-theme-dark .aa-sidebar {
+    border-color: var(--syn-dark-border) !important;
+    background:
+        linear-gradient(
+            180deg,
+            #1f2937 0%,
+            #111827 100%
+        ) !important;
+}
+
+html.syn-theme-dark .manpower-menu-link,
+html.syn-theme-dark .manpower-menu-toggle,
+html.syn-theme-dark .manpower-submenu-link,
+html.syn-theme-dark .pd-menu-link,
+html.syn-theme-dark .pd-menu-toggle,
+html.syn-theme-dark .pd-submenu-button,
+html.syn-theme-dark .db-menu-link,
+html.syn-theme-dark .db-menu-toggle,
+html.syn-theme-dark .db-submenu-link,
+html.syn-theme-dark .aa-menu-link,
+html.syn-theme-dark .aa-menu-toggle,
+html.syn-theme-dark .aa-submenu-link,
+html.syn-theme-dark .manpower-bottom-link,
+html.syn-theme-dark .pd-bottom-link,
+html.syn-theme-dark .db-bottom-link,
+html.syn-theme-dark .aa-bottom-link {
+    color: var(--syn-dark-text) !important;
+}
+
+html.syn-theme-dark .manpower-menu-link:hover,
+html.syn-theme-dark .manpower-menu-toggle:hover,
+html.syn-theme-dark .manpower-submenu-link:hover,
+html.syn-theme-dark .pd-menu-link:hover,
+html.syn-theme-dark .pd-menu-toggle:hover,
+html.syn-theme-dark .pd-submenu-button:hover,
+html.syn-theme-dark .db-menu-link:hover,
+html.syn-theme-dark .db-menu-toggle:hover,
+html.syn-theme-dark .aa-menu-link:hover,
+html.syn-theme-dark .aa-menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* =====================================================
+   KARTU DAN PANEL
+   ===================================================== */
+
+html.syn-theme-dark .syn-dashboard-card,
+html.syn-theme-dark .manpower-welcome,
+html.syn-theme-dark .profile-content,
+html.syn-theme-dark .profile-panel,
+html.syn-theme-dark .settings-account-summary,
+html.syn-theme-dark .settings-card,
+html.syn-theme-dark .settings-action-link,
+html.syn-theme-dark .email-account-summary,
+html.syn-theme-dark .email-card,
+html.syn-theme-dark .email-information-item,
+html.syn-theme-dark [class*="pd-"][class*="card"],
+html.syn-theme-dark [class*="db-"][class*="card"],
+html.syn-theme-dark [class*="aa-"][class*="card"],
+html.syn-theme-dark [class*="pd-"][class*="panel"],
+html.syn-theme-dark [class*="db-"][class*="panel"],
+html.syn-theme-dark [class*="aa-"][class*="panel"] {
+    color: var(--syn-dark-text) !important;
+    border-color: var(--syn-dark-border) !important;
+    background: var(--syn-dark-surface) !important;
+}
+
+/* =====================================================
+   HEADER KARTU
+   ===================================================== */
+
+html.syn-theme-dark .profile-panel-header,
+html.syn-theme-dark .settings-card-header,
+html.syn-theme-dark .email-card-header,
+html.syn-theme-dark [class*="pd-card-header"],
+html.syn-theme-dark [class*="db-card-header"],
+html.syn-theme-dark [class*="aa-card-header"] {
+    border-color: var(--syn-dark-border) !important;
+    background: var(--syn-dark-surface-soft) !important;
+}
+
+/* =====================================================
+   TEKS
+   ===================================================== */
+
+html.syn-theme-dark .profile-page-heading h1,
+html.syn-theme-dark .profile-panel-header h3,
+html.syn-theme-dark .profile-detail-value,
+html.syn-theme-dark .profile-action-information strong,
+html.syn-theme-dark .settings-page-heading h1,
+html.syn-theme-dark .settings-account-information strong,
+html.syn-theme-dark .settings-card-header h2,
+html.syn-theme-dark .settings-row-information strong,
+html.syn-theme-dark .settings-action-information strong,
+html.syn-theme-dark .email-page-heading h1,
+html.syn-theme-dark .email-account-information strong,
+html.syn-theme-dark .email-card-header h2,
+html.syn-theme-dark .email-information-content strong,
+html.syn-theme-dark .pd-page-title h1,
+html.syn-theme-dark [class*="aa-"] h1,
+html.syn-theme-dark [class*="aa-"] h2,
+html.syn-theme-dark [class*="db-"] h1,
+html.syn-theme-dark [class*="db-"] h2 {
+    color: var(--syn-dark-text) !important;
+}
+
+html.syn-theme-dark .profile-page-heading p,
+html.syn-theme-dark .profile-panel-header p,
+html.syn-theme-dark .profile-detail-label,
+html.syn-theme-dark .profile-action-information small,
+html.syn-theme-dark .settings-page-heading p,
+html.syn-theme-dark .settings-account-information span,
+html.syn-theme-dark .settings-card-header p,
+html.syn-theme-dark .settings-row-information small,
+html.syn-theme-dark .settings-action-information small,
+html.syn-theme-dark .email-page-heading p,
+html.syn-theme-dark .email-account-information span,
+html.syn-theme-dark .email-card-header p,
+html.syn-theme-dark .email-information-content small,
+html.syn-theme-dark .pd-page-title p {
+    color: var(--syn-dark-muted) !important;
+}
+
+/* =====================================================
+   KALENDER DAN TABEL PEOPLE DEVELOPMENT
+   ===================================================== */
+
+html.syn-theme-dark .pd-calendar-day,
+html.syn-theme-dark .pd-upcoming-item,
+html.syn-theme-dark .pd-summary-box {
+    color: var(--syn-dark-text) !important;
+    border-color: var(--syn-dark-border) !important;
+    background: var(--syn-dark-surface-soft) !important;
+}
+
+html.syn-theme-dark .pd-table th,
+html.syn-theme-dark .pd-matrix th {
+    color: var(--syn-dark-text) !important;
+    border-color: var(--syn-dark-border) !important;
+    background: #18202d !important;
+}
+
+html.syn-theme-dark .pd-table td,
+html.syn-theme-dark .pd-matrix td {
+    color: var(--syn-dark-text) !important;
+    border-color: var(--syn-dark-border) !important;
+    background: var(--syn-dark-surface) !important;
+}
+
+/* =====================================================
+   INPUT DAN SELECT
+   ===================================================== */
+
+html.syn-theme-dark input,
+html.syn-theme-dark select,
+html.syn-theme-dark textarea {
+    color: var(--syn-dark-text) !important;
+    border-color: #4b5563 !important;
+    background: var(--syn-dark-surface-soft) !important;
+}
+
+html.syn-theme-dark input[readonly] {
+    color: var(--syn-dark-muted) !important;
+    background: #18202d !important;
+}
+
+/* =====================================================
+   BORDER UMUM
+   ===================================================== */
+
+html.syn-theme-dark .profile-detail-row,
+html.syn-theme-dark .settings-row,
+html.syn-theme-dark .email-form-actions {
+    border-color: var(--syn-dark-border) !important;
+}

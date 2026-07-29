@@ -1426,6 +1426,17 @@
             grid-template-columns: repeat(2, 1fr);
         }
     }
+    /* Menyamakan ukuran dropdown profil dengan tombol People Development */
+.pd-header-actions .syn-profile-trigger {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex: 0 0 44px;
+}
+
+.pd-header-actions .syn-profile-wrapper {
+    flex: 0 0 44px;
+}
 </style>
 @endpush
 
@@ -1951,68 +1962,56 @@
         </div>
     </aside>
 
-    {{-- HEADER --}}
-    <header class="pd-header">
-        <div class="pd-header-brand">
+{{-- HEADER --}}
+<header class="pd-header">
+    <div class="pd-header-brand">
+        <img
+            src="{{ asset('assets/images/synrgypro-logo.png') }}"
+            alt="SYNRGYPRO"
+        >
+    </div>
+
+    <nav class="pd-header-actions" aria-label="Shortcut pengguna">
+
+        {{-- Shortcut lintas modul --}}
+        <x-module-shortcut />
+
+        {{-- Kembali ke Dashboard --}}
+        <a
+            href="{{ route('dashboard') }}"
+            class="pd-header-button"
+            aria-label="Dashboard"
+        >
             <img
-                src="{{ asset('assets/images/synrgypro-logo.png') }}"
-                alt="SYNRGYPRO"
+                src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
+                alt="Dashboard"
             >
-        </div>
+        </a>
 
-        <nav class="pd-header-actions" aria-label="Shortcut pengguna">
-            <x-module-shortcut />
+        {{-- Dropdown Profil --}}
+        <x-profile-dropdown />
 
-            <a
-                href="{{ route('dashboard') }}"
-                class="pd-header-button"
-                aria-label="Dashboard"
-            >
-                <img
-                    src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
-                    alt=""
-                >
-            </a>
+        {{-- Logout --}}
+        <form
+            method="POST"
+            action="{{ route('logout') }}"
+            class="pd-logout-form"
+        >
+            @csrf
 
             <button
-                type="button"
-                class="pd-header-button pd-profile-button"
-                aria-label="Profil"
+                type="submit"
+                class="pd-header-button pd-logout-button"
+                aria-label="Logout"
             >
-                @if (Auth::user()?->avatar)
-                    <img
-                        src="{{ Auth::user()->avatar }}"
-                        alt="Foto profil {{ Auth::user()->name }}"
-                        referrerpolicy="no-referrer"
-                    >
-                @else
-                    <img
-                        src="{{ asset('assets/images/profile.png') }}"
-                        alt="Profil"
-                    >
-                @endif
-            </button>
-
-            <form
-                method="POST"
-                action="{{ route('logout') }}"
-                class="pd-logout-form"
-            >
-                @csrf
-
-                <button
-                    type="submit"
-                    class="pd-header-button pd-logout-button"
-                    aria-label="Logout"
+                <img
+                    src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
+                    alt="Logout"
                 >
-                    <img
-                        src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
-                        alt=""
-                    >
-                </button>
-            </form>
-        </nav>
-    </header>
+            </button>
+        </form>
+    </nav>
+</header>
 
     {{-- CONTENT --}}
     <main class="pd-content">

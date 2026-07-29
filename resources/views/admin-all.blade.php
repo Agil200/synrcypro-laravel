@@ -1680,68 +1680,52 @@
         </div>
     </aside>
 
-    {{-- HEADER --}}
-    <header class="aa-header">
-        <div class="aa-header-brand">
+{{-- HEADER --}}
+<header class="aa-header">
+    <div class="aa-header-brand">
+        <img
+            src="{{ asset('assets/images/synrgypro-logo.png') }}"
+            alt="SYNRGYPRO"
+        >
+    </div>
+
+    <nav class="aa-header-actions" aria-label="Shortcut pengguna">
+        <x-module-shortcut />
+
+        <a
+            href="{{ route('dashboard') }}"
+            class="aa-header-button"
+            aria-label="Dashboard"
+        >
             <img
-                src="{{ asset('assets/images/synrgypro-logo.png') }}"
-                alt="SYNRGYPRO"
+                src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
+                alt="Dashboard"
             >
-        </div>
+        </a>
 
-        <nav class="aa-header-actions" aria-label="Shortcut pengguna">
-            <x-module-shortcut />
+        {{-- Dropdown Profil --}}
+        <x-profile-dropdown />
 
-            <a
-                href="{{ route('dashboard') }}"
-                class="aa-header-button"
-                aria-label="Dashboard"
-            >
-                <img
-                    src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
-                    alt=""
-                >
-            </a>
+        <form
+            method="POST"
+            action="{{ route('logout') }}"
+            class="aa-logout-form"
+        >
+            @csrf
 
             <button
-                type="button"
-                class="aa-header-button aa-profile-button"
-                aria-label="Profil"
+                type="submit"
+                class="aa-header-button aa-logout-button"
+                aria-label="Logout"
             >
-                @if (Auth::user()?->avatar)
-                    <img
-                        src="{{ Auth::user()->avatar }}"
-                        alt="Foto profil {{ Auth::user()->name }}"
-                        referrerpolicy="no-referrer"
-                    >
-                @else
-                    <img
-                        src="{{ asset('assets/images/profile.png') }}"
-                        alt="Profil"
-                    >
-                @endif
-            </button>
-
-            <form
-                method="POST"
-                action="{{ route('logout') }}"
-                class="aa-logout-form"
-            >
-                @csrf
-
-                <button
-                    type="submit"
-                    class="aa-header-button aa-logout-button"
-                    aria-label="Logout"
+                <img
+                    src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
+                    alt="Logout"
                 >
-                    <img
-                        src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
-                        alt=""
-                    >
-                </button>
-            </form>
-        </nav>
-    </header>
+            </button>
+        </form>
+    </nav>
+</header>
 
     {{-- CONTENT --}}
     <main class="aa-content">

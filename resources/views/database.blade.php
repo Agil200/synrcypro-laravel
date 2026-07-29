@@ -1824,6 +1824,13 @@
         height: 44px;
         flex-basis: 44px;
     }
+    /* Menyamakan ukuran dropdown profil dengan tombol header Database */
+.db-header-actions .syn-profile-trigger {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    flex: 0 0 44px;
+}
 
 </style>
 @endpush
@@ -2117,69 +2124,56 @@
         </div>
     </aside>
 
-    {{-- HEADER --}}
-    <header class="db-header">
-        <div class="db-header-brand">
+{{-- HEADER --}}
+<header class="db-header">
+    <div class="db-header-brand">
+        <img
+            src="{{ asset('assets/images/synrgypro-logo.png') }}"
+            alt="SYNRGYPRO"
+        >
+    </div>
+
+    <nav class="db-header-actions" aria-label="Shortcut pengguna">
+
+        {{-- Shortcut modul --}}
+        <x-module-shortcut />
+
+        {{-- Kembali ke Dashboard --}}
+        <a
+            href="{{ route('dashboard') }}"
+            class="db-header-button"
+            aria-label="Dashboard"
+        >
             <img
-                src="{{ asset('assets/images/synrgypro-logo.png') }}"
-                alt="SYNRGYPRO"
+                src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
+                alt="Dashboard"
             >
-        </div>
+        </a>
 
-        <nav class="db-header-actions" aria-label="Shortcut pengguna">
-            {{-- Shortcut Manpower, People Development, Database, dan Admin All --}}
-            <x-module-shortcut />
+        {{-- Dropdown Profil --}}
+        <x-profile-dropdown />
 
-            <a
-                href="{{ route('dashboard') }}"
-                class="db-header-button"
-                aria-label="Dashboard"
-            >
-                <img
-                    src="{{ asset('assets/images/LOGO HOME.jpeg') }}"
-                    alt=""
-                >
-            </a>
+        {{-- Logout --}}
+        <form
+            method="POST"
+            action="{{ route('logout') }}"
+            class="db-logout-form"
+        >
+            @csrf
 
             <button
-                type="button"
-                class="db-header-button db-profile-button"
-                aria-label="Profil"
+                type="submit"
+                class="db-header-button db-logout-button"
+                aria-label="Logout"
             >
-                @if (Auth::user()?->avatar)
-                    <img
-                        src="{{ Auth::user()->avatar }}"
-                        alt="Foto profil {{ Auth::user()->name }}"
-                        referrerpolicy="no-referrer"
-                    >
-                @else
-                    <img
-                        src="{{ asset('assets/images/profile.png') }}"
-                        alt="Profil"
-                    >
-                @endif
-            </button>
-
-            <form
-                method="POST"
-                action="{{ route('logout') }}"
-                class="db-logout-form"
-            >
-                @csrf
-
-                <button
-                    type="submit"
-                    class="db-header-button db-logout-button"
-                    aria-label="Logout"
+                <img
+                    src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
+                    alt="Logout"
                 >
-                    <img
-                        src="{{ asset('assets/images/LOGO LOGOUT.png') }}"
-                        alt=""
-                    >
-                </button>
-            </form>
-        </nav>
-    </header>
+            </button>
+        </form>
+    </nav>
+</header>
 
     {{-- CONTENT --}}
     <main class="db-content" style="position: relative;">
