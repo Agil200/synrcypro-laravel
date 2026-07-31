@@ -390,7 +390,117 @@
         box-shadow: 0 5px 15px rgba(27,31,35,.05);
     }
 
-    /* Modal */
+    /* Modal pemilihan kategori */
+    .category-modal .modal-content {
+        overflow: hidden;
+        border: 0;
+        border-radius: 20px;
+        box-shadow: 0 22px 70px rgba(0,0,0,.22);
+    }
+
+    .category-modal .modal-header {
+        align-items: flex-start;
+        padding: 22px 23px;
+        color: #fff;
+        background: linear-gradient(110deg, #171717 0%, #302525 58%, #e85b2c 100%);
+        border: 0;
+    }
+
+    .category-modal .modal-title {
+        font-size: 1.12rem;
+        font-weight: 800;
+    }
+
+    .category-modal .btn-close {
+        margin-top: 1px;
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .category-modal .modal-body {
+        padding: 22px;
+        background: #f7f8fa;
+    }
+
+    .category-intro {
+        margin: 0 0 16px;
+        color: #6f7680;
+        font-size: .82rem;
+    }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .category-option {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-height: 84px;
+        padding: 15px;
+        text-align: left;
+        color: #2f343a;
+        background: #fff;
+        border: 1px solid #e3e6ea;
+        border-radius: 14px;
+        box-shadow: 0 5px 14px rgba(27,31,35,.04);
+        transition: .2s ease;
+    }
+
+    .category-option:hover,
+    .category-option:focus {
+        color: #2f343a;
+        background: #fff8f4;
+        border-color: rgba(239,91,42,.55);
+        box-shadow: 0 9px 20px rgba(239,91,42,.10);
+        transform: translateY(-2px);
+        outline: none;
+    }
+
+    .category-option:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    .category-option-icon {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: var(--bast-primary);
+        background: rgba(239,91,42,.10);
+        border-radius: 13px;
+    }
+
+    .category-option-title {
+        display: block;
+        margin-bottom: 3px;
+        color: #24282e;
+        font-size: .86rem;
+        font-weight: 800;
+    }
+
+    .category-option-note {
+        display: block;
+        color: #838a94;
+        font-size: .72rem;
+        line-height: 1.35;
+    }
+
+    .category-modal .modal-footer {
+        padding: 14px 22px;
+        background: #fff;
+        border-top: 1px solid var(--bast-border);
+    }
+
+    @media (max-width: 575.98px) {
+        .category-grid { grid-template-columns: 1fr; }
+        .category-option:last-child:nth-child(odd) { grid-column: auto; }
+    }
+
+    /* Modal form */
     .bast-modal .modal-content {
         overflow: hidden;
         border: 0;
@@ -652,7 +762,7 @@
             </div>
 
             <div class="bast-hero-action">
-                <button type="button" class="btn-add-bast" data-bs-toggle="modal" data-bs-target="#bastFormModal">
+                <button type="button" class="btn-add-bast" data-bs-toggle="modal" data-bs-target="#bastCategoryModal">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
                         <path d="M12 5v14M5 12h14"/>
                     </svg>
@@ -798,7 +908,7 @@
                                     </div>
                                     <h3>Belum ada berita acara</h3>
                                     <p>Data BAST untuk kategori <strong>{{ $category }}</strong> belum tersedia. Tambahkan dokumen pertama melalui tombol di bawah ini.</p>
-                                    <button type="button" class="btn btn-dark btn-sm px-3 rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#bastFormModal">
+                                    <button type="button" class="btn btn-dark btn-sm px-3 rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#bastCategoryModal">
                                         + Tambah Berita Acara
                                     </button>
                                 </td>
@@ -829,6 +939,91 @@
     </div>
 </div>
 
+{{-- Modal Pilih Kategori BAST --}}
+<div class="modal fade category-modal" id="bastCategoryModal" tabindex="-1" aria-labelledby="bastCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="bastCategoryModalLabel">Pilih Kategori BAST</h5>
+                    <div class="modal-heading-note">Pilih jenis asset sebelum mengisi berita acara serah terima.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="category-intro">Kategori yang dipilih akan otomatis dimasukkan ke kolom <strong>Jenis Asset</strong> pada formulir.</p>
+
+                <div class="category-grid">
+                    <button type="button" class="category-option" data-bast-category="Senter P101X">
+                        <span class="category-option-icon">
+                            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 3h6l1 4H8l1-4Z"/><path d="M8 7h8l-2 14h-4L8 7Z"/><path d="M10 11h4"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="category-option-title">BAST Senter P101X</span>
+                            <span class="category-option-note">Serah terima perangkat senter tipe P101X.</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="category-option" data-bast-category="Laser">
+                        <span class="category-option-icon">
+                            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 12h7M15 12h5M14 8l2-2M14 16l2 2"/><circle cx="12" cy="12" r="2"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="category-option-title">BAST Laser</span>
+                            <span class="category-option-note">Serah terima perangkat atau alat laser.</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="category-option" data-bast-category="Laptop">
+                        <span class="category-option-icon">
+                            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="4" width="16" height="11" rx="1"/><path d="M2 19h20M8 19l1-4h6l1 4"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="category-option-title">BAST Laptop</span>
+                            <span class="category-option-note">Serah terima laptop dan perangkat pendukung.</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="category-option" data-bast-category="Radio HT">
+                        <span class="category-option-icon">
+                            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="7" y="5" width="10" height="16" rx="2"/><path d="M10 2h4M12 5V2M10 10h4M12 15h.01"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="category-option-title">BAST Radio HT</span>
+                            <span class="category-option-note">Serah terima radio komunikasi handheld.</span>
+                        </span>
+                    </button>
+
+                    <button type="button" class="category-option" data-bast-category="Lainnya">
+                        <span class="category-option-icon">
+                            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/>
+                            </svg>
+                        </span>
+                        <span>
+                            <span class="category-option-title">BAST Lainnya</span>
+                            <span class="category-option-note">Gunakan untuk jenis asset di luar kategori utama.</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Batal</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Modal Tambah Berita Acara Asset --}}
 <div class="modal fade bast-modal" id="bastFormModal" tabindex="-1" aria-labelledby="bastFormModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -836,7 +1031,7 @@
             <div class="modal-header">
                 <div>
                     <h5 class="modal-title" id="bastFormModalLabel">Tambah Berita Acara Asset</h5>
-                    <div class="modal-heading-note">Isi data penerima dan asset dengan lengkap, lalu unggah dokumen BAST dalam format PDF.</div>
+                    <div class="modal-heading-note" id="bastFormCategoryNote">Isi data penerima dan asset dengan lengkap, lalu unggah dokumen BAST dalam format PDF.</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
@@ -1014,6 +1209,46 @@
         const fileNameLabel = document.getElementById('fileNameLabel');
         const form = document.getElementById('bastForm');
         const saveButton = document.getElementById('saveBastButton');
+        const categoryModalElement = document.getElementById('bastCategoryModal');
+        const formModalElement = document.getElementById('bastFormModal');
+        const categoryButtons = Array.from(document.querySelectorAll('[data-bast-category]'));
+        const jenisAssetInput = document.getElementById('jenis_asset');
+        const formModalTitle = document.getElementById('bastFormModalLabel');
+        const formCategoryNote = document.getElementById('bastFormCategoryNote');
+
+        if (
+            categoryModalElement &&
+            formModalElement &&
+            categoryButtons.length &&
+            typeof bootstrap !== 'undefined'
+        ) {
+            const categoryModal = bootstrap.Modal.getOrCreateInstance(categoryModalElement);
+            const formModal = bootstrap.Modal.getOrCreateInstance(formModalElement);
+
+            categoryButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const selectedCategory = this.dataset.bastCategory;
+
+                    if (jenisAssetInput) {
+                        jenisAssetInput.value = selectedCategory;
+                    }
+
+                    if (formModalTitle) {
+                        formModalTitle.textContent = 'Tambah BAST ' + selectedCategory;
+                    }
+
+                    if (formCategoryNote) {
+                        formCategoryNote.textContent = 'Kategori terpilih: BAST ' + selectedCategory + '. Lengkapi data penerima, asset, dan dokumen PDF.';
+                    }
+
+                    categoryModalElement.addEventListener('hidden.bs.modal', function openFormAfterCategory() {
+                        formModal.show();
+                    }, { once: true });
+
+                    categoryModal.hide();
+                });
+            });
+        }
 
         if (searchInput && dataRows.length) {
             searchInput.addEventListener('input', function () {
@@ -1055,6 +1290,20 @@
 
         @if($errors->any())
             const bastModalElement = document.getElementById('bastFormModal');
+            const oldCategory = @json(old('jenis_asset', $category));
+
+            if (jenisAssetInput && oldCategory) {
+                jenisAssetInput.value = oldCategory;
+            }
+
+            if (formModalTitle && oldCategory) {
+                formModalTitle.textContent = 'Tambah BAST ' + oldCategory;
+            }
+
+            if (formCategoryNote && oldCategory) {
+                formCategoryNote.textContent = 'Kategori terpilih: BAST ' + oldCategory + '. Periksa kembali data yang belum valid.';
+            }
+
             if (bastModalElement && typeof bootstrap !== 'undefined') {
                 bootstrap.Modal.getOrCreateInstance(bastModalElement).show();
             }
