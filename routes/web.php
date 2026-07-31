@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BastAssetController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -100,6 +101,18 @@ Route::middleware('auth')->group(function () {
 
     Route::view('/ubah-email', 'profile.change-email')
         ->name('profile.change-email');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Berita Acara Asset (BAST)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/bast-asset/{category?}', [BastAssetController::class, 'index'])
+        ->name('bast.index');
+
+    Route::post('/bast-asset/store', [BastAssetController::class, 'store'])
+        ->name('bast.store');
 
     /*
     |--------------------------------------------------------------------------

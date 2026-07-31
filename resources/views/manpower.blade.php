@@ -925,90 +925,96 @@
             </span>
         </button>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Daftar Test BNN
-                </a>
+       <div class="manpower-submenu">
+    <div class="manpower-submenu-inner">
+        <!-- Daftar Test BNN -->
+        <a
+            href="https://docs.google.com/spreadsheets/d/1V9LU2Ft9NpxHULY7cVWczqpclCDy_Vja6qWtr7la38o/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="manpower-submenu-link"
+        >
+            Daftar Test BNN
+        </a>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring Kehadiran
-                </a>
-            </div>
-        </div>
+        <!-- Monitoring Kehadiran -->
+        <a
+            href="https://docs.google.com/spreadsheets/d/1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="manpower-submenu-link"
+        >
+            Monitoring Kehadiran
+        </a>
     </div>
+</div>
 
     {{-- Berita Acara Asset --}}
-    <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/BAST.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                Berita Acara Asset
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+<div class="manpower-menu-group">
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="false"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/BAST.png') }}"
+                alt=""
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    BAST Senter P101X
-                </a>
+        <span class="manpower-menu-label">
+            Berita Acara Asset
+        </span>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    BAST Laser
-                </a>
+        <span
+            class="manpower-menu-arrow"
+            aria-hidden="true"
+        >
+            ›
+        </span>
+    </button>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    BAST Laptop
-                </a>
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="{{ route('bast.index', 'Senter P101X') }}"
+                class="manpower-submenu-link"
+            >
+                BAST Senter P101X
+            </a>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    BAST Radio HT
-                </a>
+            <a
+                href="{{ route('bast.index', 'Laser') }}"
+                class="manpower-submenu-link"
+            >
+                BAST Laser
+            </a>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    BAST Lainnya
-                </a>
-            </div>
+            <a
+                href="{{ route('bast.index', 'Laptop') }}"
+                class="manpower-submenu-link"
+            >
+                BAST Laptop
+            </a>
+
+            <a
+                href="{{ route('bast.index', 'Radio HT') }}"
+                class="manpower-submenu-link"
+            >
+                BAST Radio HT
+            </a>
+
+            <a
+                href="{{ route('bast.index', 'Lainnya') }}"
+                class="manpower-submenu-link"
+            >
+                BAST Lainnya
+            </a>
         </div>
     </div>
+</div>
+
 
     {{-- Monitoring APD --}}
     <div class="manpower-menu-group">
