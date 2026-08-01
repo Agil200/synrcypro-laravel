@@ -105,6 +105,11 @@ Route::middleware('auth')->group(function () {
     */
 
     Route::get(
+        '/manpower/mine-permit/dashboard',
+        [MinePermitController::class, 'dashboardMinePermit']
+    )->name('mine-permit.dashboard');
+
+    Route::get(
         '/manpower/mine-permit/monitoring-she',
         [MinePermitController::class, 'monitoringShe']
     )->name('mine-permit.monitoring-she');
@@ -113,6 +118,14 @@ Route::middleware('auth')->group(function () {
         '/manpower/mine-permit/monitoring-internal-upload',
         [MinePermitController::class, 'monitoringInternalUpload']
     )->name('mine-permit.monitoring-internal-upload');
+
+    /*
+     * URL lama tetap aman dan diarahkan ke Dashboard Mine Permit.
+     */
+    Route::redirect(
+        '/manpower/mine-permit/monitoring-mine-permit',
+        '/manpower/mine-permit/dashboard'
+    );
 
     /*
     |--------------------------------------------------------------------------

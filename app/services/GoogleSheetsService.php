@@ -51,6 +51,45 @@ class GoogleSheetsService
         );
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ambil data mentah Monitoring Internal Upload
+    |--------------------------------------------------------------------------
+    */
+
+    public function getMonitoringInternalUploadValues(): array
+    {
+        $spreadsheetId = trim(
+            (string) config(
+                'services.google_sheets.internal_upload_spreadsheet_id'
+            )
+        );
+
+        $range = trim(
+            (string) config(
+                'services.google_sheets.internal_upload_range'
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID Monitoring Internal Upload belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range Monitoring Internal Upload belum diatur.'
+            );
+        }
+
+        return $this->getValues(
+            $spreadsheetId,
+            $range
+        );
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Baca values dari Google Sheets API

@@ -280,7 +280,7 @@
 </div>
 
 {{-- Form tambah --}}
-<div class="ccsp-modal" id="createStSpModal" aria-hidden="true">
+<div class="ccsp-modal" id="createStSpModal" aria-hidden="true" hidden>
     <div
         class="ccsp-dialog"
         role="dialog"
@@ -608,7 +608,7 @@
 </div>
 
 {{-- Form edit --}}
-<div class="ccsp-modal" id="editStSpModal" aria-hidden="true">
+<div class="ccsp-modal" id="editStSpModal" aria-hidden="true" hidden>
     <div
         class="ccsp-dialog"
         role="dialog"
@@ -926,6 +926,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        modal.hidden = false;
+        modal.removeAttribute('hidden');
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('ccsp-modal-open');
@@ -938,6 +940,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
+        modal.hidden = true;
+        modal.setAttribute('hidden', '');
 
         if (!document.querySelector('.ccsp-modal.is-open')) {
             document.body.classList.remove('ccsp-modal-open');

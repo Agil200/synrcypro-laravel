@@ -956,38 +956,41 @@ body.syn-manpower-page {
             </span>
         </button>
 
- <div class="manpower-submenu">
-    <div class="manpower-submenu-inner">
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
 
-        <a
-            href="{{ route('mine-permit.monitoring-she') }}"
-            class="manpower-submenu-link
-                {{ request()->routeIs('mine-permit.monitoring-she')
-                    ? 'active'
-                    : '' }}"
-        >
-            Monitoring SHE
-        </a>
+            <a
+                href="{{ route('mine-permit.dashboard') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('mine-permit.dashboard')
+                        ? 'active'
+                        : '' }}"
+            >
+                Dashboard Mine Permit
+            </a>
 
-        <a
-            href="{{ route('mine-permit.monitoring-internal-upload') }}"
-            class="manpower-submenu-link
-                {{ request()->routeIs('mine-permit.monitoring-internal-upload')
-                    ? 'active'
-                    : '' }}"
-        >
-            Monitoring Internal Upload
-        </a>
+            <a
+                href="{{ route('mine-permit.monitoring-she') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('mine-permit.monitoring-she')
+                        ? 'active'
+                        : '' }}"
+            >
+                Monitoring SHE
+            </a>
 
-        <a
-            href="#"
-            class="manpower-submenu-link"
-        >
-            Monitoring Mine Permit
-        </a>
+            <a
+                href="{{ route('mine-permit.monitoring-internal-upload') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('mine-permit.monitoring-internal-upload')
+                        ? 'active'
+                        : '' }}"
+            >
+                Monitoring Internal Upload
+            </a>
 
+        </div>
     </div>
-</div>
 
 {{-- Penutup manpower-menu-group Mine Permit --}}
 </div>
