@@ -1108,51 +1108,92 @@ body.syn-manpower-page {
     </div>
 </div>
 
-
-    {{-- Monitoring APD --}}
-    <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/APD.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                Monitoring APD
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+{{-- Monitoring APD --}}
+<div
+    class="manpower-menu-group
+        {{ request()->routeIs('apd.*') ? 'is-open' : '' }}"
+>
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="{{
+            request()->routeIs('apd.*')
+                ? 'true'
+                : 'false'
+        }}"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/APD.png') }}"
+                alt=""
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Pencarian
-                </a>
+        <span class="manpower-menu-label">
+            Monitoring APD
+        </span>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Input Pengajuan
-                </a>
-            </div>
+        <span
+            class="manpower-menu-arrow"
+            aria-hidden="true"
+        >
+            ›
+        </span>
+    </button>
+
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="{{ route('apd.index') }}"
+                class="manpower-submenu-link
+                    {{
+                        request()->routeIs('apd.index')
+                            && request('open') === null
+                            ? 'active'
+                            : ''
+                    }}"
+            >
+                Monitoring &amp; Pencarian
+            </a>
+
+            <a
+                href="{{
+                    route(
+                        'apd.index',
+                        ['open' => 'create']
+                    )
+                }}"
+                class="manpower-submenu-link
+                    {{
+                        request()->routeIs('apd.index')
+                            && request('open') === 'create'
+                            ? 'active'
+                            : ''
+                    }}"
+            >
+                Input Pengajuan
+            </a>
+
+            <a
+                href="{{
+                    route(
+                        'apd.index',
+                        ['open' => 'pickup']
+                    )
+                }}"
+                class="manpower-submenu-link
+                    {{
+                        request()->routeIs('apd.index')
+                            && request('open') === 'pickup'
+                            ? 'active'
+                            : ''
+                    }}"
+            >
+                Pengambilan Ready
+            </a>
         </div>
     </div>
+</div>
 
 {{-- CC ST SP --}}
 <div

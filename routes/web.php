@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ApdController;
 use App\Http\Controllers\BastAssetController;
 use App\Http\Controllers\CoachingCounsellingController;
 use App\Http\Controllers\StSpController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\MinePermitController;
+use App\Http\Controllers\ManpowerDashboardController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
 
@@ -73,9 +75,9 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view(
+    Route::get(
         '/manpower',
-        'manpower'
+        [ManpowerDashboardController::class, 'index']
     )->name('manpower');
 
     /*
@@ -182,6 +184,53 @@ Route::middleware('auth')->group(function () {
         [BastAssetController::class, 'store']
     )->name('bast.store');
 
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monitoring APD
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('manpower/apd')
+        ->name('apd.')
+        ->controller(ApdController::class)
+        ->group(function () {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            Route::post(
+                '/',
+                'store'
+            )->name('store');
+
+            Route::put(
+                '/{apdRequest}',
+                'update'
+            )->name('update');
+
+            Route::patch(
+                '/{apdRequest}/status',
+                'updateStatus'
+            )->name('status');
+
+            Route::delete(
+                '/{apdRequest}',
+                'destroy'
+            )->name('destroy');
+
+            Route::post(
+                '/pickup/store',
+                'pickup'
+            )->name('pickup.store');
+
+            Route::get(
+                '/pickup/{apdPickup}/photo',
+                'pickupPhoto'
+            )->name('pickup.photo');
+        });
 
     /*
     |--------------------------------------------------------------------------

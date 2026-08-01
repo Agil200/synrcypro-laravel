@@ -4,9 +4,21 @@
 @section('body-class', 'syn-dashboard-page')
 
 @push('styles')
+@php
+    $dashboardCssFile = public_path(
+        'assets/css/dashboard-figma.css'
+    );
+
+    $dashboardCssVersion = is_file($dashboardCssFile)
+        ? filemtime($dashboardCssFile)
+        : time();
+@endphp
+
 <link
     rel="stylesheet"
-    href="{{ asset('assets/css/dashboard-figma.css') }}?v={{ filemtime(public_path('assets/css/dashboard-figma.css')) }}"
+    href="{{
+        asset('assets/css/dashboard-figma.css')
+    }}?v={{ $dashboardCssVersion }}"
 >
 
 <style>
