@@ -1,35 +1,342 @@
-/* ==========================================================
-   SYNRGYPRO MANPOWER CSS
-   Global Layout
-========================================================== */
+/* =====================================================
+   SYNRGYPRO MANPOWER
+   MAIN CSS
+===================================================== */
 
 
-* {
-    box-sizing: border-box;
+*{
+    box-sizing:border-box;
 }
 
 
-html,
-body {
+body.syn-manpower-page{
 
     margin:0;
-    padding:0;
 
-    width:100%;
-    height:100%;
+    background:#f3f5f7;
 
     font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+    Arial,
+    Helvetica,
+    sans-serif;
 
 }
 
 
 
-body.syn-manpower-page {
+/* =====================================================
+   MAIN LAYOUT
+===================================================== */
 
-    background:#f4f4f4;
+
+.manpower-page{
+
+    width:100%;
+
+    min-height:100vh;
+
+    display:grid;
+
+    grid-template-columns:220px 1fr;
+
+    grid-template-rows:65px 1fr 30px;
+
+}
+
+
+
+/* =====================================================
+   SIDEBAR
+===================================================== */
+
+
+.manpower-sidebar{
+
+    grid-row:1 / 4;
+
+    display:flex;
+
+    flex-direction:column;
+
+    background:
+    linear-gradient(
+        180deg,
+        #eeeeee,
+        #d7d7d7
+    );
+
+    border-right:1px solid #ccc;
+
+}
+
+
+
+.manpower-sidebar-header{
+
+    height:65px;
+
+    display:grid;
+
+    grid-template-columns:1fr 50px;
+
+    background:#111;
+
+}
+
+
+
+.manpower-sidebar-logo{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+
+.manpower-sidebar-logo img{
+
+    width:75px;
+
+}
+
+
+
+.manpower-sidebar-toggle{
+
+    border:none;
+
+    background:white;
+
+    font-size:25px;
+
+    cursor:pointer;
+
+}
+
+
+
+
+/* MENU */
+
+.manpower-navigation{
+
+    flex:1;
+
+}
+
+
+
+.manpower-menu-toggle,
+.manpower-menu-link{
+
+
+    width:100%;
+
+    min-height:44px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    padding:10px 15px;
+
+    border:none;
+
+    background:none;
+
+    color:#111;
+
+    text-decoration:none;
+
+    font-size:13px;
+
+    font-weight:800;
+
+    cursor:pointer;
+
+}
+
+
+
+.manpower-menu-toggle:hover,
+.manpower-menu-link:hover{
+
+    background:white;
+
+}
+
+
+
+.manpower-menu-icon img{
+
+    width:20px;
+
+    height:20px;
+
+}
+
+
+
+
+.manpower-menu-label{
+
+    flex:1;
+
+}
+
+
+
+.manpower-menu-arrow{
+
+    font-size:18px;
+
+}
+
+
+
+
+/* SUBMENU */
+
+
+.manpower-submenu{
+
+    display:none;
+
+}
+
+
+.manpower-menu-group.is-open 
+.manpower-submenu{
+
+    display:block;
+
+}
+
+
+
+.manpower-submenu-link{
+
+
+    display:block;
+
+    padding:
+
+    8px 15px 8px 45px;
+
+    color:#222;
+
+    text-decoration:none;
+
+    font-size:12px;
+
+    font-weight:700;
+
+}
+
+
+
+.manpower-submenu-link:hover{
+
+    background:white;
+
+}
+
+
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+
+.manpower-header{
+
+
+    grid-column:2;
+
+    height:65px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    background:white;
+
+    border-bottom:1px solid #ddd;
+
+}
+
+
+
+.manpower-header-brand{
+
+
+    flex:1;
+
+    height:65px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+
+    background:
+
+    linear-gradient(
+        90deg,
+        #222,
+        #d95d20
+    );
+
+}
+
+
+
+.manpower-header-brand img{
+
+
+    width:120px;
+
+}
+
+
+
+
+.manpower-header-actions{
+
+
+    display:flex;
+
+    gap:10px;
+
+    padding:0 15px;
+
+}
+
+
+
+
+.manpower-header-button{
+
+
+    width:45px;
+
+    height:45px;
+
+    border-radius:50%;
+
+    border:2px solid #111;
+
+    background:white;
 
     overflow:hidden;
 
@@ -37,54 +344,52 @@ body.syn-manpower-page {
 
 
 
-/* ==========================================================
-   MAIN PAGE
-========================================================== */
 
+.manpower-header-button img{
 
-.manpower-page {
 
     width:100%;
 
-    min-height:100vh;
+    height:100%;
+
+    object-fit:cover;
 
 }
 
 
 
-.manpower-content {
 
-    margin-left:220px;
+/* =====================================================
+   CONTENT
+===================================================== */
 
-    padding-top:65px;
 
-    min-height:calc(100vh - 95px);
+.manpower-content{
 
-    background:#f5f6f7;
 
-    padding-left:20px;
+    grid-column:2;
 
-    padding-right:20px;
+    padding:16px;
+
+    background:#f3f5f7;
 
 }
 
 
 
-.manpower-welcome {
+
+.manpower-welcome{
+
 
     display:inline-flex;
 
-    margin-top:20px;
-
-    padding:12px 18px;
+    padding:12px 15px;
 
     background:white;
 
     border-radius:10px;
 
-    border:1px solid #ddd;
-
-    font-size:14px;
+    font-size:13px;
 
     font-weight:700;
 
@@ -92,492 +397,60 @@ body.syn-manpower-page {
 
 
 
-/* ==========================================================
-   HEADER
-========================================================== */
 
 
-.manpower-header {
+/* =====================================================
+   FOOTER
+===================================================== */
 
-    position:fixed;
 
-    top:0;
+.manpower-footer{
 
-    left:0;
 
-    right:0;
-
-    height:65px;
-
+    grid-column:2;
 
     display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-
-    background:
-    linear-gradient(
-        90deg,
-        #111111,
-        #4b2525,
-        #d26b32
-    );
-
-
-    z-index:1000;
-
-
-}
-
-
-
-.manpower-header-brand {
-
-    display:flex;
-
-    align-items:center;
-
-}
-
-
-
-.manpower-header-brand img {
-
-    width:145px;
-
-    margin-left:20px;
-
-}
-
-
-
-.manpower-header-actions {
-
-    display:flex;
-
-    align-items:center;
-
-    gap:15px;
-
-    margin-right:20px;
-
-}
-
-
-
-.manpower-header-button {
-
-    width:42px;
-
-    height:42px;
-
-    border-radius:50%;
-
-    background:white;
-
-    border:none;
-
-    display:flex;
-
-    align-items:center;
 
     justify-content:center;
 
-    cursor:pointer;
-
-}
-
-
-
-.manpower-header-button img {
-
-    width:30px;
-
-    height:30px;
-
-    object-fit:contain;
-
-}
-
-
-
-/* ==========================================================
-   SIDEBAR
-========================================================== */
-
-
-.manpower-sidebar {
-
-
-    position:fixed;
-
-
-    top:65px;
-
-    left:0;
-
-
-    width:220px;
-
-
-    bottom:35px;
-
-
-    background:#e5e5e5;
-
-
-    overflow-y:auto;
-
-
-    z-index:900;
-
-
-}
-
-
-
-.manpower-sidebar-header {
-
-
-    height:80px;
-
-
-    display:flex;
-
-
     align-items:center;
-
-
-    justify-content:space-between;
-
-
-    background:#111;
-
-
-}
-
-
-
-.manpower-sidebar-logo img {
-
-
-    width:75px;
-
-    margin-left:20px;
-
-
-}
-
-
-
-.manpower-sidebar-toggle {
-
-
-    width:45px;
-
-
-    height:45px;
-
-
-    border:none;
-
-
-    background:white;
-
-
-    font-size:25px;
-
-
-    cursor:pointer;
-
-
-}
-
-
-
-/* ==========================================================
-   MENU
-========================================================== */
-
-
-.manpower-navigation {
-
-
-    width:100%;
-
-
-}
-
-
-
-.manpower-menu-group {
-
-
-    width:100%;
-
-
-}
-
-
-
-.manpower-menu-toggle {
-
-
-    width:100%;
-
-
-    padding:15px 20px;
-
-
-    border:none;
-
-
-    background:transparent;
-
-
-    display:flex;
-
-
-    justify-content:space-between;
-
-
-    align-items:center;
-
-
-    cursor:pointer;
-
-
-    font-weight:700;
-
-
-    font-size:14px;
-
-
-}
-
-
-
-.manpower-menu-toggle:hover {
-
-
-    background:#d5d5d5;
-
-
-}
-
-
-
-.manpower-submenu {
-
-
-    display:none;
-
-
-    background:#dedede;
-
-
-}
-
-
-
-.manpower-menu-group.is-open 
-.manpower-submenu {
-
-
-    display:block;
-
-
-}
-
-
-
-.manpower-submenu-link {
-
-
-    display:block;
-
-
-    padding:10px 35px;
-
-
-    color:#222;
-
-
-    text-decoration:none;
-
-
-    font-size:13px;
-
-
-}
-
-
-
-.manpower-submenu-link:hover {
-
-
-    background:#cfcfcf;
-
-
-}
-
-
-
-/* ==========================================================
-   ACTIVE MENU
-========================================================== */
-
-
-.manpower-menu-link {
-
-
-    display:flex;
-
-
-    align-items:center;
-
-
-    padding:15px 20px;
-
-
-    text-decoration:none;
-
-
-    color:#111;
-
-
-    font-weight:700;
-
-
-}
-
-
-
-.manpower-menu-link:hover {
-
-
-    background:#d5d5d5;
-
-
-}
-
-
-
-
-/* ==========================================================
-   SIDEBAR BOTTOM
-========================================================== */
-
-
-.manpower-sidebar-bottom {
-
-
-    position:absolute;
-
-
-    bottom:15px;
-
-
-    width:100%;
-
-
-}
-
-
-
-.manpower-sidebar-bottom a {
-
-
-    display:block;
-
-
-    padding:12px 25px;
-
-
-    color:#111;
-
-
-    text-decoration:none;
-
-
-    font-weight:bold;
-
-
-}
-
-
-
-/* ==========================================================
-   FOOTER
-========================================================== */
-
-
-.manpower-footer {
-
-
-    position:fixed;
-
-
-    bottom:0;
-
-
-    left:0;
-
-
-    width:100%;
-
-
-    height:35px;
 
 
     background:#333;
 
-
     color:white;
 
+    font-size:9px;
 
-    display:flex;
-
-
-    align-items:center;
-
-
-    justify-content:center;
-
-
-    font-size:12px;
-
-
-    z-index:1000;
-
+    font-weight:bold;
 
 }
 
 
 
-/* ==========================================================
-   RESPONSIVE
-========================================================== */
 
 
-@media(max-width:900px){
+/* =====================================================
+   COLLAPSE SIDEBAR
+===================================================== */
 
 
-.manpower-sidebar {
-
-    width:180px;
-
-}
+.manpower-page.sidebar-collapsed{
 
 
-.manpower-content {
-
-    margin-left:180px;
+    grid-template-columns:
+    70px 1fr;
 
 }
 
 
+
+.manpower-page.sidebar-collapsed
+.manpower-menu-label,
+.manpower-page.sidebar-collapsed
+.manpower-menu-arrow{
+
+
+    display:none;
 
 }

@@ -797,6 +797,87 @@
     flex: 0 0 44px;
 }
 
+/* =====================================================
+   FIX SCROLL CONTENT, SIDEBAR, DAN FOOTER
+   ===================================================== */
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+body.syn-manpower-page {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/*
+ * Seluruh layout harus tepat setinggi layar.
+ * Header 64px, isi fleksibel, footer 30px.
+ */
+.manpower-page {
+    width: 100%;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+
+    grid-template-rows:
+        64px
+        minmax(0, 1fr)
+        30px;
+}
+
+/*
+ * Sidebar tidak membuat halaman utama bertambah tinggi.
+ */
+.manpower-sidebar {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/*
+ * Yang dapat di-scroll hanya daftar menu sidebar.
+ */
+.manpower-navigation {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+/*
+ * Pengaturan dan Bantuan tetap berada di bawah sidebar.
+ */
+.manpower-sidebar-bottom {
+    flex: 0 0 auto;
+}
+
+/*
+ * Area konten memiliki scroll sendiri.
+ */
+.manpower-content {
+    min-width: 0;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+/*
+ * Footer selalu terlihat dan tidak tertutup konten.
+ */
+.manpower-footer {
+    position: relative;
+    z-index: 5;
+
+    width: 100%;
+    height: 30px;
+    min-height: 30px;
+
+    overflow: hidden;
+    flex: 0 0 30px;
+}
 </style>
 @endpush
 
@@ -833,7 +914,7 @@
     {{-- Dashboard --}}
     <a
         href="{{ route('manpower') }}"
-        class="manpower-menu-link active"
+        class="manpower-menu-link {{ request()->routeIs('manpower') ? 'active' : '' }}"
     >
         <span class="manpower-menu-icon">
             <img
@@ -848,11 +929,13 @@
     </a>
 
     {{-- Mine Permit --}}
-    <div class="manpower-menu-group">
+    <div
+        class="manpower-menu-group {{ request()->routeIs('mine-permit.*') ? 'is-open' : '' }}"
+    >
         <button
             type="button"
             class="manpower-menu-toggle"
-            aria-expanded="false"
+            aria-expanded="{{ request()->routeIs('mine-permit.*') ? 'true' : 'false' }}"
         >
             <span class="manpower-menu-icon">
                 <img
@@ -873,34 +956,44 @@
             </span>
         </button>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring SHE
-                </a>
+ <div class="manpower-submenu">
+    <div class="manpower-submenu-inner">
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring Internal Upload
-                </a>
+        <a
+            href="{{ route('mine-permit.monitoring-she') }}"
+            class="manpower-submenu-link
+                {{ request()->routeIs('mine-permit.monitoring-she')
+                    ? 'active'
+                    : '' }}"
+        >
+            Monitoring SHE
+        </a>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring Mine Permit
-                </a>
-            </div>
-        </div>
+        <a
+            href="{{ route('mine-permit.monitoring-internal-upload') }}"
+            class="manpower-submenu-link
+                {{ request()->routeIs('mine-permit.monitoring-internal-upload')
+                    ? 'active'
+                    : '' }}"
+        >
+            Monitoring Internal Upload
+        </a>
+
+        <a
+            href="#"
+            class="manpower-submenu-link"
+        >
+            Monitoring Mine Permit
+        </a>
+
     </div>
+</div>
 
-    {{-- Test BNN --}}
-    <div class="manpower-menu-group">
+{{-- Penutup manpower-menu-group Mine Permit --}}
+</div>
+
+{{-- Test BNN --}}
+<div class="manpower-menu-group">
         <button
             type="button"
             class="manpower-menu-toggle"
@@ -1061,57 +1154,56 @@
         </div>
     </div>
 
-    {{-- CC ST SP --}}
-    <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/CC,ST,SP.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                CC ST SP
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+{{-- CC ST SP --}}
+<div
+    class="manpower-menu-group
+        {{ request()->routeIs('cc-st-sp.*') ? 'is-open' : '' }}"
+>
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="{{ request()->routeIs('cc-st-sp.*') ? 'true' : 'false' }}"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/CC,ST,SP.png') }}"
+                alt=""
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Coaching Counselling
-                </a>
+        <span class="manpower-menu-label">CC ST SP</span>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Surat Teguran
-                </a>
+        <span class="manpower-menu-arrow" aria-hidden="true">›</span>
+    </button>
 
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Surat Peringatan
-                </a>
-            </div>
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="{{ route('cc-st-sp.coaching.index') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('cc-st-sp.coaching.*') ? 'active' : '' }}"
+            >
+                Coaching Counselling
+            </a>
+
+            <a
+                href="{{ route('cc-st-sp.teguran.index') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('cc-st-sp.teguran.*') ? 'active' : '' }}"
+            >
+                Surat Teguran
+            </a>
+
+            <a
+                href="{{ route('cc-st-sp.peringatan.index') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('cc-st-sp.peringatan.*') ? 'active' : '' }}"
+            >
+                Surat Peringatan
+            </a>
         </div>
     </div>
+</div>
 
     {{-- MCU & FU --}}
     <div class="manpower-menu-group">
@@ -1151,43 +1243,55 @@
         </div>
     </div>
 
-    {{-- Document Out --}}
-    <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/E-ARSIP.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                DOCUMENT OUT
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+{{-- Document Out --}}
+<div
+    class="manpower-menu-group
+        {{ request()->routeIs('document-out.*') ? 'is-open' : '' }}"
+>
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="{{
+            request()->routeIs('document-out.*')
+                ? 'true'
+                : 'false'
+        }}"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/E-ARSIP.png') }}"
+                alt=""
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring Dokumen
-                </a>
-            </div>
+        <span class="manpower-menu-label">
+            DOCUMENT OUT
+        </span>
+
+        <span
+            class="manpower-menu-arrow"
+            aria-hidden="true"
+        >
+            ›
+        </span>
+    </button>
+
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="{{ route('document-out.index') }}"
+                class="manpower-submenu-link
+                    {{
+                        request()->routeIs('document-out.*')
+                            ? 'active'
+                            : ''
+                    }}"
+            >
+                Monitoring Surat Keluar
+            </a>
         </div>
     </div>
+</div>
 </nav>
 
         <div class="manpower-sidebar-bottom">
@@ -1269,11 +1373,21 @@
 </header>
 
 {{-- Isi halaman --}}
-    <main class="manpower-content">
+<main class="manpower-content">
+
+    @if (isset($contentView))
+
+        @include($contentView)
+
+    @else
+
         <p class="manpower-welcome">
             Hi, {{ Auth::user()?->name ?? 'Pengguna' }}
         </p>
-    </main>
+
+    @endif
+
+</main>
 
     <footer class="manpower-footer">
         @COPYRIGHT SYNRGYPRO {{ date('Y') }}. V1.0
@@ -1307,48 +1421,150 @@
             );
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Buka dan tutup submenu
-        |--------------------------------------------------------------------------
-        */
+/*
+|--------------------------------------------------------------------------
+| Accordion submenu
+|--------------------------------------------------------------------------
+| Hanya satu grup submenu yang boleh terbuka.
+| Grup yang memiliki submenu aktif tetap terbuka saat halaman dimuat.
+*/
 
-        const menuToggles =
-            document.querySelectorAll(
-                '.manpower-menu-toggle'
-            );
+const menuGroups =
+    document.querySelectorAll(
+        '.manpower-menu-group'
+    );
 
-        menuToggles.forEach(function (menuToggle) {
-            menuToggle.addEventListener(
-                'click',
-                function () {
-                    const menuGroup =
-                        menuToggle.closest(
-                            '.manpower-menu-group'
-                        );
+const menuToggles =
+    document.querySelectorAll(
+        '.manpower-menu-toggle'
+    );
 
-                    if (!menuGroup) {
-                        return;
-                    }
 
-                    const willOpen =
-                        !menuGroup.classList.contains(
-                            'is-open'
-                        );
+/*
+|--------------------------------------------------------------------------
+| Atur submenu ketika halaman pertama kali dibuka
+|--------------------------------------------------------------------------
+*/
 
-                    menuGroup.classList.toggle(
-                        'is-open',
-                        willOpen
+const activeSubmenuLink =
+    document.querySelector(
+        '.manpower-submenu-link.active'
+    );
+
+const activeMenuGroup =
+    activeSubmenuLink
+        ? activeSubmenuLink.closest(
+            '.manpower-menu-group'
+        )
+        : null;
+
+
+menuGroups.forEach(function (menuGroup) {
+
+    const menuToggle =
+        menuGroup.querySelector(
+            '.manpower-menu-toggle'
+        );
+
+    const shouldOpen =
+        menuGroup === activeMenuGroup;
+
+    menuGroup.classList.toggle(
+        'is-open',
+        shouldOpen
+    );
+
+    if (menuToggle) {
+        menuToggle.setAttribute(
+            'aria-expanded',
+            String(shouldOpen)
+        );
+    }
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Buka menu yang diklik dan tutup menu lainnya
+|--------------------------------------------------------------------------
+*/
+
+menuToggles.forEach(function (menuToggle) {
+
+    menuToggle.addEventListener(
+        'click',
+        function () {
+
+            const selectedMenuGroup =
+                menuToggle.closest(
+                    '.manpower-menu-group'
+                );
+
+            if (!selectedMenuGroup) {
+                return;
+            }
+
+            const willOpen =
+                !selectedMenuGroup.classList.contains(
+                    'is-open'
+                );
+
+
+            /*
+             * Tutup seluruh submenu terlebih dahulu.
+             */
+
+            menuGroups.forEach(function (menuGroup) {
+
+                const otherToggle =
+                    menuGroup.querySelector(
+                        '.manpower-menu-toggle'
                     );
 
-                    menuToggle.setAttribute(
+                menuGroup.classList.remove(
+                    'is-open'
+                );
+
+                if (otherToggle) {
+                    otherToggle.setAttribute(
                         'aria-expanded',
-                        String(willOpen)
+                        'false'
                     );
                 }
-            );
-        });
-    });
 
+            });
+
+
+            /*
+             * Buka menu yang baru dipilih.
+             * Jika menu yang sama diklik ulang, menu tetap tertutup.
+             */
+
+            if (willOpen) {
+
+                selectedMenuGroup.classList.add(
+                    'is-open'
+                );
+
+                menuToggle.setAttribute(
+                    'aria-expanded',
+                    'true'
+                );
+
+            }
+
+        }
+    );
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Penutup DOMContentLoaded
+|--------------------------------------------------------------------------
+*/
+
+});
 </script>
 @endpush

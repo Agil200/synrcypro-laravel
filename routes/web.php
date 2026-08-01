@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BastAssetController;
+use App\Http\Controllers\CoachingCounsellingController;
+use App\Http\Controllers\StSpController;
+use App\Http\Controllers\GoogleOAuthController;
+use App\Http\Controllers\MinePermitController;
+use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -10,20 +15,27 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', [AuthController::class, 'showLogin'])
-    ->name('login');
+Route::get(
+    '/',
+    [AuthController::class, 'showLogin']
+)->name('login');
 
 /*
 |--------------------------------------------------------------------------
-| Google Login
+| Google Login SYNRGYPRO
 |--------------------------------------------------------------------------
+| Digunakan untuk login pengguna ke aplikasi.
 */
 
-Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])
-    ->name('auth.google');
+Route::get(
+    '/auth/google',
+    [AuthController::class, 'redirectToGoogle']
+)->name('auth.google');
 
-Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])
-    ->name('auth.google.callback');
+Route::get(
+    '/auth/google/callback',
+    [AuthController::class, 'handleGoogleCallback']
+)->name('auth.google.callback');
 
 /*
 |--------------------------------------------------------------------------
@@ -31,8 +43,10 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 |--------------------------------------------------------------------------
 */
 
-Route::post('/auth/guest', [AuthController::class, 'loginAsGuest'])
-    ->name('auth.guest');
+Route::post(
+    '/auth/guest',
+    [AuthController::class, 'loginAsGuest']
+)->name('auth.guest');
 
 /*
 |--------------------------------------------------------------------------
@@ -48,8 +62,10 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/dashboard', 'dashboard')
-        ->name('dashboard');
+    Route::view(
+        '/dashboard',
+        'dashboard'
+    )->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
@@ -57,8 +73,44 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/manpower', 'manpower')
-        ->name('manpower');
+    Route::view(
+        '/manpower',
+        'manpower'
+    )->name('manpower');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google OAuth untuk Google Sheets
+    |--------------------------------------------------------------------------
+    | Berbeda dengan Google Login di atas.
+    | Digunakan untuk memberikan izin baca Spreadsheet.
+    */
+
+    Route::get(
+        '/google/oauth/redirect',
+        [GoogleOAuthController::class, 'redirect']
+    )->name('google.oauth.redirect');
+
+    Route::get(
+        '/google/oauth/callback',
+        [GoogleOAuthController::class, 'callback']
+    )->name('google.oauth.callback');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mine Permit
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/manpower/mine-permit/monitoring-she',
+        [MinePermitController::class, 'monitoringShe']
+    )->name('mine-permit.monitoring-she');
+
+    Route::get(
+        '/manpower/mine-permit/monitoring-internal-upload',
+        [MinePermitController::class, 'monitoringInternalUpload']
+    )->name('mine-permit.monitoring-internal-upload');
 
     /*
     |--------------------------------------------------------------------------
@@ -66,8 +118,10 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/people-development', 'people-development')
-        ->name('people-development');
+    Route::view(
+        '/people-development',
+        'people-development'
+    )->name('people-development');
 
     /*
     |--------------------------------------------------------------------------
@@ -75,8 +129,10 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/database', 'database')
-        ->name('database');
+    Route::view(
+        '/database',
+        'database'
+    )->name('database');
 
     /*
     |--------------------------------------------------------------------------
@@ -84,8 +140,10 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/admin-all', 'admin-all')
-        ->name('admin-all');
+    Route::view(
+        '/admin-all',
+        'admin-all'
+    )->name('admin-all');
 
     /*
     |--------------------------------------------------------------------------
@@ -93,26 +151,160 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::view('/profil', 'profile.index')
-        ->name('profile.index');
+    Route::view(
+        '/profil',
+        'profile.index'
+    )->name('profile.index');
 
-    Route::view('/pengaturan-akun', 'profile.settings')
-        ->name('profile.settings');
+    Route::view(
+        '/pengaturan-akun',
+        'profile.settings'
+    )->name('profile.settings');
 
-    Route::view('/ubah-email', 'profile.change-email')
-        ->name('profile.change-email');
+    Route::view(
+        '/ubah-email',
+        'profile.change-email'
+    )->name('profile.change-email');
 
     /*
     |--------------------------------------------------------------------------
-    | Berita Acara Asset (BAST)
+    | Berita Acara Asset
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/bast-asset/{category?}', [BastAssetController::class, 'index'])
-        ->name('bast.index');
+    Route::get(
+        '/bast-asset/{category?}',
+        [BastAssetController::class, 'index']
+    )->name('bast.index');
 
-    Route::post('/bast-asset/store', [BastAssetController::class, 'store'])
-        ->name('bast.store');
+    Route::post(
+        '/bast-asset/store',
+        [BastAssetController::class, 'store']
+    )->name('bast.store');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DOCUMENT OUT — Monitoring Surat Keluar
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('manpower/document-out')
+        ->name('document-out.')
+        ->controller(SuratKeluarController::class)
+        ->group(function () {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            Route::post(
+                '/',
+                'store'
+            )->name('store');
+
+            Route::get(
+                '/{suratKeluar}/file',
+                'file'
+            )->name('file');
+
+            Route::put(
+                '/{suratKeluar}',
+                'update'
+            )->name('update');
+
+            Route::delete(
+                '/{suratKeluar}',
+                'destroy'
+            )->name('destroy');
+        });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CC, ST & SP
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('manpower/cc-st-sp')
+        ->name('cc-st-sp.')
+        ->group(function () {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Coaching & Counselling
+            |--------------------------------------------------------------------------
+            */
+
+            Route::prefix('coaching-counselling')
+                ->name('coaching.')
+                ->controller(CoachingCounsellingController::class)
+                ->group(function () {
+                    Route::get(
+                        '/',
+                        'index'
+                    )->name('index');
+
+                    Route::post(
+                        '/',
+                        'store'
+                    )->name('store');
+
+                    Route::get(
+                        '/{coachingCounselling}/file',
+                        'file'
+                    )->name('file');
+
+                    Route::put(
+                        '/{coachingCounselling}',
+                        'update'
+                    )->name('update');
+
+                    Route::delete(
+                        '/{coachingCounselling}',
+                        'destroy'
+                    )->name('destroy');
+                });
+
+            /*
+            |--------------------------------------------------------------------------
+            | Surat Teguran dan Surat Peringatan
+            |--------------------------------------------------------------------------
+            */
+
+            Route::controller(StSpController::class)
+                ->group(function () {
+                    Route::get(
+                        '/surat-teguran',
+                        'teguran'
+                    )->name('teguran.index');
+
+                    Route::get(
+                        '/surat-peringatan',
+                        'peringatan'
+                    )->name('peringatan.index');
+
+                    Route::post(
+                        '/st-sp',
+                        'store'
+                    )->name('st-sp.store');
+
+                    Route::get(
+                        '/st-sp/{stSpRecord}/file',
+                        'file'
+                    )->name('st-sp.file');
+
+                    Route::put(
+                        '/st-sp/{stSpRecord}',
+                        'update'
+                    )->name('st-sp.update');
+
+                    Route::delete(
+                        '/st-sp/{stSpRecord}',
+                        'destroy'
+                    )->name('st-sp.destroy');
+                });
+        });
 
     /*
     |--------------------------------------------------------------------------
@@ -120,6 +312,8 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::post('/logout', [AuthController::class, 'logout'])
-        ->name('logout');
+    Route::post(
+        '/logout',
+        [AuthController::class, 'logout']
+    )->name('logout');
 });
