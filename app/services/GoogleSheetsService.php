@@ -92,6 +92,57 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Ambil data mentah MASTER_DATABASE
+    |--------------------------------------------------------------------------
+    */
+
+    public function getMasterDatabaseValues(): array
+    {
+        $spreadsheetId = trim(
+            (string) config(
+                'services.google_sheets.master_database_spreadsheet_id'
+            )
+        );
+
+        $range = trim(
+            (string) config(
+                'services.google_sheets.master_database_range'
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID MASTER_DATABASE belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range MASTER_DATABASE belum diatur.'
+            );
+        }
+
+        return $this->getValues(
+            $spreadsheetId,
+            $range
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Periksa apakah token OAuth Google Sheets sudah tersimpan
+    |--------------------------------------------------------------------------
+    */
+
+    public function hasStoredToken(): bool
+    {
+        return Storage::disk('local')->exists(
+            self::TOKEN_PATH
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Baca values dari Google Sheets API
     |--------------------------------------------------------------------------
     */

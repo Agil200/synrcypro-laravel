@@ -8,7 +8,6 @@ use App\Http\Controllers\StSpController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\MinePermitController;
 use App\Http\Controllers\ManpowerDashboardController;
-use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
 
@@ -141,77 +140,13 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Menu Database & ATR — Fase 1 UI/UX
+    | Menu Database
     |--------------------------------------------------------------------------
     */
 
-    Route::prefix('database')
-        ->name('database.')
-        ->controller(DatabaseUiController::class)
-        ->group(function () {
-            Route::get(
-                '/',
-                'dashboard'
-            )->name('dashboard');
-
-            Route::get(
-                '/employees',
-                'employees'
-            )->name('employees');
-
-
-            Route::get(
-                '/employees/mapping-diagnostics',
-                'employeeMappingDiagnostics'
-            )->name('employees.mapping-diagnostics');
-
-
-            Route::post(
-                '/employees/test-fallback',
-                'testEmployeeFallback'
-            )->name('employees.test-fallback');
-
-
-            Route::post(
-                '/employees/sync',
-                'syncEmployees'
-            )->name('employees.sync');
-
-            Route::get(
-                '/atr',
-                'atrSummary'
-            )->name('atr.summary');
-
-            Route::get(
-                '/atr/upload',
-                'atrUpload'
-            )->name('atr.upload');
-
-            Route::get(
-                '/atr/import-history',
-                'atrHistory'
-            )->name('atr.history');
-
-            Route::get(
-                '/atr/call-documentation',
-                'atrCalls'
-            )->name('atr.calls');
-
-
-            Route::get(
-                '/atr/pic-roster',
-                'atrPicRoster'
-            )->name('atr.pic-roster');
-        });
-
-
-    /*
-     * Kompatibilitas untuk link lama yang masih memakai:
-     * route('database')
-     */
-    Route::redirect(
-        '/database-home',
-        '/database'
+    Route::view(
+        '/database',
+        'database'
     )->name('database');
 
     /*
