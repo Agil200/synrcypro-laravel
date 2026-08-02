@@ -58,10 +58,18 @@ class AuthController extends Controller
                 trim((string) $googleUser->getEmail())
             );
 
-            $allowedEmails = config(
-                'access.allowed_emails',
-                []
-            );
+$allowedEmails = array_map(
+    'trim',
+    explode(
+        ',',
+        strtolower(
+            (string) env(
+                'GOOGLE_SHEETS_ALLOWED_EMAIL',
+                ''
+            )
+        )
+    )
+);
 
             /*
              * Email kosong atau tidak terdapat dalam daftar akses.

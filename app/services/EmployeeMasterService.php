@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
@@ -19,6 +20,23 @@ class EmployeeMasterService
 
     private const LOCK_KEY =
         'database.master.employees.sync.lock.v1';
+
+    private const DURABLE_BACKUP_FILE =
+        'database-cache/master-employees-backup.json';
+
+    /**
+     * Field penting yang menentukan status kelengkapan detail karyawan.
+     */
+    private const DETAIL_REQUIRED_FIELDS = [
+        'nama',
+        'jabatan',
+        'departemen',
+        'perusahaan',
+        'site',
+        'no_hp',
+        'email',
+        'status_tinggal',
+    ];
 
     public function __construct(
         private readonly GoogleSheetsService $googleSheets
@@ -68,9 +86,15 @@ class EmployeeMasterService
 
     public function synchronize(): array
     {
-        return $this->refresh(
-            force: true
-        );
+        try {
+            return $this->refresh(
+                force: true
+            );
+        } catch (Throwable $exception) {
+            return $this->staleSnapshot(
+                $exception
+            );
+        }
     }
 
     /*
@@ -322,6 +346,7 @@ class EmployeeMasterService
                 'gedung',
                 'kamar',
                 'gedung_kamar',
+                'foto',
             ] as $field
         ) {
             $emptyCount = $employees
@@ -527,6 +552,9 @@ class EmployeeMasterService
             self::BACKUP_KEY
         );
 
+        $durableBackup =
+            $this->readDurableBackup();
+
         $meta = Cache::get(
             self::META_KEY,
             []
@@ -535,22 +563,52 @@ class EmployeeMasterService
         $freshExists =
             is_array($freshEmployees);
 
-        $backupExists =
-            is_array($backupEmployees);
+        $cacheBackupExists =
+            is_array($backupEmployees) &&
+            $backupEmployees !== [];
+
+        $durableExists =
+            is_array($durableBackup) &&
+            is_array(
+                $durableBackup['employees'] ??
+                null
+            );
 
         $freshCount =
             $freshExists
                 ? count($freshEmployees)
                 : 0;
 
-        $backupCount =
-            $backupExists
+        $cacheBackupCount =
+            $cacheBackupExists
                 ? count($backupEmployees)
                 : 0;
 
+        $durableCount =
+            $durableExists
+                ? count(
+                    $durableBackup['employees']
+                )
+                : 0;
+
+        $effectiveBackup =
+            $cacheBackupExists
+                ? $backupEmployees
+                : (
+                    $durableExists
+                        ? $durableBackup['employees']
+                        : []
+                );
+
+        $effectiveBackupCount =
+            count($effectiveBackup);
+
         $sameData = false;
 
-        if ($freshExists && $backupExists) {
+        if (
+            $freshExists &&
+            $effectiveBackup !== []
+        ) {
             $freshHash = hash(
                 'sha256',
                 json_encode(
@@ -563,7 +621,7 @@ class EmployeeMasterService
             $backupHash = hash(
                 'sha256',
                 json_encode(
-                    $backupEmployees,
+                    $effectiveBackup,
                     JSON_UNESCAPED_UNICODE |
                     JSON_UNESCAPED_SLASHES
                 ) ?: ''
@@ -583,14 +641,32 @@ class EmployeeMasterService
                     'file'
                 ),
             'fresh_exists' => $freshExists,
-            'backup_exists' => $backupExists,
+            'backup_exists' =>
+                $cacheBackupExists ||
+                $durableExists,
+            'cache_backup_exists' =>
+                $cacheBackupExists,
+            'durable_backup_exists' =>
+                $durableExists,
             'meta_exists' => is_array($meta),
             'fresh_count' => $freshCount,
-            'backup_count' => $backupCount,
+            'backup_count' =>
+                $effectiveBackupCount,
+            'cache_backup_count' =>
+                $cacheBackupCount,
+            'durable_backup_count' =>
+                $durableCount,
+            'backup_source' =>
+                $cacheBackupExists
+                    ? 'cache'
+                    : (
+                        $durableExists
+                            ? 'storage'
+                            : null
+                    ),
             'same_data' => $sameData,
             'fallback_ready' =>
-                $backupExists &&
-                $backupCount > 0,
+                $effectiveBackupCount > 0,
             'status' =>
                 is_array($meta)
                     ? (
@@ -627,12 +703,28 @@ class EmployeeMasterService
             self::BACKUP_KEY
         );
 
+        $source = 'cache';
+
+        if (
+            !is_array($backupEmployees) ||
+            $backupEmployees === []
+        ) {
+            $durableBackup =
+                $this->readDurableBackup();
+
+            $backupEmployees =
+                $durableBackup['employees'] ??
+                [];
+
+            $source = 'storage';
+        }
+
         if (
             !is_array($backupEmployees) ||
             $backupEmployees === []
         ) {
             throw new RuntimeException(
-                'Backup cache belum tersedia. Jalankan sinkronisasi terlebih dahulu.'
+                'Backup belum tersedia. Jalankan sinkronisasi berhasil satu kali terlebih dahulu.'
             );
         }
 
@@ -647,6 +739,7 @@ class EmployeeMasterService
 
         return [
             'status' => 'passed',
+            'source' => $source,
             'employees_count' =>
                 count($backupEmployees),
             'sample_nrps' => $sampleNrps,
@@ -758,13 +851,40 @@ class EmployeeMasterService
                 );
 
                 /*
-                 * Backup tidak diberi TTL agar data terakhir tetap
-                 * tersedia ketika Google sedang tidak dapat diakses.
+                 * Backup cache cepat. Cache ini bisa hilang jika
+                 * administrator menjalankan cache:clear.
                  */
                 Cache::forever(
                     self::BACKUP_KEY,
                     $employees
                 );
+
+                /*
+                 * Backup tahan lama di storage/app. Backup ini tetap ada
+                 * meskipun cache Laravel dibersihkan.
+                 */
+                try {
+                    $this->writeDurableBackup(
+                        $employees,
+                        $meta
+                    );
+
+                    $meta['durable_backup_status'] =
+                        'ready';
+
+                    $meta['durable_backup_file'] =
+                        self::DURABLE_BACKUP_FILE;
+                } catch (Throwable $backupException) {
+                    /*
+                     * Kegagalan menulis backup tidak boleh membatalkan
+                     * sinkronisasi Google yang sudah berhasil.
+                     */
+                    $meta['durable_backup_status'] =
+                        'failed';
+
+                    $meta['durable_backup_error'] =
+                        $backupException->getMessage();
+                }
 
                 Cache::forever(
                     self::META_KEY,
@@ -792,7 +912,46 @@ class EmployeeMasterService
             self::BACKUP_KEY
         );
 
-        if (!is_array($backupEmployees)) {
+        $backupMeta = Cache::get(
+            self::META_KEY,
+            []
+        );
+
+        $fallbackSource = 'cache';
+
+        if (
+            !is_array($backupEmployees) ||
+            $backupEmployees === []
+        ) {
+            $durableBackup =
+                $this->readDurableBackup();
+
+            if ($durableBackup !== null) {
+                $backupEmployees =
+                    $durableBackup['employees'];
+
+                $backupMeta =
+                    $durableBackup['meta'];
+
+                $fallbackSource =
+                    'storage';
+
+                Cache::forever(
+                    self::BACKUP_KEY,
+                    $backupEmployees
+                );
+
+                Cache::forever(
+                    self::META_KEY,
+                    $backupMeta
+                );
+            }
+        }
+
+        if (
+            !is_array($backupEmployees) ||
+            $backupEmployees === []
+        ) {
             return [
                 'employees' => [],
                 'meta' => [
@@ -811,21 +970,109 @@ class EmployeeMasterService
                     'header_row' => null,
                     'missing_fields' => [],
                     'is_stale' => false,
+                    'fallback_available' => false,
+                    'fallback_source' => null,
                     'error' => $exception->getMessage(),
                 ],
             ];
         }
 
-        $meta = $this->meta(
-            isStale: true
-        );
+        if (!is_array($backupMeta)) {
+            $backupMeta = [];
+        }
 
-        $meta['status'] = 'stale';
-        $meta['error'] = $exception->getMessage();
+        $meta = array_merge(
+            $this->meta(
+                isStale: true
+            ),
+            $backupMeta,
+            [
+                'status' => 'stale',
+                'mapped_rows' =>
+                    count($backupEmployees),
+                'is_stale' => true,
+                'fallback_available' => true,
+                'fallback_source' =>
+                    $fallbackSource,
+                'error' =>
+                    $exception->getMessage(),
+            ]
+        );
 
         return [
             'employees' => $backupEmployees,
             'meta' => $meta,
+        ];
+    }
+
+    private function writeDurableBackup(
+        array $employees,
+        array $meta
+    ): void {
+        $payload = [
+            'version' => 1,
+            'saved_at' =>
+                now()->toIso8601String(),
+            'employees' => $employees,
+            'meta' => $meta,
+        ];
+
+        $json = json_encode(
+            $payload,
+            JSON_PRETTY_PRINT |
+            JSON_UNESCAPED_UNICODE |
+            JSON_UNESCAPED_SLASHES |
+            JSON_THROW_ON_ERROR
+        );
+
+        Storage::disk('local')->put(
+            self::DURABLE_BACKUP_FILE,
+            $json
+        );
+    }
+
+    private function readDurableBackup(): ?array
+    {
+        $disk = Storage::disk('local');
+
+        if (!$disk->exists(
+            self::DURABLE_BACKUP_FILE
+        )) {
+            return null;
+        }
+
+        try {
+            $payload = json_decode(
+                (string) $disk->get(
+                    self::DURABLE_BACKUP_FILE
+                ),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+        } catch (Throwable) {
+            return null;
+        }
+
+        $employees =
+            $payload['employees'] ?? null;
+
+        $meta =
+            $payload['meta'] ?? [];
+
+        if (
+            !is_array($employees) ||
+            $employees === []
+        ) {
+            return null;
+        }
+
+        return [
+            'employees' => $employees,
+            'meta' =>
+                is_array($meta)
+                    ? $meta
+                    : [],
         ];
     }
 
@@ -864,6 +1111,11 @@ class EmployeeMasterService
                 'duplicate_rows' => 0,
                 'header_row' => null,
                 'missing_fields' => [],
+                'fallback_available' => false,
+                'fallback_source' => null,
+                'durable_backup_status' => null,
+                'durable_backup_file' =>
+                    self::DURABLE_BACKUP_FILE,
                 'error' => null,
             ],
             $meta,
@@ -1089,6 +1341,14 @@ class EmployeeMasterService
                         $kamar
                     ),
 
+                'foto' =>
+                    $this->valueOrDash(
+                        $this->cell(
+                            $row,
+                            $columns['foto']
+                        )
+                    ),
+
                 'source_row' =>
                     $rowIndex + 1,
             ];
@@ -1112,8 +1372,10 @@ class EmployeeMasterService
                 $employee;
         }
 
-        $employees = array_values(
-            $employeesByNrp
+        $employees = array_map(
+            fn (array $employee): array =>
+                $this->finalizeEmployee($employee),
+            array_values($employeesByNrp)
         );
 
         usort(
@@ -1276,6 +1538,17 @@ class EmployeeMasterService
                 'GEDUNG/KAMAR',
                 'MESS GEDUNG KAMAR',
             ],
+
+            'foto' => [
+                'PASS FOTO MENGGUNAKAN SERAGAM KERJA',
+                'PASFOTO MENGGUNAKAN SERAGAM KERJA',
+                'PASSFOTO MENGGUNAKAN SERAGAM KERJA',
+                'PASS FOTO SERAGAM',
+                'PASFOTO SERAGAM',
+                'FOTO KARYAWAN',
+                'PAS FOTO',
+                'FOTO',
+            ],
         ];
     }
 
@@ -1296,6 +1569,7 @@ class EmployeeMasterService
             'gedung' => 'Gedung',
             'kamar' => 'Kamar',
             'gedung_kamar' => 'Gedung/Kamar Gabungan',
+            'foto' => 'Pas Foto',
         ];
     }
 
@@ -1732,6 +2006,463 @@ class EmployeeMasterService
             trim((string) ($parts[0] ?? '')),
             trim((string) ($parts[1] ?? '')),
         ];
+    }
+
+    /**
+     * Menambahkan field turunan untuk modal detail karyawan.
+     */
+    private function finalizeEmployee(
+        array $employee
+    ): array {
+        $missingFields = [];
+
+        foreach (
+            self::DETAIL_REQUIRED_FIELDS
+            as $field
+        ) {
+            $value = $employee[$field] ?? null;
+
+            if ($this->isMissingEmployeeValue($value)) {
+                $missingFields[] = $field;
+            }
+        }
+
+        $requiredCount = count(
+            self::DETAIL_REQUIRED_FIELDS
+        );
+
+        $filledCount = max(
+            0,
+            $requiredCount - count($missingFields)
+        );
+
+        $photo = $this->photoMetadata(
+            $employee['foto'] ?? null
+        );
+
+        $employee['foto_url'] =
+            $photo['source_url'];
+
+        $employee['foto_open_url'] =
+            $photo['open_url'];
+
+        $employee['foto_preview_url'] =
+            $photo['preview_url'];
+
+        $employee['foto_preview_candidates'] =
+            $photo['preview_candidates'];
+
+        $employee['foto_drive_id'] =
+            $photo['drive_file_id'];
+
+        $employee['foto_source_type'] =
+            $photo['source_type'];
+
+        $employee['foto_available'] =
+            $photo['source_url'] !== null;
+
+        $whatsappNumber =
+            $this->normalizeWhatsappNumber(
+                (string) ($employee['no_hp'] ?? '')
+            );
+
+        $employee['whatsapp_number'] =
+            $whatsappNumber !== ''
+                ? $whatsappNumber
+                : null;
+
+        $employee['whatsapp_url'] =
+            $whatsappNumber !== ''
+                ? 'https://wa.me/' . $whatsappNumber
+                : null;
+
+        $email = trim(
+            (string) ($employee['email'] ?? '')
+        );
+
+        $employee['email_url'] =
+            $email !== '' &&
+            $email !== '-' &&
+            filter_var(
+                $email,
+                FILTER_VALIDATE_EMAIL
+            )
+                ? 'mailto:' . $email
+                : null;
+
+        $employee['missing_fields'] =
+            $missingFields;
+
+        $employee['missing_field_labels'] =
+            array_map(
+                fn (string $field): string =>
+                    $this->fieldLabels()[$field] ??
+                    strtoupper($field),
+                $missingFields
+            );
+
+        $employee['is_complete'] =
+            $missingFields === [];
+
+        $employee['kelengkapan_status'] =
+            $employee['is_complete']
+                ? 'LENGKAP'
+                : 'BELUM LENGKAP';
+
+        $employee['completion_percentage'] =
+            $requiredCount > 0
+                ? (int) round(
+                    ($filledCount / $requiredCount) *
+                    100
+                )
+                : 100;
+
+        return $employee;
+    }
+
+    /**
+     * Nilai kosong dan tanda "-" dianggap belum lengkap.
+     */
+    private function isMissingEmployeeValue(
+        mixed $value
+    ): bool {
+        if ($value === null) {
+            return true;
+        }
+
+        $normalized = trim(
+            (string) $value
+        );
+
+        return $normalized === '' ||
+            $normalized === '-';
+    }
+
+    /**
+     * Menyiapkan seluruh informasi pas foto untuk tampilan modal.
+     *
+     * Satu foto dapat mempunyai beberapa kandidat URL preview. Browser akan
+     * mencobanya secara berurutan sehingga format tautan Google Drive yang
+     * berbeda tetap dapat ditampilkan tanpa mengubah data sumber.
+     */
+    private function photoMetadata(
+        mixed $value
+    ): array {
+        $source = $this->normalizePhotoSource(
+            $value
+        );
+
+        $empty = [
+            'source_url' => null,
+            'open_url' => null,
+            'preview_url' => null,
+            'preview_candidates' => [],
+            'drive_file_id' => null,
+            'source_type' => 'missing',
+        ];
+
+        if ($source === null) {
+            return $empty;
+        }
+
+        $fileId = $this->googleDriveFileId(
+            $source
+        );
+
+        if ($fileId !== null) {
+            $encodedId = rawurlencode($fileId);
+
+            $previewCandidates = array_values(
+                array_unique([
+                    'https://drive.google.com/thumbnail?id=' .
+                    $encodedId .
+                    '&sz=w1200',
+
+                    'https://lh3.googleusercontent.com/d/' .
+                    $encodedId .
+                    '=w1200',
+
+                    'https://drive.google.com/uc?export=view&id=' .
+                    $encodedId,
+                ])
+            );
+
+            return [
+                'source_url' =>
+                    'https://drive.google.com/file/d/' .
+                    $encodedId .
+                    '/view',
+
+                'open_url' =>
+                    'https://drive.google.com/file/d/' .
+                    $encodedId .
+                    '/view',
+
+                'preview_url' =>
+                    $previewCandidates[0] ?? null,
+
+                'preview_candidates' =>
+                    $previewCandidates,
+
+                'drive_file_id' => $fileId,
+                'source_type' => 'google_drive',
+            ];
+        }
+
+        if (!$this->isSafeHttpUrl($source)) {
+            return $empty;
+        }
+
+        return [
+            'source_url' => $source,
+            'open_url' => $source,
+            'preview_url' => $source,
+            'preview_candidates' => [$source],
+            'drive_file_id' => null,
+            'source_type' => 'external_url',
+        ];
+    }
+
+    /**
+     * Kompatibilitas dengan field lama yang hanya memerlukan satu URL.
+     */
+    private function photoPreviewUrl(
+        ?string $url
+    ): ?string {
+        return $this->photoMetadata(
+            $url
+        )['preview_url'];
+    }
+
+    /**
+     * Membersihkan nilai foto dari spreadsheet.
+     *
+     * Format yang didukung antara lain URL biasa, formula HYPERLINK, URL yang
+     * ter-encode, tautan tanpa skema, serta Google Drive file ID langsung.
+     */
+    private function normalizePhotoSource(
+        mixed $value
+    ): ?string {
+        $text = html_entity_decode(
+            trim((string) $value),
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8'
+        );
+
+        if ($text === '' || $text === '-') {
+            return null;
+        }
+
+        if (
+            preg_match(
+                '/^=HYPERLINK\(\s*["\']([^"\']+)["\']/i',
+                $text,
+                $formulaMatch
+            ) === 1
+        ) {
+            $text = trim(
+                (string) ($formulaMatch[1] ?? '')
+            );
+        }
+
+        if (
+            !str_contains($text, '://') &&
+            preg_match(
+                '~https?%3A%2F%2F~i',
+                $text
+            ) === 1
+        ) {
+            $decoded = rawurldecode($text);
+
+            if ($decoded !== '') {
+                $text = $decoded;
+            }
+        }
+
+        if (
+            preg_match(
+                '~https?://[^\s"\'<>]+~i',
+                $text,
+                $urlMatch
+            ) === 1
+        ) {
+            $text = (string) ($urlMatch[0] ?? $text);
+        }
+
+        $text = trim(
+            $text,
+            " \t\n\r\0\x0B\"'<>"
+        );
+
+        if (str_starts_with($text, '//')) {
+            $text = 'https:' . $text;
+        }
+
+        if (
+            str_starts_with(
+                strtolower($text),
+                'www.'
+            ) ||
+            str_starts_with(
+                strtolower($text),
+                'drive.google.com/'
+            ) ||
+            str_starts_with(
+                strtolower($text),
+                'docs.google.com/'
+            )
+        ) {
+            $text = 'https://' . $text;
+        }
+
+        if ($this->looksLikeGoogleDriveFileId($text)) {
+            return $text;
+        }
+
+        return $this->isSafeHttpUrl($text)
+            ? $text
+            : null;
+    }
+
+    /**
+     * Mendukung format:
+     * - drive.google.com/open?id=...
+     * - drive.google.com/file/d/.../view
+     * - drive.google.com/uc?id=...
+     * - drive.google.com/thumbnail?id=...
+     * - drive.usercontent.google.com/...id=...
+     * - lh3.googleusercontent.com/d/...
+     * - file ID Google Drive langsung
+     */
+    private function googleDriveFileId(
+        string $url
+    ): ?string {
+        $candidate = trim($url);
+
+        if ($this->looksLikeGoogleDriveFileId($candidate)) {
+            return $candidate;
+        }
+
+        $query = parse_url(
+            $candidate,
+            PHP_URL_QUERY
+        );
+
+        if (is_string($query)) {
+            parse_str($query, $parameters);
+
+            foreach (['id', 'file_id'] as $key) {
+                $id = trim(
+                    (string) ($parameters[$key] ?? '')
+                );
+
+                if ($this->looksLikeGoogleDriveFileId($id)) {
+                    return $id;
+                }
+            }
+        }
+
+        $patterns = [
+            '~drive\.google\.com/file/d/([^/?#]+)~i',
+            '~drive\.google\.com/d/([^/?#]+)~i',
+            '~googleusercontent\.com/d/([^/?#=]+)~i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (
+                preg_match(
+                    $pattern,
+                    $candidate,
+                    $matches
+                ) !== 1
+            ) {
+                continue;
+            }
+
+            $id = trim(
+                rawurldecode(
+                    (string) ($matches[1] ?? '')
+                )
+            );
+
+            if ($this->looksLikeGoogleDriveFileId($id)) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Google Drive file ID umumnya berisi huruf, angka, garis bawah, dan
+     * tanda minus. Batas minimal mencegah teks biasa dianggap sebagai ID.
+     */
+    private function looksLikeGoogleDriveFileId(
+        string $value
+    ): bool {
+        return preg_match(
+            '/^[A-Za-z0-9_-]{20,}$/',
+            trim($value)
+        ) === 1;
+    }
+
+    /**
+     * Hanya URL HTTP/HTTPS yang boleh diteruskan ke atribut href/src.
+     */
+    private function isSafeHttpUrl(
+        string $url
+    ): bool {
+        if (
+            filter_var(
+                $url,
+                FILTER_VALIDATE_URL
+            ) === false
+        ) {
+            return false;
+        }
+
+        $scheme = strtolower(
+            (string) parse_url(
+                $url,
+                PHP_URL_SCHEME
+            )
+        );
+
+        return in_array(
+            $scheme,
+            ['http', 'https'],
+            true
+        );
+    }
+
+    /**
+     * Menyiapkan nomor untuk tautan wa.me.
+     */
+    private function normalizeWhatsappNumber(
+        string $value
+    ): string {
+        $digits = preg_replace(
+            '/\D+/',
+            '',
+            $value
+        ) ?? '';
+
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '0')) {
+            return '62' . substr(
+                $digits,
+                1
+            );
+        }
+
+        if (str_starts_with($digits, '62')) {
+            return $digits;
+        }
+
+        return $digits;
     }
 
     private function mergeNonEmpty(

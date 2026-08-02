@@ -283,34 +283,55 @@ class DatabaseUiController extends Controller
 
     public function syncEmployees(): RedirectResponse
     {
-        try {
-            $snapshot =
-                $this->employeeMaster
-                    ->synchronize();
+        $snapshot =
+            $this->employeeMaster
+                ->synchronize();
 
-            $mappedRows = (int) (
-                $snapshot['meta']['mapped_rows'] ??
-                count(
-                    $snapshot['employees'] ?? []
-                )
-            );
+        $meta =
+            $snapshot['meta'] ?? [];
 
+        $status = (string) (
+            $meta['status'] ?? 'error'
+        );
+
+        $mappedRows = (int) (
+            $meta['mapped_rows'] ??
+            count(
+                $snapshot['employees'] ?? []
+            )
+        );
+
+        if ($status === 'synced') {
             return redirect()
                 ->route('database.employees')
                 ->with(
                     'success',
                     'MASTER_DATABASE berhasil disinkronkan. ' .
                     number_format($mappedRows) .
-                    ' karyawan dimuat ke cache.'
+                    ' karyawan dimuat ke cache dan backup lokal.'
                 );
-        } catch (Throwable $exception) {
+        }
+
+        if ($status === 'stale') {
             return redirect()
                 ->route('database.employees')
                 ->with(
-                    'error',
-                    $exception->getMessage()
+                    'warning',
+                    'Google Sheets tidak dapat diakses. Sistem tetap menampilkan ' .
+                    number_format($mappedRows) .
+                    ' karyawan dari backup terakhir.'
                 );
         }
+
+        return redirect()
+            ->route('database.employees')
+            ->with(
+                'error',
+                (string) (
+                    $meta['error'] ??
+                    'MASTER_DATABASE belum dapat dimuat dan backup belum tersedia.'
+                )
+            );
     }
 
     public function atrSummary(): View

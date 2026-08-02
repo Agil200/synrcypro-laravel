@@ -23,7 +23,7 @@
         <img
             src="{{ asset('assets/images/synrgypro-logo.png') }}"
             class="auth-login-app-logo"
-            alt="SYNRCYPRO Production Monitoring"
+            alt="SYNRGYPRO Production Monitoring"
             id="login-title"
         >
 
@@ -40,10 +40,10 @@
         <div class="auth-login-actions">
 
             {{-- LOGIN GOOGLE --}}
-            <a
-                href="{{ route('auth.google') }}"
-                class="auth-login-button auth-login-google"
-            >
+<a
+    href="{{ route('auth.google') }}"
+    class="auth-login-button auth-login-google"
+>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path
                         fill="#4285F4"

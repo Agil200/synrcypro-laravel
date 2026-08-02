@@ -33,8 +33,8 @@
     $statusLabel = match ($syncStatus) {
         'synced' => 'Baru Disinkronkan',
         'cached' => 'Menggunakan Cache',
-        'stale' => 'Cache Terakhir',
-        default => 'Belum Terhubung',
+        'stale' => 'Menggunakan Backup Terakhir',
+        default => 'Data Belum Tersedia',
     };
 
     $statusClass = match ($syncStatus) {
@@ -42,6 +42,21 @@
         'stale' => 'warning',
         default => 'danger',
     };
+
+    $fallbackSource = match (
+        (string) (
+            $syncMeta['fallback_source'] ?? ''
+        )
+    ) {
+        'storage' => 'backup lokal tahan lama',
+        'cache' => 'backup cache',
+        default => 'backup terakhir',
+    };
+
+    $hasUsableData =
+        (int) (
+            $syncMeta['mapped_rows'] ?? 0
+        ) > 0;
 @endphp
 
 <div class="db-page-title employee-page-head">
@@ -53,16 +68,31 @@
     </div>
 
     <div class="employee-head-actions">
-        @if ($googleConnected ?? false)
+        @if (
+            ($googleConnected ?? false) &&
+            in_array(
+                $syncStatus,
+                ['synced', 'cached'],
+                true
+            )
+        )
             <span class="employee-connection connected">
                 ● Google Terhubung
             </span>
+        @elseif ($syncStatus === 'stale')
+            <a
+                href="{{ route('google.oauth.redirect') }}"
+                class="employee-connection warning"
+                title="Hubungkan ulang Google Sheets"
+            >
+                ⚠ CACHE AKTIF
+            </a>
         @else
             <a
                 href="{{ route('google.oauth.redirect') }}"
-                class="db-button secondary"
+                class="employee-connection disconnected"
             >
-                HUBUNGKAN GOOGLE
+                ● HUBUNGKAN ULANG GOOGLE
             </a>
         @endif
 
@@ -109,6 +139,12 @@
 @if (session('success'))
     <div class="employee-alert success">
         {{ session('success') }}
+    </div>
+@endif
+
+@if (session('warning'))
+    <div class="employee-alert warning">
+        {{ session('warning') }}
     </div>
 @endif
 
@@ -168,13 +204,30 @@
         </span>
     </div>
 
-    @if ($syncError !== '')
+    @if ($syncStatus === 'stale')
+        <p class="employee-sync-error">
+            Google Sheets sedang tidak dapat diakses:
+            <strong>{{ $syncError }}</strong>.
+
+            Sistem tetap menampilkan
+            <strong>
+                {{ number_format(
+                    (int) (
+                        $syncMeta['mapped_rows'] ?? 0
+                    )
+                ) }}
+                karyawan
+            </strong>
+            dari {{ $fallbackSource }}.
+        </p>
+    @elseif ($syncError !== '')
         <p class="employee-sync-error">
             {{ $syncError }}
 
-            @if ($syncStatus === 'stale')
-                Data cache terakhir tetap ditampilkan.
-            @endif
+            @unless ($hasUsableData)
+                Backup belum tersedia. Hubungkan ulang Google,
+                lalu lakukan sinkronisasi satu kali.
+            @endunless
         </p>
     @endif
 </section>
@@ -441,6 +494,170 @@
                             )
                                 ? 'green'
                                 : 'orange';
+
+
+                        $completionPercentage = max(
+                            0,
+                            min(
+                                100,
+                                (int) (
+                                    $employee[
+                                        'completion_percentage'
+                                    ] ?? 0
+                                )
+                            )
+                        );
+
+                        $isComplete = (bool) (
+                            $employee['is_complete'] ?? false
+                        );
+
+                        $completenessStatus = (string) (
+                            $employee['kelengkapan_status'] ??
+                            (
+                                $isComplete
+                                    ? 'LENGKAP'
+                                    : 'BELUM LENGKAP'
+                            )
+                        );
+
+                        $missingFieldLabels = array_values(
+                            array_filter(
+                                (array) (
+                                    $employee[
+                                        'missing_field_labels'
+                                    ] ?? []
+                                ),
+                                fn ($value): bool =>
+                                    trim((string) $value) !== ''
+                            )
+                        );
+
+                        $whatsappUrl = trim(
+                            (string) (
+                                $employee['whatsapp_url'] ?? ''
+                            )
+                        );
+
+                        if (
+                            $whatsappUrl === '' &&
+                            $phoneDigits !== ''
+                        ) {
+                            $whatsappUrl =
+                                'https://wa.me/' .
+                                $phoneDigits;
+                        }
+
+                        $emailUrl = trim(
+                            (string) (
+                                $employee['email_url'] ?? ''
+                            )
+                        );
+
+                        if (
+                            $emailUrl === '' &&
+                            !empty($employee['email']) &&
+                            $employee['email'] !== '-'
+                        ) {
+                            $emailUrl =
+                                'mailto:' .
+                                $employee['email'];
+                        }
+
+                        $employeeModalData = [
+                            'nrp' =>
+                                $employee['nrp'] ?? '-',
+                            'nama' =>
+                                $employee['nama'] ?? '-',
+                            'jabatan' =>
+                                $employee['jabatan'] ?? '-',
+                            'departemen' =>
+                                $employee['departemen'] ?? '-',
+                            'perusahaan' =>
+                                $employee['perusahaan'] ?? '-',
+                            'site' =>
+                                $employee['site'] ?? '-',
+                            'tanggalLahir' =>
+                                $employee['tanggal_lahir'] ?? '-',
+                            'statusKaryawan' =>
+                                $employmentStatus,
+                            'statusTinggal' =>
+                                $employee['status_tinggal'] ?? '-',
+                            'gedung' =>
+                                $employee['gedung'] ?? '-',
+                            'kamar' =>
+                                $employee['kamar'] ?? '-',
+                            'gedungKamar' =>
+                                $employee['gedung_kamar'] ?? (
+                                    ($employee['gedung'] ?? '-') .
+                                    ' / ' .
+                                    ($employee['kamar'] ?? '-')
+                                ),
+                            'noHp' =>
+                                $employee['no_hp'] ?? '-',
+                            'email' =>
+                                $employee['email'] ?? '-',
+                            'fotoUrl' =>
+                                $employee['foto_url'] ?? null,
+                            'fotoOpenUrl' =>
+                                $employee[
+                                    'foto_open_url'
+                                ] ?? (
+                                    $employee['foto_url'] ?? null
+                                ),
+                            'fotoPreviewUrl' =>
+                                $employee[
+                                    'foto_preview_url'
+                                ] ?? null,
+                            'fotoPreviewCandidates' =>
+                                array_values(
+                                    array_filter(
+                                        (array) (
+                                            $employee[
+                                                'foto_preview_candidates'
+                                            ] ?? []
+                                        ),
+                                        fn ($value): bool =>
+                                            trim((string) $value) !== ''
+                                    )
+                                ),
+                            'fotoAvailable' =>
+                                (bool) (
+                                    $employee[
+                                        'foto_available'
+                                    ] ?? false
+                                ),
+                            'fotoSourceType' =>
+                                $employee[
+                                    'foto_source_type'
+                                ] ?? 'missing',
+                            'whatsappUrl' =>
+                                $whatsappUrl !== ''
+                                    ? $whatsappUrl
+                                    : null,
+                            'emailUrl' =>
+                                $emailUrl !== ''
+                                    ? $emailUrl
+                                    : null,
+                            'isComplete' => $isComplete,
+                            'completenessStatus' =>
+                                $completenessStatus,
+                            'completionPercentage' =>
+                                $completionPercentage,
+                            'missingFieldLabels' =>
+                                $missingFieldLabels,
+                        ];
+
+                        $employeeModalJson = (string) json_encode(
+                            $employeeModalData,
+                            JSON_HEX_APOS |
+                            JSON_HEX_QUOT |
+                            JSON_HEX_AMP |
+                            JSON_HEX_TAG |
+                            JSON_UNESCAPED_UNICODE |
+                            JSON_UNESCAPED_SLASHES |
+                            JSON_INVALID_UTF8_SUBSTITUTE
+                        );
                     @endphp
 
                     <tr>
@@ -485,92 +702,15 @@
                         </td>
 
                         <td>
-                            <details class="employee-detail">
-                                <summary class="db-button">
-                                    DETAIL
-                                </summary>
-
-                                <div class="employee-detail-card">
-                                    <div class="employee-detail-title">
-                                        <strong>
-                                            {{ $employee['nama'] ?? '-' }}
-                                        </strong>
-
-                                        <small>
-                                            NRP:
-                                            {{ $employee['nrp'] ?? '-' }}
-                                        </small>
-                                    </div>
-
-                                    <dl class="employee-detail-list">
-                                        <div>
-                                            <dt>Jabatan</dt>
-                                            <dd>
-                                                {{ $employee['jabatan'] ?? '-' }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Departemen</dt>
-                                            <dd>
-                                                {{ $employee['departemen'] ?? '-' }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Perusahaan/Site</dt>
-                                            <dd>
-                                                {{ $employee['perusahaan'] ?? '-' }}
-                                                /
-                                                {{ $employee['site'] ?? '-' }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Tanggal Lahir</dt>
-                                            <dd>
-                                                {{ $employee['tanggal_lahir'] ?? '-' }}
-                                            </dd>
-                                        </div>
-
-                                        <div>
-                                            <dt>Tempat Tinggal</dt>
-                                            <dd>
-                                                {{ $employee['status_tinggal'] ?? '-' }}
-                                                ·
-                                                {{ $employee['gedung'] ?? '-' }}
-                                                /
-                                                {{ $employee['kamar'] ?? '-' }}
-                                            </dd>
-                                        </div>
-                                    </dl>
-
-                                    <div class="db-actions">
-                                        @if ($phoneDigits !== '')
-                                            <a
-                                                href="https://wa.me/{{ $phoneDigits }}"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="db-button green"
-                                            >
-                                                WHATSAPP
-                                            </a>
-                                        @endif
-
-                                        @if (
-                                            !empty($employee['email']) &&
-                                            $employee['email'] !== '-'
-                                        )
-                                            <a
-                                                href="mailto:{{ $employee['email'] }}"
-                                                class="db-button dark"
-                                            >
-                                                KIRIM EMAIL
-                                            </a>
-                                        @endif
-                                    </div>
-                                </div>
-                            </details>
+                            <button
+                                type="button"
+                                class="db-button employee-detail-trigger"
+                                data-employee="{{ $employeeModalJson }}"
+                                aria-haspopup="dialog"
+                                aria-controls="employeeDetailModal"
+                            >
+                                DETAIL
+                            </button>
                         </td>
                     </tr>
                 @empty
@@ -631,6 +771,246 @@
         </div>
     @endif
 </section>
+
+<div
+    class="employee-modal"
+    id="employeeDetailModal"
+    hidden
+>
+    <div
+        class="employee-modal-backdrop"
+        data-employee-modal-close
+    ></div>
+
+    <section
+        class="employee-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employeeModalName"
+        aria-describedby="employeeModalSummary"
+        tabindex="-1"
+    >
+        <header class="employee-modal-header">
+            <div>
+                <span class="employee-modal-eyebrow">
+                    DETAIL KARYAWAN
+                </span>
+
+                <h2 id="employeeModalName">-</h2>
+
+                <p id="employeeModalSummary">
+                    NRP: <strong id="employeeModalNrp">-</strong>
+                </p>
+            </div>
+
+            <button
+                type="button"
+                class="employee-modal-close"
+                data-employee-modal-close
+                aria-label="Tutup detail karyawan"
+            >
+                ×
+            </button>
+        </header>
+
+        <div class="employee-modal-body">
+            <aside class="employee-modal-profile">
+                <div
+                    class="employee-photo-frame"
+                    id="employeeModalPhotoFrame"
+                    data-photo-state="missing"
+                >
+                    <img
+                        id="employeeModalPhoto"
+                        class="employee-photo-image"
+                        src=""
+                        alt="Pas foto karyawan"
+                        decoding="async"
+                        referrerpolicy="no-referrer"
+                        hidden
+                    >
+
+                    <div
+                        id="employeeModalPhotoLoader"
+                        class="employee-photo-loader"
+                        hidden
+                    >
+                        <span aria-hidden="true"></span>
+                        <small>MEMUAT FOTO...</small>
+                    </div>
+
+                    <div
+                        id="employeeModalPhotoPlaceholder"
+                        class="employee-photo-placeholder"
+                    >
+                        <span id="employeeModalInitials">--</span>
+                        <small id="employeeModalPhotoPlaceholderText">
+                            FOTO BELUM TERSEDIA
+                        </small>
+                    </div>
+                </div>
+
+                <div
+                    id="employeeModalPhotoNotice"
+                    class="employee-photo-notice"
+                    hidden
+                >
+                    <strong>Preview foto tidak dapat dimuat</strong>
+                    <p>
+                        Pastikan file Google Drive dapat diakses oleh
+                        “Siapa saja yang memiliki link”.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="employeeModalPhotoRetry"
+                        class="employee-photo-retry"
+                    >
+                        COBA MUAT ULANG
+                    </button>
+                </div>
+
+                <div class="employee-completeness-card">
+                    <div class="employee-completeness-heading">
+                        <span>Kelengkapan Data</span>
+
+                        <strong
+                            id="employeeModalCompletenessBadge"
+                            class="employee-completeness-badge incomplete"
+                        >
+                            BELUM LENGKAP
+                        </strong>
+                    </div>
+
+                    <div class="employee-progress-track">
+                        <span
+                            id="employeeModalProgressBar"
+                            class="employee-progress-bar"
+                        ></span>
+                    </div>
+
+                    <p>
+                        <strong id="employeeModalPercentage">0%</strong>
+                        data utama telah terisi.
+                    </p>
+                </div>
+
+                <div
+                    id="employeeModalMissingBox"
+                    class="employee-missing-box"
+                >
+                    <strong>Data yang belum tersedia</strong>
+                    <p id="employeeModalMissingFields">-</p>
+                </div>
+            </aside>
+
+            <div class="employee-modal-information">
+                <div class="employee-information-section">
+                    <h3>Informasi Pekerjaan</h3>
+
+                    <dl class="employee-information-grid">
+                        <div>
+                            <dt>Jabatan</dt>
+                            <dd id="employeeModalJabatan">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Departemen</dt>
+                            <dd id="employeeModalDepartemen">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Perusahaan</dt>
+                            <dd id="employeeModalPerusahaan">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Site</dt>
+                            <dd id="employeeModalSite">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Status Karyawan</dt>
+                            <dd id="employeeModalStatusKaryawan">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Tanggal Lahir</dt>
+                            <dd id="employeeModalTanggalLahir">-</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="employee-information-section">
+                    <h3>Tempat Tinggal & Kontak</h3>
+
+                    <dl class="employee-information-grid">
+                        <div>
+                            <dt>Status Tinggal</dt>
+                            <dd id="employeeModalStatusTinggal">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Gedung/Kamar</dt>
+                            <dd id="employeeModalGedungKamar">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Nomor HP</dt>
+                            <dd id="employeeModalNoHp">-</dd>
+                        </div>
+
+                        <div>
+                            <dt>Email</dt>
+                            <dd id="employeeModalEmail">-</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <footer class="employee-modal-footer">
+            <a
+                id="employeeModalPhotoLink"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="db-button secondary"
+                hidden
+            >
+                BUKA FOTO
+            </a>
+
+            <a
+                id="employeeModalWhatsapp"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="db-button green"
+                hidden
+            >
+                WHATSAPP
+            </a>
+
+            <a
+                id="employeeModalEmailAction"
+                href="#"
+                class="db-button dark"
+                hidden
+            >
+                KIRIM EMAIL
+            </a>
+
+            <button
+                type="button"
+                class="db-button secondary"
+                data-employee-modal-close
+            >
+                TUTUP
+            </button>
+        </footer>
+    </section>
+</div>
 
 <style>
 .employee-page-head {
@@ -806,68 +1186,410 @@
     min-width: 1200px;
 }
 
-.employee-detail {
-    position: relative;
+.employee-detail-trigger {
+    white-space: nowrap;
 }
 
-.employee-detail summary {
-    list-style: none;
+body.employee-modal-open {
+    overflow: hidden;
 }
 
-.employee-detail summary::-webkit-details-marker {
-    display: none;
+.employee-modal[hidden],
+.employee-modal [hidden] {
+    display: none !important;
 }
 
-.employee-detail-card {
-    position: absolute;
-    z-index: 50;
-    top: calc(100% + 7px);
-    right: 0;
-    width: 360px;
-    padding: 13px;
-    border: 1px solid #dbe2ea;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, .18);
-}
-
-.employee-detail-title {
-    padding-bottom: 9px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.employee-detail-title strong,
-.employee-detail-title small {
-    display: block;
-}
-
-.employee-detail-title small {
-    margin-top: 3px;
-    color: #64748b;
-    font-size: 9px;
-}
-
-.employee-detail-list {
-    margin: 10px 0;
-}
-
-.employee-detail-list > div {
+.employee-modal {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
     display: grid;
-    grid-template-columns: 105px minmax(0, 1fr);
-    gap: 8px;
-    margin-bottom: 6px;
+    place-items: center;
+    padding: 18px;
 }
 
-.employee-detail-list dt {
+.employee-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .72);
+    backdrop-filter: blur(3px);
+}
+
+.employee-modal-dialog {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: min(940px, calc(100vw - 36px));
+    max-height: min(88vh, 760px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, .38);
+}
+
+.employee-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    color: #ffffff;
+    background:
+        linear-gradient(
+            110deg,
+            #111827 0%,
+            #273449 62%,
+            #c95d2d 100%
+        );
+}
+
+.employee-modal-eyebrow {
+    display: block;
+    margin-bottom: 5px;
+    color: #bfdbfe;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .16em;
+}
+
+.employee-modal-header h2 {
+    margin: 0;
+    font-size: clamp(20px, 2.6vw, 30px);
+    line-height: 1.15;
+}
+
+.employee-modal-header p {
+    margin: 6px 0 0;
+    color: #dbeafe;
+    font-size: 11px;
+}
+
+.employee-modal-close {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .42);
+    border-radius: 50%;
+    color: #ffffff;
+    background: rgba(255, 255, 255, .12);
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.employee-modal-close:hover {
+    background: rgba(255, 255, 255, .22);
+}
+
+.employee-modal-body {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 20px;
+    min-height: 0;
+    padding: 20px 22px;
+    overflow: auto;
+}
+
+.employee-modal-profile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.employee-photo-frame {
+    position: relative;
+    min-height: 260px;
+    overflow: hidden;
+    border: 1px solid #dbe3ec;
+    border-radius: 14px;
+    background: #eef2f7;
+}
+
+.employee-photo-image {
+    width: 100%;
+    height: 260px;
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+    background: #eef2f7;
+}
+
+.employee-photo-loader {
+    display: grid;
+    min-height: 260px;
+    place-content: center;
+    gap: 10px;
+    color: #475569;
+    text-align: center;
+}
+
+.employee-photo-loader span {
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
+    border: 4px solid #cbd5e1;
+    border-top-color: #147df5;
+    border-radius: 50%;
+    animation: employee-photo-spin .75s linear infinite;
+}
+
+.employee-photo-loader small {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+@keyframes employee-photo-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.employee-photo-placeholder {
+    display: grid;
+    min-height: 260px;
+    place-content: center;
+    gap: 8px;
     color: #64748b;
+    text-align: center;
+}
+
+.employee-photo-placeholder span {
+    display: grid;
+    width: 84px;
+    height: 84px;
+    margin: 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    color: #ffffff;
+    background: #23324b;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: .05em;
+}
+
+.employee-photo-placeholder small {
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.employee-photo-notice {
+    padding: 10px 11px;
+    border: 1px solid #fcd34d;
+    border-radius: 11px;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.employee-photo-notice strong {
+    display: block;
     font-size: 9px;
 }
 
-.employee-detail-list dd {
-    margin: 0;
-    color: #172033;
+.employee-photo-notice p {
+    margin: 5px 0 8px;
+    font-size: 8px;
+    line-height: 1.45;
+}
+
+.employee-photo-retry {
+    padding: 6px 8px;
+    border: 1px solid #f59e0b;
+    border-radius: 7px;
+    color: #92400e;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.employee-photo-retry:hover {
+    background: #fef3c7;
+}
+
+.employee-completeness-card,
+.employee-missing-box {
+    border: 1px solid #dbe3ec;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.employee-completeness-card {
+    padding: 12px;
+}
+
+.employee-completeness-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #334155;
     font-size: 9px;
     font-weight: 800;
+}
+
+.employee-completeness-badge {
+    padding: 5px 7px;
+    border-radius: 999px;
+    font-size: 8px;
+    font-weight: 900;
+}
+
+.employee-completeness-badge.complete {
+    color: #087a45;
+    background: #dcfce7;
+}
+
+.employee-completeness-badge.incomplete {
+    color: #b45309;
+    background: #fef3c7;
+}
+
+.employee-progress-track {
+    height: 8px;
+    margin-top: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.employee-progress-bar {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #147df5, #16a34a);
+    transition: width .24s ease;
+}
+
+.employee-completeness-card p {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-size: 9px;
+}
+
+.employee-completeness-card p strong {
+    color: #172033;
+}
+
+.employee-missing-box {
+    padding: 11px 12px;
+    border-color: #fcd34d;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.employee-missing-box strong {
+    display: block;
+    font-size: 9px;
+}
+
+.employee-missing-box p {
+    margin: 5px 0 0;
+    font-size: 9px;
+    line-height: 1.45;
+}
+
+.employee-modal-information {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.employee-information-section {
+    padding: 15px;
+    border: 1px solid #dbe3ec;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.employee-information-section h3 {
+    margin: 0 0 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #172033;
+    font-size: 12px;
+}
+
+.employee-information-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 13px 18px;
+    margin: 0;
+}
+
+.employee-information-grid > div {
+    min-width: 0;
+}
+
+.employee-information-grid dt {
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.employee-information-grid dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #172033;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.employee-modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 22px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+@media (max-width: 760px) {
+    .employee-modal {
+        padding: 10px;
+    }
+
+    .employee-modal-dialog {
+        width: calc(100vw - 20px);
+        max-height: 94vh;
+        border-radius: 13px;
+    }
+
+    .employee-modal-header,
+    .employee-modal-body,
+    .employee-modal-footer {
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+
+    .employee-modal-body {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-photo-frame,
+    .employee-photo-image,
+    .employee-photo-placeholder {
+        min-height: 220px;
+        height: 220px;
+    }
+
+    .employee-information-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-modal-footer .db-button {
+        flex: 1 1 135px;
+        justify-content: center;
+    }
 }
 
 .employee-pagination {
@@ -1091,6 +1813,39 @@
     color: #78350f;
 }
 
+
+.employee-alert.warning {
+    border-color: #fcd34d;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.employee-connection.warning,
+.employee-connection.disconnected {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 900;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.employee-connection.warning {
+    border: 1px solid #fcd34d;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.employee-connection.disconnected {
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
 </style>
 
 <script>
@@ -1115,25 +1870,449 @@ document.addEventListener('DOMContentLoaded', function () {
             '↻ MENYINKRONKAN...';
     });
 
-    document
-        .querySelectorAll('.employee-detail')
-        .forEach(function (detail) {
-            detail.addEventListener(
-                'toggle',
-                function () {
-                    if (!detail.open) {
-                        return;
-                    }
+    const modal =
+        document.getElementById('employeeDetailModal');
 
-                    document
-                        .querySelectorAll('.employee-detail')
-                        .forEach(function (otherDetail) {
-                            if (otherDetail !== detail) {
-                                otherDetail.open = false;
-                            }
-                        });
+    const modalDialog = modal?.querySelector(
+        '.employee-modal-dialog'
+    );
+
+    const modalPhoto =
+        document.getElementById('employeeModalPhoto');
+
+    const modalPhotoPlaceholder =
+        document.getElementById(
+            'employeeModalPhotoPlaceholder'
+        );
+
+    const modalPhotoFrame =
+        document.getElementById(
+            'employeeModalPhotoFrame'
+        );
+
+    const modalPhotoLoader =
+        document.getElementById(
+            'employeeModalPhotoLoader'
+        );
+
+    const modalPhotoNotice =
+        document.getElementById(
+            'employeeModalPhotoNotice'
+        );
+
+    const modalPhotoRetry =
+        document.getElementById(
+            'employeeModalPhotoRetry'
+        );
+
+    const modalPhotoPlaceholderText =
+        document.getElementById(
+            'employeeModalPhotoPlaceholderText'
+        );
+
+    const modalPhotoLink =
+        document.getElementById(
+            'employeeModalPhotoLink'
+        );
+
+    const modalWhatsapp =
+        document.getElementById(
+            'employeeModalWhatsapp'
+        );
+
+    const modalEmailAction =
+        document.getElementById(
+            'employeeModalEmailAction'
+        );
+
+    const modalCompletenessBadge =
+        document.getElementById(
+            'employeeModalCompletenessBadge'
+        );
+
+    const modalProgressBar =
+        document.getElementById(
+            'employeeModalProgressBar'
+        );
+
+    const modalMissingBox =
+        document.getElementById(
+            'employeeModalMissingBox'
+        );
+
+    let lastModalTrigger = null;
+
+    const textTargets = {
+        employeeModalName: 'nama',
+        employeeModalNrp: 'nrp',
+        employeeModalJabatan: 'jabatan',
+        employeeModalDepartemen: 'departemen',
+        employeeModalPerusahaan: 'perusahaan',
+        employeeModalSite: 'site',
+        employeeModalStatusKaryawan: 'statusKaryawan',
+        employeeModalTanggalLahir: 'tanggalLahir',
+        employeeModalStatusTinggal: 'statusTinggal',
+        employeeModalGedungKamar: 'gedungKamar',
+        employeeModalNoHp: 'noHp',
+        employeeModalEmail: 'email',
+    };
+
+    function setText(id, value) {
+        const target = document.getElementById(id);
+
+        if (!target) {
+            return;
+        }
+
+        const normalized = String(value ?? '').trim();
+        target.textContent = normalized !== ''
+            ? normalized
+            : '-';
+    }
+
+    function initials(name) {
+        const words = String(name ?? '')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+        if (words.length === 0) {
+            return '--';
+        }
+
+        return words
+            .slice(0, 2)
+            .map(function (word) {
+                return word.charAt(0).toUpperCase();
+            })
+            .join('');
+    }
+
+    function configureLink(link, url) {
+        if (!link) {
+            return;
+        }
+
+        const normalizedUrl = String(url ?? '').trim();
+
+        if (normalizedUrl === '') {
+            link.hidden = true;
+            link.removeAttribute('href');
+            return;
+        }
+
+        link.href = normalizedUrl;
+        link.hidden = false;
+    }
+
+    let photoLoadSequence = 0;
+    let activePhotoData = null;
+
+    function safePhotoCandidates(data) {
+        const candidates = Array.isArray(
+            data.fotoPreviewCandidates
+        )
+            ? data.fotoPreviewCandidates
+            : [];
+
+        if (
+            String(data.fotoPreviewUrl ?? '').trim() !== ''
+        ) {
+            candidates.unshift(data.fotoPreviewUrl);
+        }
+
+        return Array.from(
+            new Set(
+                candidates
+                    .map(function (candidate) {
+                        return String(candidate ?? '').trim();
+                    })
+                    .filter(function (candidate) {
+                        return /^https?:\/\//i.test(candidate);
+                    })
+            )
+        );
+    }
+
+    function setPhotoState(state) {
+        if (modalPhotoFrame) {
+            modalPhotoFrame.dataset.photoState = state;
+        }
+
+        if (modalPhoto) {
+            modalPhoto.hidden = state !== 'loaded';
+        }
+
+        if (modalPhotoLoader) {
+            modalPhotoLoader.hidden = state !== 'loading';
+        }
+
+        if (modalPhotoPlaceholder) {
+            modalPhotoPlaceholder.hidden = ![
+                'missing',
+                'failed',
+            ].includes(state);
+        }
+
+        if (modalPhotoNotice) {
+            modalPhotoNotice.hidden = state !== 'failed';
+        }
+
+        if (modalPhotoPlaceholderText) {
+            modalPhotoPlaceholderText.textContent =
+                state === 'failed'
+                    ? 'PREVIEW FOTO GAGAL'
+                    : 'FOTO BELUM TERSEDIA';
+        }
+    }
+
+    function loadPhotoCandidate(
+        candidates,
+        index,
+        sequence
+    ) {
+        if (!modalPhoto || sequence !== photoLoadSequence) {
+            return;
+        }
+
+        if (index >= candidates.length) {
+            modalPhoto.removeAttribute('src');
+            setPhotoState('failed');
+            return;
+        }
+
+        modalPhoto.onload = function () {
+            if (sequence !== photoLoadSequence) {
+                return;
+            }
+
+            setPhotoState('loaded');
+        };
+
+        modalPhoto.onerror = function () {
+            if (sequence !== photoLoadSequence) {
+                return;
+            }
+
+            loadPhotoCandidate(
+                candidates,
+                index + 1,
+                sequence
+            );
+        };
+
+        modalPhoto.src = candidates[index];
+    }
+
+    function showPhoto(data) {
+        if (!modalPhoto || !modalPhotoPlaceholder) {
+            return;
+        }
+
+        activePhotoData = data;
+        photoLoadSequence += 1;
+
+        const sequence = photoLoadSequence;
+        const candidates = safePhotoCandidates(data);
+
+        setText(
+            'employeeModalInitials',
+            initials(data.nama)
+        );
+
+        modalPhoto.removeAttribute('src');
+
+        if (candidates.length === 0) {
+            setPhotoState('missing');
+            return;
+        }
+
+        setPhotoState('loading');
+
+        loadPhotoCandidate(
+            candidates,
+            0,
+            sequence
+        );
+    }
+
+    function openEmployeeModal(trigger) {
+        if (!modal || !modalDialog) {
+            return;
+        }
+
+        let data = {};
+
+        try {
+            data = JSON.parse(
+                trigger.dataset.employee || '{}'
+            );
+        } catch (error) {
+            console.error(
+                'Data detail karyawan tidak valid.',
+                error
+            );
+            return;
+        }
+
+        Object.entries(textTargets).forEach(
+            function ([targetId, dataKey]) {
+                setText(targetId, data[dataKey]);
+            }
+        );
+
+        const percentage = Math.max(
+            0,
+            Math.min(
+                100,
+                Number(data.completionPercentage) || 0
+            )
+        );
+
+        const isComplete = Boolean(data.isComplete);
+
+        setText(
+            'employeeModalCompletenessBadge',
+            data.completenessStatus ||
+                (isComplete
+                    ? 'LENGKAP'
+                    : 'BELUM LENGKAP')
+        );
+
+        setText(
+            'employeeModalPercentage',
+            percentage + '%'
+        );
+
+        if (modalProgressBar) {
+            modalProgressBar.style.width =
+                percentage + '%';
+        }
+
+        if (modalCompletenessBadge) {
+            modalCompletenessBadge.classList.toggle(
+                'complete',
+                isComplete
+            );
+
+            modalCompletenessBadge.classList.toggle(
+                'incomplete',
+                !isComplete
+            );
+        }
+
+        const missingLabels = Array.isArray(
+            data.missingFieldLabels
+        )
+            ? data.missingFieldLabels.filter(Boolean)
+            : [];
+
+        if (modalMissingBox) {
+            modalMissingBox.hidden = isComplete;
+        }
+
+        setText(
+            'employeeModalMissingFields',
+            missingLabels.length > 0
+                ? missingLabels.join(', ')
+                : 'Tidak ada.'
+        );
+
+        showPhoto(data);
+
+        configureLink(
+            modalPhotoLink,
+            data.fotoOpenUrl || data.fotoUrl
+        );
+
+        configureLink(
+            modalWhatsapp,
+            data.whatsappUrl
+        );
+
+        configureLink(
+            modalEmailAction,
+            data.emailUrl
+        );
+
+        lastModalTrigger = trigger;
+        modal.hidden = false;
+        document.body.classList.add(
+            'employee-modal-open'
+        );
+
+        window.requestAnimationFrame(function () {
+            modalDialog.focus();
+        });
+    }
+
+    function closeEmployeeModal() {
+        if (!modal || modal.hidden) {
+            return;
+        }
+
+        modal.hidden = true;
+        document.body.classList.remove(
+            'employee-modal-open'
+        );
+
+        photoLoadSequence += 1;
+        activePhotoData = null;
+
+        if (modalPhoto) {
+            modalPhoto.onload = null;
+            modalPhoto.onerror = null;
+            modalPhoto.removeAttribute('src');
+        }
+
+        setPhotoState('missing');
+
+        lastModalTrigger?.focus();
+        lastModalTrigger = null;
+    }
+
+    document
+        .querySelectorAll('.employee-detail-trigger')
+        .forEach(function (trigger) {
+            trigger.addEventListener(
+                'click',
+                function () {
+                    openEmployeeModal(trigger);
                 }
             );
         });
+
+    modalPhotoRetry?.addEventListener(
+        'click',
+        function () {
+            if (activePhotoData) {
+                showPhoto(activePhotoData);
+            }
+        }
+    );
+
+    modal
+        ?.querySelectorAll(
+            '[data-employee-modal-close]'
+        )
+        .forEach(function (closeButton) {
+            closeButton.addEventListener(
+                'click',
+                closeEmployeeModal
+            );
+        });
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+            if (
+                event.key === 'Escape' &&
+                modal &&
+                !modal.hidden
+            ) {
+                closeEmployeeModal();
+            }
+        }
+    );
 });
 </script>

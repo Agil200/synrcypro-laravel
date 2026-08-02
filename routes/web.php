@@ -29,6 +29,7 @@ Route::get(
 | Google Login SYNRGYPRO
 |--------------------------------------------------------------------------
 | Digunakan untuk login pengguna ke aplikasi.
+| Route ini harus tersedia sebelum middleware auth.
 */
 
 Route::get(
@@ -40,6 +41,27 @@ Route::get(
     '/auth/google/callback',
     [AuthController::class, 'handleGoogleCallback']
 )->name('auth.google.callback');
+
+/*
+|--------------------------------------------------------------------------
+| Google OAuth untuk Google Sheets
+|--------------------------------------------------------------------------
+| Berbeda dari login pengguna.
+| Redirect memerlukan login, sedangkan callback diletakkan di luar
+| middleware auth agar respons dari Google tidak terhalang.
+*/
+
+Route::get(
+    '/google/oauth/redirect',
+    [GoogleOAuthController::class, 'redirect']
+)->middleware('auth')
+    ->name('google.oauth.redirect');
+
+Route::get(
+    '/google/oauth/callback',
+    [GoogleOAuthController::class, 'callback']
+)->name('google.oauth.callback');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -81,24 +103,6 @@ Route::middleware('auth')->group(function () {
         '/manpower',
         [ManpowerDashboardController::class, 'index']
     )->name('manpower');
-
-    /*
-    |--------------------------------------------------------------------------
-    | Google OAuth untuk Google Sheets
-    |--------------------------------------------------------------------------
-    | Berbeda dengan Google Login di atas.
-    | Digunakan untuk memberikan izin baca Spreadsheet.
-    */
-
-    Route::get(
-        '/google/oauth/redirect',
-        [GoogleOAuthController::class, 'redirect']
-    )->name('google.oauth.redirect');
-
-    Route::get(
-        '/google/oauth/callback',
-        [GoogleOAuthController::class, 'callback']
-    )->name('google.oauth.callback');
 
     /*
     |--------------------------------------------------------------------------

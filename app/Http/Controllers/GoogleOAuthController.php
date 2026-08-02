@@ -12,23 +12,55 @@ use Illuminate\Support\Str;
 
 class GoogleOAuthController extends Controller
 {
+    private const TOKEN_PATH = 'google-sheets/oauth-token.json';
+
+    private const STATE_SESSION_KEY = 'google_sheets_oauth_state';
+
+    private const RETURN_URL_SESSION_KEY =
+        'google_sheets_oauth_return_url';
+
+    /**
+     * Mengarahkan pengguna ke halaman persetujuan Google.
+     */
     public function redirect(Request $request): RedirectResponse
     {
-        $clientId = (string) config('services.google_sheets.client_id');
-        $redirectUri = (string) config('services.google_sheets.redirect_uri');
-        $allowedEmail = (string) config('services.google_sheets.allowed_email');
+        $clientId = trim(
+            (string) config('services.google_sheets.client_id')
+        );
+
+        $redirectUri = trim(
+            (string) config('services.google_sheets.redirect_uri')
+        );
+
+        $allowedEmail = strtolower(
+            trim(
+                (string) config(
+                    'services.google_sheets.allowed_email'
+                )
+            )
+        );
 
         if ($clientId === '' || $redirectUri === '') {
             return redirect()
-                ->route('mine-permit.monitoring-she')
-                ->with('error', 'Konfigurasi OAuth Google Sheets belum lengkap.');
+                ->route('database.employees')
+                ->with(
+                    'error',
+                    'Konfigurasi OAuth Google Sheets belum lengkap.'
+                );
         }
 
         $state = Str::random(64);
 
         $request->session()->put(
-            'google_sheets_oauth_state',
+            self::STATE_SESSION_KEY,
             $state
+        );
+
+        $returnUrl = $this->resolveReturnUrl();
+
+        $request->session()->put(
+            self::RETURN_URL_SESSION_KEY,
+            $returnUrl
         );
 
         $query = http_build_query(
@@ -36,11 +68,14 @@ class GoogleOAuthController extends Controller
                 'client_id' => $clientId,
                 'redirect_uri' => $redirectUri,
                 'response_type' => 'code',
-                'scope' => implode(' ', [
-                    'openid',
-                    'email',
-                    'https://www.googleapis.com/auth/spreadsheets.readonly',
-                ]),
+                'scope' => implode(
+                    ' ',
+                    [
+                        'openid',
+                        'email',
+                        'https://www.googleapis.com/auth/spreadsheets.readonly',
+                    ]
+                ),
                 'access_type' => 'offline',
                 'include_granted_scopes' => 'true',
                 'prompt' => 'consent select_account',
@@ -53,15 +88,25 @@ class GoogleOAuthController extends Controller
         );
 
         return redirect()->away(
-            'https://accounts.google.com/o/oauth2/v2/auth?' . $query
+            'https://accounts.google.com/o/oauth2/v2/auth?' .
+            $query
         );
     }
 
+    /**
+     * Menerima callback Google, menukar authorization code menjadi
+     * token, memeriksa akun, lalu menyimpan token secara lokal.
+     */
     public function callback(Request $request): RedirectResponse
     {
+        $returnUrl = (string) $request->session()->pull(
+            self::RETURN_URL_SESSION_KEY,
+            route('database.employees')
+        );
+
         if ($request->filled('error')) {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
                     'Izin Google dibatalkan: ' .
@@ -70,11 +115,14 @@ class GoogleOAuthController extends Controller
         }
 
         $expectedState = (string) $request->session()->pull(
-            'google_sheets_oauth_state',
+            self::STATE_SESSION_KEY,
             ''
         );
 
-        $receivedState = (string) $request->query('state', '');
+        $receivedState = (string) $request->query(
+            'state',
+            ''
+        );
 
         if (
             $expectedState === '' ||
@@ -82,27 +130,39 @@ class GoogleOAuthController extends Controller
             ! hash_equals($expectedState, $receivedState)
         ) {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
-                    'State OAuth Google tidak valid. Ulangi proses koneksi.'
+                    'State OAuth Google tidak valid. ' .
+                    'Ulangi proses koneksi.'
                 );
         }
 
-        $authorizationCode = (string) $request->query('code', '');
+        $authorizationCode = (string) $request->query(
+            'code',
+            ''
+        );
 
         if ($authorizationCode === '') {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
                     'Authorization code Google tidak ditemukan.'
                 );
         }
 
-        $clientId = (string) config('services.google_sheets.client_id');
-        $clientSecret = (string) config('services.google_sheets.client_secret');
-        $redirectUri = (string) config('services.google_sheets.redirect_uri');
+        $clientId = trim(
+            (string) config('services.google_sheets.client_id')
+        );
+
+        $clientSecret = trim(
+            (string) config('services.google_sheets.client_secret')
+        );
+
+        $redirectUri = trim(
+            (string) config('services.google_sheets.redirect_uri')
+        );
 
         if (
             $clientId === '' ||
@@ -110,7 +170,7 @@ class GoogleOAuthController extends Controller
             $redirectUri === ''
         ) {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
                     'Konfigurasi OAuth Google Sheets belum lengkap.'
@@ -119,6 +179,7 @@ class GoogleOAuthController extends Controller
 
         $tokenResponse = Http::asForm()
             ->acceptJson()
+            ->timeout(30)
             ->post(
                 'https://oauth2.googleapis.com/token',
                 [
@@ -132,7 +193,7 @@ class GoogleOAuthController extends Controller
 
         if ($tokenResponse->failed()) {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
                     $this->googleErrorMessage(
@@ -143,11 +204,27 @@ class GoogleOAuthController extends Controller
         }
 
         $token = $tokenResponse->json();
-        $accessToken = (string) Arr::get($token, 'access_token', '');
+
+        if (! is_array($token)) {
+            return redirect()
+                ->to($returnUrl)
+                ->with(
+                    'error',
+                    'Respons token Google tidak valid.'
+                );
+        }
+
+        $accessToken = trim(
+            (string) Arr::get(
+                $token,
+                'access_token',
+                ''
+            )
+        );
 
         if ($accessToken === '') {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
                     'Access token Google tidak ditemukan.'
@@ -156,55 +233,126 @@ class GoogleOAuthController extends Controller
 
         $userResponse = Http::withToken($accessToken)
             ->acceptJson()
-            ->get('https://openidconnect.googleapis.com/v1/userinfo');
+            ->timeout(30)
+            ->get(
+                'https://openidconnect.googleapis.com/v1/userinfo'
+            );
 
         if ($userResponse->failed()) {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
-                    'Gagal memeriksa akun Google yang digunakan.'
+                    $this->googleErrorMessage(
+                        $userResponse,
+                        'Gagal memeriksa akun Google yang digunakan.'
+                    )
                 );
         }
 
         $googleEmail = strtolower(
-            trim((string) $userResponse->json('email', ''))
+            trim(
+                (string) $userResponse->json(
+                    'email',
+                    ''
+                )
+            )
         );
 
-        $allowedEmail = strtolower(
-            trim((string) config('services.google_sheets.allowed_email'))
-        );
-
-        if (
-            $allowedEmail !== '' &&
-            $googleEmail !== $allowedEmail
-        ) {
+        if ($googleEmail === '') {
             return redirect()
-                ->route('mine-permit.monitoring-she')
+                ->to($returnUrl)
                 ->with(
                     'error',
-                    'Gunakan akun Google ' .
-                    $allowedEmail .
-                    ' untuk menghubungkan Spreadsheet.'
+                    'Email akun Google tidak ditemukan.'
                 );
         }
 
-        $tokenPath = 'google-sheets/oauth-token.json';
+$allowedEmails = array_filter(
+    array_map(
+        function ($email) {
+            return strtolower(trim($email));
+        },
+        explode(
+            ',',
+            (string) config(
+                'services.google_sheets.allowed_email'
+            )
+        )
+    )
+);
+
+dd(
+    $googleEmail,
+    $allowedEmails
+);
+
+if (
+    ! in_array(
+        $googleEmail,
+        $allowedEmails,
+        true
+    )
+) {
+
+    return redirect()
+        ->to($returnUrl)
+        ->with(
+            'error',
+            'Email Google Anda belum terdaftar di SYNRGYPRO.'
+        );
+}
+
         $oldToken = [];
 
-        if (Storage::disk('local')->exists($tokenPath)) {
+        if (
+            Storage::disk('local')->exists(
+                self::TOKEN_PATH
+            )
+        ) {
+            $oldTokenJson = Storage::disk('local')->get(
+                self::TOKEN_PATH
+            );
+
             $oldToken = json_decode(
-                (string) Storage::disk('local')->get($tokenPath),
+                (string) $oldTokenJson,
                 true
             ) ?: [];
         }
 
-        $refreshToken = (string) (
-            Arr::get($token, 'refresh_token') ??
-            Arr::get($oldToken, 'refresh_token', '')
+        $refreshToken = trim(
+            (string) (
+                Arr::get(
+                    $token,
+                    'refresh_token'
+                ) ??
+                Arr::get(
+                    $oldToken,
+                    'refresh_token',
+                    ''
+                )
+            )
         );
 
-        $expiresIn = (int) Arr::get($token, 'expires_in', 3600);
+        if ($refreshToken === '') {
+            return redirect()
+                ->to($returnUrl)
+                ->with(
+                    'error',
+                    'Google tidak mengirim refresh token. ' .
+                    'Cabut akses SYNRGYPRO dari akun Google, ' .
+                    'lalu hubungkan ulang.'
+                );
+        }
+
+        $expiresIn = max(
+            60,
+            (int) Arr::get(
+                $token,
+                'expires_in',
+                3600
+            )
+        );
 
         $tokenData = [
             'access_token' => $accessToken,
@@ -214,7 +362,11 @@ class GoogleOAuthController extends Controller
                 'token_type',
                 'Bearer'
             ),
-            'scope' => (string) Arr::get($token, 'scope', ''),
+            'scope' => (string) Arr::get(
+                $token,
+                'scope',
+                ''
+            ),
             'expires_in' => $expiresIn,
             'expires_at' => now()
                 ->addSeconds($expiresIn)
@@ -223,17 +375,28 @@ class GoogleOAuthController extends Controller
             'connected_at' => now()->toIso8601String(),
         ];
 
-        Storage::disk('local')->put(
-            $tokenPath,
+        $saved = Storage::disk('local')->put(
+            self::TOKEN_PATH,
             json_encode(
                 $tokenData,
                 JSON_PRETTY_PRINT |
-                JSON_UNESCAPED_SLASHES
+                JSON_UNESCAPED_SLASHES |
+                JSON_THROW_ON_ERROR
             )
         );
 
+        if (! $saved) {
+            return redirect()
+                ->to($returnUrl)
+                ->with(
+                    'error',
+                    'Token Google berhasil diperoleh, ' .
+                    'tetapi gagal disimpan ke storage Laravel.'
+                );
+        }
+
         return redirect()
-            ->route('mine-permit.monitoring-she')
+            ->to($returnUrl)
             ->with(
                 'success',
                 'Google Sheets berhasil dihubungkan menggunakan ' .
@@ -242,22 +405,73 @@ class GoogleOAuthController extends Controller
             );
     }
 
+    /**
+     * Mengambil pesan error yang dikirim Google.
+     */
     private function googleErrorMessage(
         Response $response,
         string $fallback
     ): string {
-        $description = $response->json('error_description');
+        $description = $response->json(
+            'error_description'
+        );
 
-        if (is_string($description) && $description !== '') {
-            return $description;
+        if (
+            is_string($description) &&
+            trim($description) !== ''
+        ) {
+            return trim($description);
         }
 
-        $message = $response->json('error.message');
+        $message = $response->json(
+            'error.message'
+        );
 
-        if (is_string($message) && $message !== '') {
-            return $message;
+        if (
+            is_string($message) &&
+            trim($message) !== ''
+        ) {
+            return trim($message);
         }
 
-        return $fallback;
+        $error = $response->json('error');
+
+        if (
+            is_string($error) &&
+            trim($error) !== ''
+        ) {
+            return trim($error);
+        }
+
+        return $fallback .
+            ' HTTP ' .
+            $response->status() .
+            '.';
+    }
+
+    /**
+     * Menentukan halaman tujuan setelah proses OAuth selesai.
+     */
+    private function resolveReturnUrl(): string
+    {
+        $fallbackUrl = route('database.employees');
+        $previousUrl = url()->previous();
+        $appUrl = rtrim(
+            (string) config('app.url'),
+            '/'
+        );
+
+        if (
+            $previousUrl !== '' &&
+            $appUrl !== '' &&
+            str_starts_with(
+                $previousUrl,
+                $appUrl
+            )
+        ) {
+            return $previousUrl;
+        }
+
+        return $fallbackUrl;
     }
 }
