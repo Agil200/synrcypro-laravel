@@ -997,51 +997,50 @@ body.syn-manpower-page {
 
 {{-- Test BNN --}}
 <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/BNN.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                Test BNN
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="false"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/BNN.png') }}"
+                alt="Test BNN"
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-       <div class="manpower-submenu">
-    <div class="manpower-submenu-inner">
-        <!-- Daftar Test BNN -->
-        <a
-            href="https://docs.google.com/spreadsheets/d/1V9LU2Ft9NpxHULY7cVWczqpclCDy_Vja6qWtr7la38o/edit?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="manpower-submenu-link"
-        >
-            Daftar Test BNN
-        </a>
+        <span class="manpower-menu-label">
+            Test BNN
+        </span>
 
-        <!-- Monitoring Kehadiran -->
-        <a
-            href="https://docs.google.com/spreadsheets/d/1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU/edit?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="manpower-submenu-link"
+        <span
+            class="manpower-menu-arrow"
+            aria-hidden="true"
         >
-            Monitoring Kehadiran
-        </a>
+            ›
+        </span>
+    </button>
+
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="https://docs.google.com/spreadsheets/d/1V9LU2Ft9NpxHULY7cVWczqpclCDy_Vja6qWtr7la38o/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="manpower-submenu-link"
+            >
+                Daftar Test BNN
+            </a>
+
+            <a
+                href="https://docs.google.com/spreadsheets/d/1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU/edit?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="manpower-submenu-link"
+            >
+                Monitoring Kehadiran
+            </a>
+        </div>
     </div>
 </div>
 
@@ -1249,43 +1248,51 @@ body.syn-manpower-page {
     </div>
 </div>
 
-    {{-- MCU & FU --}}
-    <div class="manpower-menu-group">
-        <button
-            type="button"
-            class="manpower-menu-toggle"
-            aria-expanded="false"
-        >
-            <span class="manpower-menu-icon">
-                <img
-                    src="{{ asset('assets/images/MCU DAN FU.png') }}"
-                    alt=""
-                >
-            </span>
-
-            <span class="manpower-menu-label">
-                MCU &amp; FU
-            </span>
-
-            <span
-                class="manpower-menu-arrow"
-                aria-hidden="true"
+{{-- MCU & FU --}}
+<div
+    class="manpower-menu-group
+        {{ request()->routeIs('mcu-fu.*') ? 'is-open' : '' }}"
+>
+    <button
+        type="button"
+        class="manpower-menu-toggle"
+        aria-expanded="{{
+            request()->routeIs('mcu-fu.*')
+                ? 'true'
+                : 'false'
+        }}"
+    >
+        <span class="manpower-menu-icon">
+            <img
+                src="{{ asset('assets/images/MCU DAN FU.png') }}"
+                alt="MCU dan Follow Up"
             >
-                ›
-            </span>
-        </button>
+        </span>
 
-        <div class="manpower-submenu">
-            <div class="manpower-submenu-inner">
-                <a
-                    href="#"
-                    class="manpower-submenu-link"
-                >
-                    Monitoring MCU &amp; FU
-                </a>
-            </div>
+        <span class="manpower-menu-label">
+            MCU &amp; FU
+        </span>
+
+        <span
+            class="manpower-menu-arrow"
+            aria-hidden="true"
+        >
+            ›
+        </span>
+    </button>
+
+    <div class="manpower-submenu">
+        <div class="manpower-submenu-inner">
+            <a
+                href="{{ route('mcu-fu.index') }}"
+                class="manpower-submenu-link
+                    {{ request()->routeIs('mcu-fu.*') ? 'active' : '' }}"
+            >
+                Monitoring MCU &amp; FU
+            </a>
         </div>
     </div>
+</div>
 
 {{-- Document Out --}}
 <div

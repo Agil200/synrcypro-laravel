@@ -8,6 +8,7 @@ use App\Http\Controllers\StSpController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\MinePermitController;
 use App\Http\Controllers\ManpowerDashboardController;
+use App\Http\Controllers\McuFuController;
 use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
@@ -431,6 +432,41 @@ Route::middleware('auth')->group(function () {
                         'destroy'
                     )->name('st-sp.destroy');
                 });
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCU & FU — Monitoring Medical Check Up dan Follow Up
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('manpower/mcu-fu')
+        ->name('mcu-fu.')
+        ->controller(McuFuController::class)
+        ->group(function () {
+            /*
+             * Halaman utama Monitoring MCU & FU.
+             */
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            /*
+             * Endpoint data untuk tabel, filter, atau AJAX dashboard.
+             */
+            Route::get(
+                '/data',
+                'data'
+            )->name('data');
+
+            /*
+             * Menghapus cache dan membaca ulang data Google Spreadsheet MCU.
+             */
+            Route::post(
+                '/refresh',
+                'refresh'
+            )->name('refresh');
         });
 
     /*
