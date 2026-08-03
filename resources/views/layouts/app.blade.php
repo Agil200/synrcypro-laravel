@@ -10,6 +10,30 @@
 
     <title>@yield('title', 'SYNRGYPRO')</title>
 
+    {{-- Favicon SYNRGYPRO --}}
+    <link
+        rel="icon"
+        type="image/x-icon"
+        href="{{ asset('favicon.ico') }}?v=2"
+    >
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="32x32"
+        href="{{ asset('assets/images/syngypro-favicon-32.png') }}?v=2"
+    >
+    <link
+        rel="icon"
+        type="image/png"
+        sizes="192x192"
+        href="{{ asset('assets/images/syngypro-favicon-192.png') }}?v=2"
+    >
+    <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href="{{ asset('assets/images/syngypro-apple-touch-icon.png') }}?v=2"
+    >
+
     {{-- CSS utama aplikasi --}}
     <link
         rel="stylesheet"

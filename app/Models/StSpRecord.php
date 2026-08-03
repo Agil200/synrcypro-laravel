@@ -13,6 +13,7 @@ class StSpRecord extends Model
 
     protected $fillable = [
         'nrp',
+        'nama',
         'jenis_pelanggaran',
         'tanggal',
         'expired_date',

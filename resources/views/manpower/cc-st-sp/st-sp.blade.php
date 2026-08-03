@@ -72,7 +72,7 @@
                 <input type="hidden" name="bulan" value="{{ $bulan }}">
 
                 <label for="stspSearch">
-                    Cari NRP / Pelanggaran / Atasan
+                    Cari NRP / Nama / Pelanggaran / Atasan
                 </label>
 
                 <input
@@ -106,6 +106,7 @@
                     <tr>
                         <th>No</th>
                         <th>NRP</th>
+                        <th>Nama</th>
                         <th>Jenis Pelanggaran</th>
                         <th>Tanggal</th>
                         <th>Expired Date</th>
@@ -124,6 +125,7 @@
                         <tr>
                             <td>{{ $item->id }}</td>
                             <td>{{ $item->nrp }}</td>
+                            <td>{{ $item->nama ?: '-' }}</td>
                             <td>{{ $item->jenis_pelanggaran }}</td>
                             <td>
                                 {{ $item->tanggal?->format('d/m/Y') }}
@@ -176,6 +178,7 @@
                                         class="ccsp-action js-edit-stsp"
                                         data-id="{{ $item->id }}"
                                         data-nrp="{{ $item->nrp }}"
+                                        data-nama="{{ $item->nama }}"
                                         data-pelanggaran="{{
                                             $item->jenis_pelanggaran
                                         }}"
@@ -225,7 +228,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="ccsp-empty">
+                            <td colspan="13" class="ccsp-empty">
                                 Belum ada data
                                 {{ strtolower($pageTitle) }}
                                 pada {{ $labelBulan }}.
@@ -360,6 +363,27 @@
                             class="ccsp-reference-input"
                             value="{{ old('nrp') }}"
                             maxlength="50"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="ccsp-reference-row">
+                    <label
+                        for="stspNama"
+                        class="ccsp-reference-label"
+                    >
+                        NAMA*
+                    </label>
+
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="nama"
+                            id="stspNama"
+                            class="ccsp-reference-input"
+                            value="{{ old('nama') }}"
+                            maxlength="150"
                             required
                         >
                     </div>
@@ -694,6 +718,25 @@
                             id="editStspNrp"
                             class="ccsp-reference-input"
                             maxlength="50"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="ccsp-reference-row">
+                    <label
+                        for="editStspNama"
+                        class="ccsp-reference-label"
+                    >
+                        NAMA*
+                    </label>
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="nama"
+                            id="editStspNama"
+                            class="ccsp-reference-input"
+                            maxlength="150"
                             required
                         >
                     </div>
@@ -1038,6 +1081,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 document.getElementById('editStspNrp').value =
                     button.dataset.nrp || '';
+
+                document.getElementById('editStspNama').value =
+                    button.dataset.nama || '';
 
                 document.getElementById(
                     'editStspPelanggaran'

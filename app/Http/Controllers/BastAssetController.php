@@ -16,7 +16,12 @@ class BastAssetController extends Controller
         
         $assets = BastAsset::where('jenis_asset', $category)->latest()->get();
 
-        return view('bast.index', compact('assets', 'category'));
+        return view('manpower', [
+        'contentView' => 'bast.index',
+        'assets' => $assets,
+        'category' => $category,
+    ]);
+
     }
 
     // Menyimpan data form BAST

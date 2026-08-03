@@ -468,33 +468,14 @@ Route::prefix('database/employees')
     */
 
     Route::prefix('manpower/mcu-fu')
-        ->name('mcu-fu.')
-        ->controller(McuFuController::class)
-        ->group(function () {
-            /*
-             * Halaman utama Monitoring MCU & FU.
-             */
-            Route::get(
-                '/',
-                'index'
-            )->name('index');
+    ->name('mcu-fu.')
+    ->controller(McuFuController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/data', 'data')->name('data');
+        Route::post('/refresh', 'refresh')->name('refresh');
+    });
 
-            /*
-             * Endpoint data untuk tabel, filter, atau AJAX dashboard.
-             */
-            Route::get(
-                '/data',
-                'data'
-            )->name('data');
-
-            /*
-             * Menghapus cache dan membaca ulang data Google Spreadsheet MCU.
-             */
-            Route::post(
-                '/refresh',
-                'refresh'
-            )->name('refresh');
-        });
 
     /*
     |--------------------------------------------------------------------------

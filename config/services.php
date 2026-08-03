@@ -203,6 +203,46 @@ return [
                 "'DATA PERPANJANGAN'!A:V"
             )
         ),
+
+        /*
+|--------------------------------------------------------------------------
+| Spreadsheet Monitoring MCU & Follow Up
+|--------------------------------------------------------------------------
+*/
+
+'mcu_spreadsheet_id' => trim(
+    (string) env(
+        'GOOGLE_SHEETS_MCU_SPREADSHEET_ID'
+    )
+),
+
+'mcu_range' => trim(
+    (string) env(
+        'GOOGLE_SHEETS_MCU_RANGE',
+        "'PRO'!A:I"
+    )
+),
+
+'mcu_sheet_gid' => (int) env(
+    'GOOGLE_SHEETS_MCU_SHEET_GID',
+    1692836561
+),
+
+'mcu_columns' => trim(
+    (string) env(
+        'GOOGLE_SHEETS_MCU_COLUMNS',
+        'A:I'
+    )
+),
+
+'mcu_cache_ttl_seconds' => max(
+    60,
+    (int) env(
+        'GOOGLE_SHEETS_MCU_CACHE_TTL_SECONDS',
+        300
+    )
+),
     ],
+
 
 ];
