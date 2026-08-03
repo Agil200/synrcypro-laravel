@@ -21,7 +21,11 @@ class ApdRequest extends Model
         'item_rompi',
         'item_kacamata',
         'item_ear_plug',
+        'status_helm',
         'status_sepatu',
+        'status_rompi',
+        'status_kacamata',
+        'status_ear_plug',
         'picked_up_at',
         'created_by',
     ];
@@ -43,12 +47,57 @@ class ApdRequest extends Model
 
     public function getItemsLabelAttribute(): array
     {
+        return array_column(
+            $this->items_with_status,
+            'label'
+        );
+    }
+
+    /**
+     * Daftar barang yang dipilih beserta posisi terakhirnya.
+     */
+    public function getItemsWithStatusAttribute(): array
+    {
         return array_values(array_filter([
-            $this->item_helm ? 'Helm' : null,
-            $this->item_sepatu_safety ? 'Sepatu Safety' : null,
-            $this->item_rompi ? 'Rompi' : null,
-            $this->item_kacamata ? 'Kacamata' : null,
-            $this->item_ear_plug ? 'Ear Plug' : null,
+            $this->item_helm
+                ? [
+                    'key' => 'helm',
+                    'label' => 'Helm',
+                    'status' => $this->status_helm,
+                ]
+                : null,
+
+            $this->item_sepatu_safety
+                ? [
+                    'key' => 'sepatu_safety',
+                    'label' => 'Sepatu Safety',
+                    'status' => $this->status_sepatu,
+                ]
+                : null,
+
+            $this->item_rompi
+                ? [
+                    'key' => 'rompi',
+                    'label' => 'Rompi',
+                    'status' => $this->status_rompi,
+                ]
+                : null,
+
+            $this->item_kacamata
+                ? [
+                    'key' => 'kacamata',
+                    'label' => 'Kacamata',
+                    'status' => $this->status_kacamata,
+                ]
+                : null,
+
+            $this->item_ear_plug
+                ? [
+                    'key' => 'ear_plug',
+                    'label' => 'Ear Plug',
+                    'status' => $this->status_ear_plug,
+                ]
+                : null,
         ]));
     }
 }

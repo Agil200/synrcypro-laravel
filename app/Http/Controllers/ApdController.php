@@ -18,12 +18,48 @@ use Throwable;
 
 class ApdController extends Controller
 {
-    private const SHOE_STATUSES = [
+    /**
+     * Alur status barang APD.
+     */
+    private const ITEM_STATUSES = [
         'SHE',
         'WAREHOUSE',
         'LOGISTIK',
         'READY',
-        'DIAMBIL',
+    ];
+
+    /**
+     * Pemetaan checkbox barang ke kolom statusnya.
+     *
+     * Kolom status_sepatu dipertahankan agar tetap kompatibel
+     * dengan data dan kode lama.
+     */
+    private const ITEM_STATUS_FIELDS = [
+        'helm' => [
+            'selected' => 'item_helm',
+            'status' => 'status_helm',
+            'label' => 'Helm',
+        ],
+        'sepatu_safety' => [
+            'selected' => 'item_sepatu_safety',
+            'status' => 'status_sepatu',
+            'label' => 'Sepatu Safety',
+        ],
+        'rompi' => [
+            'selected' => 'item_rompi',
+            'status' => 'status_rompi',
+            'label' => 'Rompi',
+        ],
+        'kacamata' => [
+            'selected' => 'item_kacamata',
+            'status' => 'status_kacamata',
+            'label' => 'Kacamata',
+        ],
+        'ear_plug' => [
+            'selected' => 'item_ear_plug',
+            'status' => 'status_ear_plug',
+            'label' => 'Ear Plug',
+        ],
     ];
 
     /**
@@ -62,9 +98,20 @@ class ApdController extends Controller
 
         if (
             $status !== ''
-            && in_array($status, self::SHOE_STATUSES, true)
+            && in_array(
+                $status,
+                [...self::ITEM_STATUSES, 'DIAMBIL'],
+                true
+            )
         ) {
-            $query->where('status_sepatu', $status);
+            $query->where(function ($subQuery) use ($status) {
+                foreach (self::ITEM_STATUS_FIELDS as $definition) {
+                    $subQuery->orWhere(
+                        $definition['status'],
+                        $status
+                    );
+                }
+            });
         }
 
         $records = $query
@@ -74,9 +121,8 @@ class ApdController extends Controller
             ->withQueryString();
 
         /*
-         * Hanya pengajuan Sepatu Safety dengan status READY
-         * dan belum pernah diambil yang ditampilkan pada form
-         * pengambilan.
+         * Hanya Sepatu Safety berstatus READY dan belum pernah diambil
+         * yang ditampilkan pada form serah terima.
          */
         $readyShoes = ApdRequest::query()
             ->where('item_sepatu_safety', true)
@@ -91,6 +137,40 @@ class ApdController extends Controller
             ->latest('id')
             ->paginate(8, ['*'], 'pickup_page')
             ->withQueryString();
+
+        /*
+         * Seluruh riwayat terakhir per NRP dikirim ke Blade.
+         * Data ini dipakai untuk notifikasi langsung pada form.
+         * Validasi utama tetap dilakukan kembali di server pada store/update.
+         */
+        $shoePickupHistoryForJs = ApdPickup::query()
+            ->with('apdRequest')
+            ->whereHas('apdRequest', function ($pickupQuery) {
+                $pickupQuery->where('item_sepatu_safety', true);
+            })
+            ->latest('tanggal_pengambilan')
+            ->latest('id')
+            ->get()
+            ->filter(fn (ApdPickup $pickup) =>
+                filled($pickup->apdRequest?->nrp)
+            )
+            ->unique(fn (ApdPickup $pickup) =>
+                strtoupper(trim($pickup->apdRequest->nrp))
+            )
+            ->mapWithKeys(function (ApdPickup $pickup) {
+                $nrp = strtoupper(
+                    trim($pickup->apdRequest->nrp)
+                );
+
+                return [
+                    $nrp => [
+                        'tanggal' => $pickup
+                            ->tanggal_pengambilan
+                            ?->format('d/m/Y'),
+                        'nama' => $pickup->apdRequest->nama,
+                    ],
+                ];
+            });
 
         $stats = [
             'bulan' => ApdRequest::query()
@@ -118,8 +198,13 @@ class ApdController extends Controller
             'bulan' => $bulan,
             'search' => $search,
             'status' => $status,
-            'shoeStatuses' => self::SHOE_STATUSES,
+            'shoeStatuses' => [
+                ...self::ITEM_STATUSES,
+                'DIAMBIL',
+            ],
             'openModal' => $request->input('open'),
+            'shoePickupHistoryForJs' =>
+                $shoePickupHistoryForJs,
         ]);
     }
 
@@ -127,9 +212,18 @@ class ApdController extends Controller
     {
         $validated = $this->validateRequest($request);
 
-        ApdRequest::create(
-            $this->requestPayload($request, $validated)
+        $this->rejectRepeatedSafetyShoe(
+            $request,
+            $validated['nrp']
         );
+
+        $payload = $this->requestPayload(
+            $request,
+            $validated
+        );
+        $payload['created_by'] = auth()->id();
+
+        ApdRequest::create($payload);
 
         return redirect()
             ->route('apd.index', [
@@ -148,10 +242,16 @@ class ApdController extends Controller
 
         if ($apdRequest->pickup) {
             throw ValidationException::withMessages([
-                'status_sepatu' =>
-                    'Data yang sudah diambil tidak dapat diubah.',
+                'pengajuan' =>
+                    'Data yang sudah memiliki pengambilan Sepatu Safety tidak dapat diedit melalui form utama. Status barang lain masih dapat diperbarui dari kolom Update Status.',
             ]);
         }
+
+        $this->rejectRepeatedSafetyShoe(
+            $request,
+            $validated['nrp'],
+            $apdRequest->id
+        );
 
         $apdRequest->update(
             $this->requestPayload($request, $validated)
@@ -167,55 +267,69 @@ class ApdController extends Controller
     }
 
     /**
-     * Memperbarui posisi terakhir Sepatu Safety.
+     * Memperbarui posisi salah satu barang yang dipilih.
+     *
+     * Kompatibilitas:
+     * Request lama berisi status_sepatu tanpa item tetap diproses
+     * sebagai Sepatu Safety.
      */
     public function updateStatus(
         Request $request,
         ApdRequest $apdRequest
     ): RedirectResponse {
-        $validated = $request->validate([
-            'status_sepatu' => [
-                'required',
-                Rule::in([
-                    'SHE',
-                    'WAREHOUSE',
-                    'LOGISTIK',
-                    'READY',
-                ]),
-            ],
-        ]);
-
-        if (! $apdRequest->item_sepatu_safety) {
-            throw ValidationException::withMessages([
-                'status_sepatu' =>
-                    'Pengajuan ini tidak memiliki Sepatu Safety.',
+        if (
+            ! $request->filled('item')
+            && $request->filled('status_sepatu')
+        ) {
+            $request->merge([
+                'item' => 'sepatu_safety',
+                'status' => $request->input('status_sepatu'),
             ]);
         }
 
-        if ($apdRequest->pickup) {
+        $validated = $request->validate([
+            'item' => [
+                'required',
+                Rule::in(array_keys(self::ITEM_STATUS_FIELDS)),
+            ],
+            'status' => [
+                'required',
+                Rule::in(self::ITEM_STATUSES),
+            ],
+        ]);
+
+        $definition =
+            self::ITEM_STATUS_FIELDS[$validated['item']];
+
+        if (! $apdRequest->{$definition['selected']}) {
             throw ValidationException::withMessages([
-                'status_sepatu' =>
-                    'Sepatu sudah diambil dan status tidak dapat diubah.',
+                'item' =>
+                    "{$definition['label']} tidak dipilih pada pengajuan ini.",
+            ]);
+        }
+
+        if (
+            $validated['item'] === 'sepatu_safety'
+            && $apdRequest->pickup
+        ) {
+            throw ValidationException::withMessages([
+                'status' =>
+                    'Sepatu Safety sudah diambil dan statusnya tidak dapat diubah.',
             ]);
         }
 
         $apdRequest->update([
-            'status_sepatu' => $validated['status_sepatu'],
+            $definition['status'] => $validated['status'],
         ]);
 
         return back()->with(
             'success',
-            'Status Sepatu Safety berhasil diperbarui.'
+            "Status {$definition['label']} berhasil diperbarui."
         );
     }
 
     /**
-     * Menyimpan bukti pengambilan.
-     *
-     * Pengajuan yang dapat dipilih hanya:
-     * - memilih Sepatu Safety;
-     * - status READY;
-     * - belum memiliki data pengambilan.
+     * Menyimpan bukti pengambilan Sepatu Safety.
      */
     public function pickup(Request $request): RedirectResponse
     {
@@ -383,57 +497,63 @@ class ApdController extends Controller
 
     private function validateRequest(Request $request): array
     {
+        $rules = [
+            'tanggal_pengajuan' => ['required', 'date'],
+            'nrp' => ['required', 'string', 'max:50'],
+            'nama' => ['required', 'string', 'max:150'],
+            'jabatan' => ['required', 'string', 'max:150'],
+            'ukuran_sepatu' => [
+                Rule::requiredIf(
+                    $request->boolean('item_sepatu_safety')
+                ),
+                'nullable',
+                'string',
+                'max:20',
+            ],
+        ];
+
+        foreach (self::ITEM_STATUS_FIELDS as $definition) {
+            $rules[$definition['selected']] = [
+                'nullable',
+                'boolean',
+            ];
+
+            $rules[$definition['status']] = [
+                Rule::requiredIf(
+                    $request->boolean($definition['selected'])
+                ),
+                'nullable',
+                Rule::in(self::ITEM_STATUSES),
+            ];
+        }
+
         $validator = validator(
             $request->all(),
-            [
-                'tanggal_pengajuan' => ['required', 'date'],
-                'nrp' => ['required', 'string', 'max:50'],
-                'nama' => ['required', 'string', 'max:150'],
-                'jabatan' => ['required', 'string', 'max:150'],
-                'ukuran_sepatu' => [
-                    Rule::requiredIf(
-                        $request->boolean('item_sepatu_safety')
-                    ),
-                    'nullable',
-                    'string',
-                    'max:20',
-                ],
-                'item_helm' => ['nullable', 'boolean'],
-                'item_sepatu_safety' => ['nullable', 'boolean'],
-                'item_rompi' => ['nullable', 'boolean'],
-                'item_kacamata' => ['nullable', 'boolean'],
-                'item_ear_plug' => ['nullable', 'boolean'],
-                'status_sepatu' => [
-                    Rule::requiredIf(
-                        $request->boolean('item_sepatu_safety')
-                    ),
-                    'nullable',
-                    Rule::in([
-                        'SHE',
-                        'WAREHOUSE',
-                        'LOGISTIK',
-                        'READY',
-                    ]),
-                ],
-            ],
+            $rules,
             [
                 'ukuran_sepatu.required' =>
                     'Ukuran sepatu wajib diisi jika Sepatu Safety dipilih.',
+                'status_helm.required' =>
+                    'Posisi Helm wajib dipilih.',
                 'status_sepatu.required' =>
-                    'Posisi sepatu wajib dipilih jika Sepatu Safety dipilih.',
+                    'Posisi Sepatu Safety wajib dipilih.',
+                'status_rompi.required' =>
+                    'Posisi Rompi wajib dipilih.',
+                'status_kacamata.required' =>
+                    'Posisi Kacamata wajib dipilih.',
+                'status_ear_plug.required' =>
+                    'Posisi Ear Plug wajib dipilih.',
             ]
         );
 
         $validator->after(function ($validator) use ($request) {
-            $hasItem = collect([
-                'item_helm',
-                'item_sepatu_safety',
-                'item_rompi',
-                'item_kacamata',
-                'item_ear_plug',
-            ])->contains(
-                fn ($field) => $request->boolean($field)
-            );
+            $hasItem = collect(self::ITEM_STATUS_FIELDS)
+                ->contains(
+                    fn (array $definition) =>
+                        $request->boolean(
+                            $definition['selected']
+                        )
+                );
 
             if (! $hasItem) {
                 $validator->errors()->add(
@@ -450,31 +570,84 @@ class ApdController extends Controller
         Request $request,
         array $validated
     ): array {
-        $hasSafetyShoes = $request->boolean(
-            'item_sepatu_safety'
-        );
-
-        return [
+        $payload = [
             'tanggal_pengajuan' =>
                 $validated['tanggal_pengajuan'],
-            'nrp' => $validated['nrp'],
+            'nrp' => trim($validated['nrp']),
             'nama' => $validated['nama'],
             'jabatan' => $validated['jabatan'],
-            'ukuran_sepatu' => $hasSafetyShoes
-                ? $validated['ukuran_sepatu']
-                : null,
-            'item_helm' => $request->boolean('item_helm'),
-            'item_sepatu_safety' => $hasSafetyShoes,
-            'item_rompi' => $request->boolean('item_rompi'),
-            'item_kacamata' =>
-                $request->boolean('item_kacamata'),
-            'item_ear_plug' =>
-                $request->boolean('item_ear_plug'),
-            'status_sepatu' => $hasSafetyShoes
-                ? $validated['status_sepatu']
-                : null,
-            'created_by' => auth()->id(),
+            'ukuran_sepatu' =>
+                $request->boolean('item_sepatu_safety')
+                    ? $validated['ukuran_sepatu']
+                    : null,
         ];
+
+        foreach (self::ITEM_STATUS_FIELDS as $definition) {
+            $selected = $request->boolean(
+                $definition['selected']
+            );
+
+            $payload[$definition['selected']] = $selected;
+            $payload[$definition['status']] = $selected
+                ? $validated[$definition['status']]
+                : null;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Sepatu Safety yang sudah diambil tidak boleh diajukan lagi
+     * oleh NRP yang sama.
+     */
+    private function rejectRepeatedSafetyShoe(
+        Request $request,
+        string $nrp,
+        ?int $ignoreRequestId = null
+    ): void {
+        if (! $request->boolean('item_sepatu_safety')) {
+            return;
+        }
+
+        $lastPickup = ApdPickup::query()
+            ->with('apdRequest')
+            ->whereHas(
+                'apdRequest',
+                function ($query) use ($nrp) {
+                    $query
+                        ->whereRaw(
+                            'UPPER(TRIM(nrp)) = ?',
+                            [strtoupper(trim($nrp))]
+                        )
+                        ->where('item_sepatu_safety', true);
+                }
+            )
+            ->when(
+                $ignoreRequestId,
+                fn ($query) =>
+                    $query->where(
+                        'apd_request_id',
+                        '!=',
+                        $ignoreRequestId
+                    )
+            )
+            ->latest('tanggal_pengambilan')
+            ->latest('id')
+            ->first();
+
+        if (! $lastPickup) {
+            return;
+        }
+
+        $tanggal = $lastPickup
+            ->tanggal_pengambilan
+            ?->format('d/m/Y')
+            ?? '-';
+
+        throw ValidationException::withMessages([
+            'item_sepatu_safety' =>
+                "Sepatu Safety tidak dapat diajukan kembali. Pengambilan terakhir tercatat pada {$tanggal}.",
+        ]);
     }
 
     private function validMonth(mixed $month): string

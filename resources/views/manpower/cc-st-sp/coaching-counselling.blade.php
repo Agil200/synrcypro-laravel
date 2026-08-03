@@ -12,7 +12,7 @@
             <div>
                 <h1 class="ccsp-title">Coaching &amp; Counselling</h1>
                 <p class="ccsp-subtitle">
-                    Monitoring kegiatan coaching dan counselling berdasarkan NRP.
+                    Monitoring kegiatan coaching dan counselling berdasarkan NRP dan nama.
                 </p>
             </div>
 
@@ -63,7 +63,7 @@
                 <input type="hidden" name="bulan" value="{{ $bulan }}">
 
                 <label for="ccSearch">
-                    Cari NRP / Materi / Pembuat
+                    Cari NRP / Nama / Materi / Pembuat
                 </label>
 
                 <input
@@ -95,6 +95,7 @@
                     <tr>
                         <th>No</th>
                         <th>NRP</th>
+                        <th>Nama</th>
                         <th>Materi</th>
                         <th>Perihal</th>
                         <th>Tanggal</th>
@@ -116,6 +117,7 @@
                                 }}
                             </td>
                             <td>{{ $item->nrp }}</td>
+                            <td>{{ $item->nama ?: '-' }}</td>
                             <td>{{ $item->materi }}</td>
                             <td>{{ $item->perihal ?: '-' }}</td>
                             <td>{{ $item->tanggal?->format('d/m/Y') }}</td>
@@ -145,6 +147,7 @@
                                         class="ccsp-action js-edit-cc"
                                         data-id="{{ $item->id }}"
                                         data-nrp="{{ $item->nrp }}"
+                                        data-nama="{{ $item->nama }}"
                                         data-materi="{{ $item->materi }}"
                                         data-perihal="{{ $item->perihal }}"
                                         data-tanggal="{{
@@ -186,7 +189,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="ccsp-empty">
+                            <td colspan="11" class="ccsp-empty">
                                 Belum ada data pada {{ $labelBulan }}.
                             </td>
                         </tr>
@@ -324,6 +327,29 @@
                     </div>
                 </div>
 
+
+                <div class="ccsp-reference-row">
+                    <label
+                        for="ccNama"
+                        class="ccsp-reference-label"
+                    >
+                        NAMA*
+                    </label>
+
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="nama"
+                            id="ccNama"
+                            class="ccsp-reference-input"
+                            value="{{ old('nama') }}"
+                            maxlength="150"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+                </div>
+
                 <div class="ccsp-reference-row">
                     <label
                         for="ccMateri"
@@ -414,11 +440,9 @@
                                 class="ccsp-reference-select"
                                 required
                             >
-                                <option value="">Pilih shift</option>
+                                <option value="">PILIH SHFIT</option>
                                 @foreach (
                                     [
-                                        'DAY',
-                                        'NIGHT',
                                         'SHIFT 1',
                                         'SHIFT 2',
                                     ] as $shift
@@ -595,6 +619,27 @@
                     </div>
                 </div>
 
+
+                <div class="ccsp-reference-row">
+                    <label
+                        for="editCcNama"
+                        class="ccsp-reference-label"
+                    >
+                        NAMA*
+                    </label>
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="nama"
+                            id="editCcNama"
+                            class="ccsp-reference-input"
+                            maxlength="150"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+                </div>
+
                 <div class="ccsp-reference-row">
                     <label
                         for="editCcMateri"
@@ -675,8 +720,6 @@
                             >
                                 @foreach (
                                     [
-                                        'DAY',
-                                        'NIGHT',
                                         'SHIFT 1',
                                         'SHIFT 2',
                                     ] as $shift
@@ -842,6 +885,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 document.getElementById('editCcNrp').value =
                     button.dataset.nrp || '';
+
+                document.getElementById('editCcNama').value =
+                    button.dataset.nama || '';
 
                 document.getElementById('editCcMateri').value =
                     button.dataset.materi || '';

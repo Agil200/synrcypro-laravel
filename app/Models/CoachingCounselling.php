@@ -13,6 +13,7 @@ class CoachingCounselling extends Model
 
     protected $fillable = [
         'nrp',
+        'nama',
         'materi',
         'perihal',
         'tanggal',

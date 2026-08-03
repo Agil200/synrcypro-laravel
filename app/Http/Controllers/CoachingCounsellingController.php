@@ -31,6 +31,7 @@ class CoachingCounsellingController extends Controller
             $query->where(function ($subQuery) use ($search) {
                 $subQuery
                     ->where('nrp', 'like', "%{$search}%")
+                    ->orWhere('nama', 'like', "%{$search}%")
                     ->orWhere('materi', 'like', "%{$search}%")
                     ->orWhere('perihal', 'like', "%{$search}%")
                     ->orWhere('dibuat_oleh', 'like', "%{$search}%");
@@ -75,6 +76,7 @@ class CoachingCounsellingController extends Controller
 
         CoachingCounselling::create([
             'nrp' => $validated['nrp'],
+            'nama' => $validated['nama'],
             'materi' => $validated['materi'],
             'perihal' => $validated['perihal'] ?? null,
             'tanggal' => $validated['tanggal'],
@@ -100,6 +102,7 @@ class CoachingCounsellingController extends Controller
         $validated = $this->validateRequest($request, false);
         $data = [
             'nrp' => $validated['nrp'],
+            'nama' => $validated['nama'],
             'materi' => $validated['materi'],
             'perihal' => $validated['perihal'] ?? null,
             'tanggal' => $validated['tanggal'],
@@ -159,10 +162,11 @@ class CoachingCounsellingController extends Controller
     {
         return $request->validate([
             'nrp' => ['required', 'string', 'max:50'],
+            'nama' => ['required', 'string', 'max:150'],
             'materi' => ['required', 'string', 'max:255'],
             'perihal' => ['nullable', 'string', 'max:255'],
             'tanggal' => ['required', 'date'],
-            'shift' => ['required', Rule::in(['DAY', 'NIGHT', 'SHIFT 1', 'SHIFT 2'])],
+            'shift' => ['required', Rule::in(['SHIFT 1', 'SHIFT 2'])],
             'keterangan' => ['nullable', 'string', 'max:1000'],
             'dibuat_oleh' => ['nullable', 'string', 'max:150'],
             'file_dokumen' => [
@@ -172,6 +176,7 @@ class CoachingCounsellingController extends Controller
                 'max:10240',
             ],
         ], [
+            'nama.required' => 'Nama wajib diisi.',
             'file_dokumen.required' => 'File PDF wajib diunggah.',
             'file_dokumen.mimes' => 'Dokumen harus berformat PDF.',
             'file_dokumen.max' => 'Ukuran PDF maksimal 10 MB.',

@@ -883,7 +883,7 @@
     >
         <div class="mp-section-header">
             <div>
-                <h2>Seluruh fitur Manpower</h2>
+                <h2>Seluruh Fitur Manpower</h2>
                 <p>
                     Angka utama menunjukkan total data yang tersimpan.
                 </p>
@@ -968,7 +968,7 @@
         >
             <div class="mp-section-header">
                 <div>
-                    <h2>Tren enam bulan</h2>
+                    <h2>DASHBOARD DOCUMENT OUT , CC, ST , SP</h2>
                     <p>
                         Document Out, Coaching, Teguran,
                         dan Surat Peringatan.
@@ -1194,7 +1194,7 @@
     >
         <div class="mp-section-header">
             <div>
-                <h2>Aktivitas terbaru</h2>
+                <h2>Aktivitas Terbaru</h2>
                 <p>
                     Data terbaru dari Document Out,
                     Coaching, Teguran, dan Peringatan.
@@ -1264,7 +1264,7 @@
     >
         <div class="mp-section-header">
             <div>
-                <h2>Akses cepat</h2>
+                <h2>Akses Cepat</h2>
                 <p>
                     Buka halaman input dan monitoring utama.
                 </p>

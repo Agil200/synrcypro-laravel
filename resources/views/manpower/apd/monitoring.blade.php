@@ -10,6 +10,87 @@
         'READY',
         'DIAMBIL',
     ];
+
+    $itemStatusDefinitions = [
+        'helm' => [
+            'checkbox' => 'item_helm',
+            'status' => 'status_helm',
+            'label' => 'Helm',
+        ],
+        'sepatu_safety' => [
+            'checkbox' => 'item_sepatu_safety',
+            'status' => 'status_sepatu',
+            'label' => 'Sepatu Safety',
+        ],
+        'rompi' => [
+            'checkbox' => 'item_rompi',
+            'status' => 'status_rompi',
+            'label' => 'Rompi',
+        ],
+        'kacamata' => [
+            'checkbox' => 'item_kacamata',
+            'status' => 'status_kacamata',
+            'label' => 'Kacamata',
+        ],
+        'ear_plug' => [
+            'checkbox' => 'item_ear_plug',
+            'status' => 'status_ear_plug',
+            'label' => 'Ear Plug',
+        ],
+    ];
+
+    /*
+     * Riwayat pengambilan Sepatu Safety untuk notifikasi pada form.
+     * Agar pengecekan mencakup seluruh database, controller disarankan
+     * mengirim variabel $shoePickupHistoryForJs dengan format:
+     * [
+     *     '22002759' => [
+     *         'tanggal' => '03/08/2026',
+     *         'nama' => 'Nama Karyawan',
+     *     ],
+     * ]
+     *
+     * Jika variabel tersebut belum dikirim, Blade memakai data riwayat
+     * yang tersedia pada halaman ini sebagai fallback.
+     */
+    $shoePickupHistoryForJs = collect(
+        $shoePickupHistoryForJs ?? []
+    );
+
+    if ($shoePickupHistoryForJs->isEmpty() && isset($pickups)) {
+        $pickupRowsForNotice = method_exists($pickups, 'getCollection')
+            ? $pickups->getCollection()
+            : collect($pickups);
+
+        $shoePickupHistoryForJs = $pickupRowsForNotice
+            ->filter(function ($pickup) {
+                return filled($pickup->apdRequest?->nrp)
+                    && filled($pickup->tanggal_pengambilan);
+            })
+            ->sortByDesc(function ($pickup) {
+                return $pickup->tanggal_pengambilan;
+            })
+            ->unique(function ($pickup) {
+                return strtoupper(trim($pickup->apdRequest->nrp));
+            })
+            ->mapWithKeys(function ($pickup) {
+                $tanggal = $pickup->tanggal_pengambilan;
+
+                if ($tanggal instanceof \Carbon\CarbonInterface) {
+                    $tanggal = $tanggal->format('d/m/Y');
+                } else {
+                    $tanggal = \Carbon\Carbon::parse($tanggal)
+                        ->format('d/m/Y');
+                }
+
+                return [
+                    strtoupper(trim($pickup->apdRequest->nrp)) => [
+                        'tanggal' => $tanggal,
+                        'nama' => $pickup->apdRequest->nama,
+                    ],
+                ];
+            });
+    }
 @endphp
 
 <style>
@@ -202,7 +283,7 @@
 
     .apd-table {
         width: 100%;
-        min-width: 1280px;
+        min-width: 1550px;
         border-collapse: separate;
         border-spacing: 0;
         color: #293244;
@@ -298,6 +379,75 @@
         background: #ffffff;
         font-size: 10px;
         font-weight: 800;
+    }
+
+    .apd-item-status-list {
+        display: grid;
+        min-width: 355px;
+        gap: 9px;
+    }
+
+    .apd-item-status-block {
+        display: grid;
+        gap: 4px;
+        padding-bottom: 7px;
+        border-bottom: 1px dashed #e1e6ec;
+    }
+
+    .apd-item-status-block:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .apd-item-status-block strong,
+    .apd-status-update-form strong,
+    .apd-status-update-row strong {
+        color: #344054;
+        font-size: 9px;
+        font-weight: 900;
+    }
+
+    .apd-status-update-form {
+        display: grid;
+        min-width: 355px;
+        grid-template-columns:
+            minmax(78px, 100px)
+            minmax(115px, 1fr)
+            68px;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .apd-status-update-form .apd-status-select {
+        width: 100%;
+    }
+
+    .apd-status-update-row {
+        display: grid;
+        min-width: 355px;
+        grid-template-columns:
+            minmax(78px, 100px)
+            minmax(115px, 1fr);
+        align-items: center;
+        gap: 6px;
+    }
+
+    .apd-item-status-panel {
+        padding: 12px;
+        border: 1px solid #e2e7ee;
+        border-radius: 10px;
+        background: #fafbfc;
+    }
+
+    .apd-status-submit {
+        min-width: 68px;
+        border-color: #5146e5 !important;
+        color: #ffffff !important;
+        background: #5146e5 !important;
+    }
+
+    .apd-status-submit:hover {
+        background: #4136c9 !important;
     }
 
     .apd-actions {
@@ -500,6 +650,57 @@
         color: #344054;
         background: #ffffff;
         font-size: 11px;
+    }
+
+    .apd-submit-primary {
+        min-width: 150px;
+        min-height: 40px;
+        border: 0 !important;
+        color: #ffffff !important;
+        background: #5146e5 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        box-shadow: 0 8px 18px rgba(81, 70, 229, .22);
+    }
+
+    .apd-submit-primary:hover {
+        background: #4136c9 !important;
+    }
+
+    .apd-calendar-help {
+        margin: 0;
+        color: #7b8492;
+        font-size: 9px;
+        line-height: 1.4;
+    }
+
+    .apd-inline-note[hidden] {
+        display: none !important;
+    }
+
+    .apd-inline-note {
+        padding: 10px 12px;
+        border: 1px solid #f4c2c5;
+        border-radius: 8px;
+        color: #991b1b;
+        background: #fff1f2;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    .apd-inline-note.info {
+        border-color: #c7d7fe;
+        color: #1e3a8a;
+        background: #eff6ff;
+    }
+
+    .apd-check-option.is-disabled {
+        opacity: .55;
+    }
+
+    .apd-check-option.is-disabled .apd-check-box {
+        cursor: not-allowed;
     }
 
     .apd-check-grid {
@@ -733,6 +934,14 @@
         overflow: hidden !important;
     }
 
+    @media (max-width: 720px) {
+        .apd-item-status-list,
+        .apd-status-update-form,
+        .apd-status-update-row {
+            min-width: 300px;
+        }
+    }
+
     @media (max-width: 1280px) {
         .apd-toolbar {
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -793,7 +1002,7 @@
             <div>
                 <h1 class="apd-title">Monitoring APD</h1>
                 <p class="apd-subtitle">
-                    Pengajuan barang APD, pemantauan posisi Sepatu Safety,
+                    Pengajuan barang APD, pemantauan posisi setiap barang,
                     dan dokumentasi pengambilan dengan kamera atau galeri.
                 </p>
             </div>
@@ -883,7 +1092,7 @@
                 <input type="hidden" name="search" value="{{ $search }}">
 
                 <label for="apdStatusFilter">
-                    Status Sepatu
+                    Status Barang
                 </label>
                 <select
                     name="status"
@@ -935,7 +1144,7 @@
                         <th>Jabatan</th>
                         <th>Ukuran Sepatu</th>
                         <th>Barang Diajukan</th>
-                        <th>Posisi Sepatu</th>
+                        <th>Posisi Barang</th>
                         <th>Update Status</th>
                         <th>Aksi</th>
                     </tr>
@@ -943,14 +1152,6 @@
 
                 <tbody>
                     @forelse ($records as $item)
-                        @php
-                            $currentStatusIndex = array_search(
-                                $item->status_sepatu,
-                                $statusOrder,
-                                true
-                            );
-                        @endphp
-
                         <tr>
                             <td>
                                 {{
@@ -985,80 +1186,169 @@
                                 </div>
                             </td>
                             <td>
-                                @if ($item->item_sepatu_safety)
-                                    <div class="apd-progress">
-                                        @foreach ($statusOrder as $index => $step)
-                                            <span
-                                                class="apd-progress-step
-                                                    {{
-                                                        $currentStatusIndex !== false
-                                                        && $index < $currentStatusIndex
-                                                            ? 'done'
-                                                            : ''
-                                                    }}
-                                                    {{
-                                                        $item->status_sepatu === $step
-                                                            ? 'current'
-                                                            : ''
-                                                    }}"
-                                            >
-                                                {{ $step }}
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    -
-                                @endif
+                                <div class="apd-item-status-list">
+                                    @foreach (
+                                        $item->items_with_status
+                                        as $apdItem
+                                    )
+                                        @php
+                                            $itemStatus =
+                                                $apdItem['status'] ?: 'SHE';
+
+                                            $itemStatusOrder =
+                                                $apdItem['key']
+                                                    === 'sepatu_safety'
+                                                ? $statusOrder
+                                                : array_slice(
+                                                    $statusOrder,
+                                                    0,
+                                                    4
+                                                );
+
+                                            $itemStatusIndex =
+                                                array_search(
+                                                    $itemStatus,
+                                                    $itemStatusOrder,
+                                                    true
+                                                );
+                                        @endphp
+
+                                        <div class="apd-item-status-block">
+                                            <strong>
+                                                {{ $apdItem['label'] }}
+                                            </strong>
+
+                                            <div class="apd-progress">
+                                                @foreach (
+                                                    $itemStatusOrder
+                                                    as $index => $step
+                                                )
+                                                    <span
+                                                        class="
+                                                            apd-progress-step
+                                                            {{
+                                                                $itemStatusIndex
+                                                                    !== false
+                                                                && $index
+                                                                    < $itemStatusIndex
+                                                                    ? 'done'
+                                                                    : ''
+                                                            }}
+                                                            {{
+                                                                $itemStatus
+                                                                    === $step
+                                                                    ? 'current'
+                                                                    : ''
+                                                            }}
+                                                        "
+                                                    >
+                                                        {{ $step }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </td>
                             <td>
-                                @if (
-                                    $item->item_sepatu_safety
-                                    && ! $item->pickup
-                                )
-                                    <form
-                                        method="POST"
-                                        action="{{
-                                            route(
-                                                'apd.status',
-                                                $item
-                                            )
-                                        }}"
-                                    >
-                                        @csrf
-                                        @method('PATCH')
-
-                                        <select
-                                            name="status_sepatu"
-                                            class="apd-status-select"
-                                            onchange="this.form.submit()"
-                                        >
-                                            @foreach (
-                                                [
-                                                    'SHE',
-                                                    'WAREHOUSE',
-                                                    'LOGISTIK',
-                                                    'READY',
-                                                ] as $step
-                                            )
-                                                <option
-                                                    value="{{ $step }}"
-                                                    @selected(
-                                                        $item->status_sepatu
-                                                            === $step
+                                <div class="apd-item-status-list">
+                                    @foreach (
+                                        $item->items_with_status
+                                        as $apdItem
+                                    )
+                                        @if (
+                                            $apdItem['key']
+                                                === 'sepatu_safety'
+                                            && $item->pickup
+                                        )
+                                            <div
+                                                class="
+                                                    apd-status-update-row
+                                                "
+                                            >
+                                                <strong>
+                                                    {{ $apdItem['label'] }}
+                                                </strong>
+                                                <span class="apd-chip">
+                                                    ✓ DIAMBIL
+                                                </span>
+                                            </div>
+                                        @else
+                                            <form
+                                                method="POST"
+                                                action="{{
+                                                    route(
+                                                        'apd.status',
+                                                        $item
                                                     )
+                                                }}"
+                                                class="
+                                                    apd-status-update-form
+                                                "
+                                            >
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <input
+                                                    type="hidden"
+                                                    name="item"
+                                                    value="{{
+                                                        $apdItem['key']
+                                                    }}"
                                                 >
-                                                    {{ $step }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </form>
-                                @elseif ($item->pickup)
-                                    <span class="apd-chip">
-                                        ✓ DIAMBIL
-                                    </span>
-                                @else
-                                    -
-                                @endif
+
+                                                <strong>
+                                                    {{ $apdItem['label'] }}
+                                                </strong>
+
+                                                <select
+                                                    name="status"
+                                                    class="
+                                                        apd-status-select
+                                                    "
+                                                    aria-label="{{
+                                                        'Posisi '
+                                                        .$apdItem['label']
+                                                    }}"
+                                                >
+                                                    @foreach (
+                                                        [
+                                                            'SHE',
+                                                            'WAREHOUSE',
+                                                            'LOGISTIK',
+                                                            'READY',
+                                                        ] as $step
+                                                    )
+                                                        <option
+                                                            value="{{ $step }}"
+                                                            @selected(
+                                                                $apdItem[
+                                                                    'status'
+                                                                ] === $step
+                                                            )
+                                                        >
+                                                            {{ $step }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+
+                                                <button
+                                                    type="submit"
+                                                    class="
+                                                        apd-action
+                                                        apd-status-submit
+                                                    "
+                                                    title="{{
+                                                        'Simpan status '
+                                                        .$apdItem['label']
+                                                    }}"
+                                                >
+                                                    Submit
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endforeach
+                                </div>
                             </td>
                             <td>
                                 <div class="apd-actions">
@@ -1103,8 +1393,20 @@
                                                     ? 1
                                                     : 0
                                             }}"
-                                            data-status="{{
+                                            data-status-helm="{{
+                                                $item->status_helm
+                                            }}"
+                                            data-status-sepatu="{{
                                                 $item->status_sepatu
+                                            }}"
+                                            data-status-rompi="{{
+                                                $item->status_rompi
+                                            }}"
+                                            data-status-kacamata="{{
+                                                $item->status_kacamata
+                                            }}"
+                                            data-status-earplug="{{
+                                                $item->status_ear_plug
                                             }}"
                                         >
                                             Edit
@@ -1373,6 +1675,9 @@
                             }}"
                             required
                         >
+                        <p class="apd-calendar-help">
+                            Klik ikon kalender untuk memilih tanggal.
+                        </p>
                     </div>
 
                     <div class="apd-field">
@@ -1384,9 +1689,17 @@
                             class="apd-input"
                             value="{{ old('nrp') }}"
                             maxlength="50"
+                            autocomplete="off"
+                            data-shoe-nrp-input
                             required
                         >
                     </div>
+
+                    <div
+                        class="apd-inline-note apd-full"
+                        data-shoe-history-notice
+                        hidden
+                    ></div>
 
                     <div class="apd-field">
                         <label for="apdNama">Nama</label>
@@ -1419,39 +1732,49 @@
 
                         <div class="apd-check-grid">
                             @foreach (
-                                [
-                                    'item_helm' => 'Helm',
-                                    'item_sepatu_safety' =>
-                                        'Sepatu Safety',
-                                    'item_rompi' => 'Rompi',
-                                    'item_kacamata' => 'Kacamata',
-                                    'item_ear_plug' => 'Ear Plug',
-                                ] as $field => $label
+                                $itemStatusDefinitions
+                                as $key => $definition
                             )
                                 <label class="apd-check-option">
                                     <input
                                         type="checkbox"
-                                        name="{{ $field }}"
+                                        name="{{
+                                            $definition['checkbox']
+                                        }}"
                                         value="1"
-                                        @checked(old($field))
-                                        @if (
-                                            $field
-                                            === 'item_sepatu_safety'
+                                        data-item-key="{{ $key }}"
+                                        class="
+                                            js-apd-item-toggle
+                                            {{
+                                                $key === 'sepatu_safety'
+                                                    ? 'js-safety-shoe-toggle'
+                                                    : ''
+                                            }}
+                                        "
+                                        @checked(
+                                            old(
+                                                $definition['checkbox']
+                                            )
                                         )
-                                            class="js-safety-shoe-toggle"
-                                        @endif
                                     >
                                     <span class="apd-check-box">
-                                        {{ $label }}
+                                        {{ $definition['label'] }}
                                     </span>
                                 </label>
                             @endforeach
                         </div>
+
+                        <p class="apd-calendar-help">
+                            Setiap barang yang dipilih memiliki status
+                            SHE, WAREHOUSE, LOGISTIK, atau READY.
+                            Sepatu Safety yang sudah pernah diambil tidak
+                            dapat diajukan kembali dengan NRP yang sama.
+                        </p>
                     </div>
 
                     <div
                         class="apd-field"
-                        data-shoe-field
+                        data-shoe-size-field
                     >
                         <label for="apdUkuran">
                             Ukuran Sepatu yang Diajukan
@@ -1467,42 +1790,51 @@
                         >
                     </div>
 
-                    <div
-                        class="apd-field apd-full"
-                        data-shoe-field
-                    >
-                        <label>
-                            Posisi Sepatu Saat Ini
-                        </label>
+                    @foreach (
+                        $itemStatusDefinitions
+                        as $key => $definition
+                    )
+                        <div
+                            class="apd-field apd-full
+                                apd-item-status-panel"
+                            data-item-status-panel="{{ $key }}"
+                        >
+                            <label>
+                                Posisi {{ $definition['label'] }}
+                                Saat Ini
+                            </label>
 
-                        <div class="apd-status-options">
-                            @foreach (
-                                [
-                                    'SHE',
-                                    'WAREHOUSE',
-                                    'LOGISTIK',
-                                    'READY',
-                                ] as $step
-                            )
-                                <label class="apd-status-option">
-                                    <input
-                                        type="radio"
-                                        name="status_sepatu"
-                                        value="{{ $step }}"
-                                        @checked(
-                                            old(
-                                                'status_sepatu',
-                                                'SHE'
-                                            ) === $step
-                                        )
-                                    >
-                                    <span class="apd-status-box">
-                                        {{ $step }}
-                                    </span>
-                                </label>
-                            @endforeach
+                            <div class="apd-status-options">
+                                @foreach (
+                                    [
+                                        'SHE',
+                                        'WAREHOUSE',
+                                        'LOGISTIK',
+                                        'READY',
+                                    ] as $step
+                                )
+                                    <label class="apd-status-option">
+                                        <input
+                                            type="radio"
+                                            name="{{
+                                                $definition['status']
+                                            }}"
+                                            value="{{ $step }}"
+                                            @checked(
+                                                old(
+                                                    $definition['status'],
+                                                    'SHE'
+                                                ) === $step
+                                            )
+                                        >
+                                        <span class="apd-status-box">
+                                            {{ $step }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -1513,8 +1845,12 @@
                 >
                     Batal
                 </button>
-                <button type="submit" class="apd-primary">
-                    Simpan Pengajuan
+                <button
+                    type="submit"
+                    class="apd-primary apd-submit-primary"
+                    id="submitApdCreate"
+                >
+                    Submit Pengajuan
                 </button>
             </div>
         </form>
@@ -1560,6 +1896,9 @@
                             class="apd-input"
                             required
                         >
+                        <p class="apd-calendar-help">
+                            Klik ikon kalender untuk mengubah tanggal.
+                        </p>
                     </div>
 
                     <div class="apd-field">
@@ -1570,9 +1909,17 @@
                             id="editApdNrp"
                             class="apd-input"
                             maxlength="50"
+                            autocomplete="off"
+                            data-shoe-nrp-input
                             required
                         >
                     </div>
+
+                    <div
+                        class="apd-inline-note apd-full"
+                        data-shoe-history-notice
+                        hidden
+                    ></div>
 
                     <div class="apd-field">
                         <label for="editApdNama">Nama</label>
@@ -1605,30 +1952,31 @@
 
                         <div class="apd-check-grid">
                             @foreach (
-                                [
-                                    'item_helm' => 'Helm',
-                                    'item_sepatu_safety' =>
-                                        'Sepatu Safety',
-                                    'item_rompi' => 'Rompi',
-                                    'item_kacamata' => 'Kacamata',
-                                    'item_ear_plug' => 'Ear Plug',
-                                ] as $field => $label
+                                $itemStatusDefinitions
+                                as $key => $definition
                             )
                                 <label class="apd-check-option">
                                     <input
                                         type="checkbox"
-                                        name="{{ $field }}"
-                                        id="edit_{{ $field }}"
+                                        name="{{
+                                            $definition['checkbox']
+                                        }}"
+                                        id="edit_{{
+                                            $definition['checkbox']
+                                        }}"
                                         value="1"
-                                        @if (
-                                            $field
-                                            === 'item_sepatu_safety'
-                                        )
-                                            class="js-safety-shoe-toggle"
-                                        @endif
+                                        data-item-key="{{ $key }}"
+                                        class="
+                                            js-apd-item-toggle
+                                            {{
+                                                $key === 'sepatu_safety'
+                                                    ? 'js-safety-shoe-toggle'
+                                                    : ''
+                                            }}
+                                        "
                                     >
                                     <span class="apd-check-box">
-                                        {{ $label }}
+                                        {{ $definition['label'] }}
                                     </span>
                                 </label>
                             @endforeach
@@ -1637,7 +1985,7 @@
 
                     <div
                         class="apd-field"
-                        data-shoe-field
+                        data-shoe-size-field
                     >
                         <label for="editApdUkuran">
                             Ukuran Sepatu yang Diajukan
@@ -1651,35 +1999,48 @@
                         >
                     </div>
 
-                    <div
-                        class="apd-field apd-full"
-                        data-shoe-field
-                    >
-                        <label>Posisi Sepatu Saat Ini</label>
+                    @foreach (
+                        $itemStatusDefinitions
+                        as $key => $definition
+                    )
+                        <div
+                            class="apd-field apd-full
+                                apd-item-status-panel"
+                            data-item-status-panel="{{ $key }}"
+                        >
+                            <label>
+                                Posisi {{ $definition['label'] }}
+                                Saat Ini
+                            </label>
 
-                        <div class="apd-status-options">
-                            @foreach (
-                                [
-                                    'SHE',
-                                    'WAREHOUSE',
-                                    'LOGISTIK',
-                                    'READY',
-                                ] as $step
-                            )
-                                <label class="apd-status-option">
-                                    <input
-                                        type="radio"
-                                        name="status_sepatu"
-                                        id="edit_status_{{ $step }}"
-                                        value="{{ $step }}"
-                                    >
-                                    <span class="apd-status-box">
-                                        {{ $step }}
-                                    </span>
-                                </label>
-                            @endforeach
+                            <div class="apd-status-options">
+                                @foreach (
+                                    [
+                                        'SHE',
+                                        'WAREHOUSE',
+                                        'LOGISTIK',
+                                        'READY',
+                                    ] as $step
+                                )
+                                    <label class="apd-status-option">
+                                        <input
+                                            type="radio"
+                                            name="{{
+                                                $definition['status']
+                                            }}"
+                                            id="{{
+                                                'edit_status_'.$key.'_'.$step
+                                            }}"
+                                            value="{{ $step }}"
+                                        >
+                                        <span class="apd-status-box">
+                                            {{ $step }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -1690,8 +2051,11 @@
                 >
                     Batal
                 </button>
-                <button type="submit" class="apd-primary">
-                    Simpan Perubahan
+                <button
+                    type="submit"
+                    class="apd-primary apd-submit-primary"
+                >
+                    Submit Perubahan
                 </button>
             </div>
         </form>
@@ -1954,6 +2318,10 @@ document.addEventListener('DOMContentLoaded', function () {
         route('apd.update', ['apdRequest' => '__ID__'])
     );
 
+    const shoePickupHistory = @json(
+        $shoePickupHistoryForJs
+    );
+
     let cameraStream = null;
 
     function openModal(modal) {
@@ -1987,37 +2355,140 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function syncShoeFields(container) {
+    function syncItemStatusFields(container) {
+        if (!container) {
+            return;
+        }
+
+        container
+            .querySelectorAll('.js-apd-item-toggle')
+            .forEach(function (toggle) {
+                const key = toggle.dataset.itemKey;
+                const panel = container.querySelector(
+                    `[data-item-status-panel="${key}"]`
+                );
+                const isEnabled = Boolean(toggle.checked);
+
+                if (panel) {
+                    panel.style.display =
+                        isEnabled ? 'grid' : 'none';
+
+                    panel
+                        .querySelectorAll('input, select')
+                        .forEach(function (input) {
+                            input.disabled = !isEnabled;
+                        });
+                }
+            });
+
+        const shoeToggle = container.querySelector(
+            '.js-safety-shoe-toggle'
+        );
+        const shoeSizeField = container.querySelector(
+            '[data-shoe-size-field]'
+        );
+        const shoeEnabled = Boolean(shoeToggle?.checked);
+
+        if (shoeSizeField) {
+            shoeSizeField.style.display =
+                shoeEnabled ? 'grid' : 'none';
+
+            shoeSizeField
+                .querySelectorAll('input, select')
+                .forEach(function (input) {
+                    input.disabled = !shoeEnabled;
+                });
+        }
+    }
+
+    function normalizeNrp(value) {
+        return String(value || '')
+            .trim()
+            .toUpperCase();
+    }
+
+    function getShoeHistory(container) {
+        const nrpInput = container?.querySelector(
+            '[data-shoe-nrp-input]'
+        );
+
+        if (!nrpInput) {
+            return null;
+        }
+
+        return shoePickupHistory[
+            normalizeNrp(nrpInput.value)
+        ] || null;
+    }
+
+    function applyShoeHistoryGuard(container) {
+        if (!container) {
+            return;
+        }
+
+        const history = getShoeHistory(container);
+        const notice = container.querySelector(
+            '[data-shoe-history-notice]'
+        );
         const toggle = container.querySelector(
             '.js-safety-shoe-toggle'
         );
-
-        const shoeFields = container.querySelectorAll(
-            '[data-shoe-field]'
+        const option = toggle?.closest(
+            '.apd-check-option'
         );
 
-        const isEnabled = Boolean(toggle?.checked);
+        const editingExistingShoe =
+            container === editModal
+            && container.dataset.existingShoe === '1';
 
-        shoeFields.forEach(function (field) {
-            field.style.display = isEnabled ? 'grid' : 'none';
+        const shouldBlock = Boolean(history)
+            && !editingExistingShoe;
 
-            field.querySelectorAll(
-                'input, select'
-            ).forEach(function (input) {
-                if (
-                    input.name === 'ukuran_sepatu'
-                    || input.name === 'status_sepatu'
-                ) {
-                    input.disabled = !isEnabled;
-                }
-            });
-        });
+        if (notice) {
+            if (history) {
+                const prefix = editingExistingShoe
+                    ? 'Riwayat ditemukan. Pengajuan yang sedang diedit tetap dapat diperbarui.'
+                    : 'Sepatu Safety tidak dapat diajukan kembali.';
+
+                notice.textContent =
+                    `${prefix} Pengambilan terakhir: `
+                    + `${history.tanggal || '-'} `
+                    + `oleh ${history.nama || 'karyawan terkait'}.`;
+                notice.hidden = false;
+                notice.classList.toggle(
+                    'info',
+                    editingExistingShoe
+                );
+            } else {
+                notice.textContent = '';
+                notice.hidden = true;
+                notice.classList.remove('info');
+            }
+        }
+
+        if (toggle) {
+            if (shouldBlock) {
+                toggle.checked = false;
+                toggle.disabled = true;
+                option?.classList.add('is-disabled');
+                option?.setAttribute(
+                    'title',
+                    'Sepatu Safety sudah pernah diambil.'
+                );
+            } else {
+                toggle.disabled = false;
+                option?.classList.remove('is-disabled');
+                option?.removeAttribute('title');
+            }
+        }
+
+        syncItemStatusFields(container);
     }
 
     document
         .getElementById('openApdCreate')
         ?.addEventListener('click', function () {
-            syncShoeFields(createModal);
+            applyShoeHistoryGuard(createModal);
             openModal(createModal);
         });
 
@@ -2054,17 +2525,29 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     document
-        .querySelectorAll('.js-safety-shoe-toggle')
+        .querySelectorAll('.js-apd-item-toggle')
         .forEach(function (toggle) {
             toggle.addEventListener('change', function () {
-                syncShoeFields(
+                syncItemStatusFields(
                     toggle.closest('.apd-modal')
                 );
             });
         });
 
-    syncShoeFields(createModal);
-    syncShoeFields(editModal);
+    document
+        .querySelectorAll('[data-shoe-nrp-input]')
+        .forEach(function (input) {
+            ['input', 'change', 'blur'].forEach(function (eventName) {
+                input.addEventListener(eventName, function () {
+                    applyShoeHistoryGuard(
+                        input.closest('.apd-modal')
+                    );
+                });
+            });
+        });
+
+    applyShoeHistoryGuard(createModal);
+    applyShoeHistoryGuard(editModal);
 
     document
         .querySelectorAll('.js-edit-apd')
@@ -2118,15 +2601,34 @@ document.addEventListener('DOMContentLoaded', function () {
                     'edit_item_ear_plug'
                 ).checked = button.dataset.earplug === '1';
 
-                const statusInput = document.getElementById(
-                    'edit_status_' + (button.dataset.status || 'SHE')
-                );
+                const itemStatuses = {
+                    helm: button.dataset.statusHelm || 'SHE',
+                    sepatu_safety:
+                        button.dataset.statusSepatu || 'SHE',
+                    rompi: button.dataset.statusRompi || 'SHE',
+                    kacamata:
+                        button.dataset.statusKacamata || 'SHE',
+                    ear_plug:
+                        button.dataset.statusEarplug || 'SHE',
+                };
 
-                if (statusInput) {
-                    statusInput.checked = true;
-                }
+                Object.entries(itemStatuses)
+                    .forEach(function ([key, status]) {
+                        const statusInput =
+                            document.getElementById(
+                                `edit_status_${key}_${status}`
+                            );
 
-                syncShoeFields(editModal);
+                        if (statusInput) {
+                            statusInput.checked = true;
+                        }
+                    });
+
+                editModal.dataset.existingShoe =
+                    button.dataset.sepatu || '0';
+
+                applyShoeHistoryGuard(editModal);
+                syncItemStatusFields(editModal);
                 openModal(editModal);
             });
         });
@@ -2143,6 +2645,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     event.preventDefault();
                 }
             });
+        });
+
+    createModal
+        ?.querySelector('form')
+        ?.addEventListener('submit', function (event) {
+            const history = getShoeHistory(createModal);
+            const shoeToggle = createModal.querySelector(
+                '.js-safety-shoe-toggle'
+            );
+
+            if (history && shoeToggle?.checked) {
+                event.preventDefault();
+                alert(
+                    'Pengajuan Sepatu Safety ditolak. '
+                    + `Pengambilan terakhir tercatat pada ${history.tanggal}.`
+                );
+            }
         });
 
     const readySelect =
@@ -2355,11 +2874,11 @@ document.addEventListener('DOMContentLoaded', function () {
         )
             openModal(pickupModal);
         @else
-            syncShoeFields(createModal);
+            applyShoeHistoryGuard(createModal);
             openModal(createModal);
         @endif
     @elseif ($openModal === 'create')
-        syncShoeFields(createModal);
+        applyShoeHistoryGuard(createModal);
         openModal(createModal);
     @elseif ($openModal === 'pickup')
         openModal(pickupModal);
