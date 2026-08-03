@@ -130,6 +130,86 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Tambahkan satu baris ke UPDATE_DATA_KARYAWAN
+    |--------------------------------------------------------------------------
+    */
+
+    public function appendEmployeeDataUpdate(
+        array $row
+    ): array {
+        $spreadsheetId = trim(
+            (string) config(
+                'services.google_sheets.update_data_spreadsheet_id'
+            )
+        );
+
+        $range = trim(
+            (string) config(
+                'services.google_sheets.update_data_range'
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID UPDATE_DATA_KARYAWAN belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range UPDATE_DATA_KARYAWAN belum diatur.'
+            );
+        }
+
+        return $this->appendValues(
+            $spreadsheetId,
+            $range,
+            $row
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tambahkan satu baris ke UPDATE_STATUS_KARYAWAN
+    |--------------------------------------------------------------------------
+    */
+
+    public function appendEmployeeStatusUpdate(
+        array $row
+    ): array {
+        $spreadsheetId = trim(
+            (string) config(
+                'services.google_sheets.update_status_spreadsheet_id'
+            )
+        );
+
+        $range = trim(
+            (string) config(
+                'services.google_sheets.update_status_range'
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID UPDATE_STATUS_KARYAWAN belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range UPDATE_STATUS_KARYAWAN belum diatur.'
+            );
+        }
+
+        return $this->appendValues(
+            $spreadsheetId,
+            $range,
+            $row
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Periksa apakah token OAuth Google Sheets sudah tersimpan
     |--------------------------------------------------------------------------
     */
@@ -192,6 +272,94 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Tambahkan values sebagai baris baru Google Sheets
+    |--------------------------------------------------------------------------
+    */
+
+    public function appendValues(
+        string $spreadsheetId,
+        string $range,
+        array $row
+    ): array {
+        $spreadsheetId = trim($spreadsheetId);
+        $range = trim($range);
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID tujuan belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range tujuan belum diatur.'
+            );
+        }
+
+        $row = array_map(
+            static function (mixed $value): mixed {
+                return $value === null
+                    ? ''
+                    : $value;
+            },
+            array_values($row)
+        );
+
+        if ($row === []) {
+            throw new RuntimeException(
+                'Data yang akan ditulis ke Google Sheets masih kosong.'
+            );
+        }
+
+        $this->ensureWriteScope();
+
+        $accessToken = $this->getValidAccessToken();
+
+        $response = $this->requestAppendValues(
+            $accessToken,
+            $spreadsheetId,
+            $range,
+            $row
+        );
+
+        /*
+         * Jika access token sudah tidak valid, refresh dan coba sekali lagi.
+         */
+        if ($response->status() === 401) {
+            $accessToken = $this->getValidAccessToken(
+                forceRefresh: true
+            );
+
+            $response = $this->requestAppendValues(
+                $accessToken,
+                $spreadsheetId,
+                $range,
+                $row
+            );
+        }
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                $this->googleErrorMessage(
+                    $response,
+                    'Gagal menambahkan data ke Google Spreadsheet.'
+                )
+            );
+        }
+
+        $result = $response->json();
+
+        if (!is_array($result)) {
+            throw new RuntimeException(
+                'Respons penulisan Google Spreadsheet tidak valid.'
+            );
+        }
+
+        return $result;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Kirim request ke Google Sheets API
     |--------------------------------------------------------------------------
     */
@@ -220,6 +388,90 @@ class GoogleSheetsService
                         'FORMATTED_STRING',
                 ]
             );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kirim request append ke Google Sheets API
+    |--------------------------------------------------------------------------
+    */
+
+    private function requestAppendValues(
+        string $accessToken,
+        string $spreadsheetId,
+        string $range,
+        array $row
+    ): Response {
+        $query = http_build_query(
+            [
+                'valueInputOption' => 'USER_ENTERED',
+                'insertDataOption' => 'INSERT_ROWS',
+                'includeValuesInResponse' => 'true',
+            ],
+            '',
+            '&',
+            PHP_QUERY_RFC3986
+        );
+
+        $url =
+            'https://sheets.googleapis.com/v4/spreadsheets/' .
+            rawurlencode($spreadsheetId) .
+            '/values/' .
+            rawurlencode($range) .
+            ':append?' .
+            $query;
+
+        return Http::withToken($accessToken)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(30)
+            ->post(
+                $url,
+                [
+                    'range' => $range,
+                    'majorDimension' => 'ROWS',
+                    'values' => [$row],
+                ]
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pastikan token memiliki izin tulis Google Sheets
+    |--------------------------------------------------------------------------
+    */
+
+    private function ensureWriteScope(): void
+    {
+        $token = $this->readStoredToken();
+
+        $scopeText = trim(
+            (string) Arr::get(
+                $token,
+                'scope',
+                ''
+            )
+        );
+
+        $scopes = preg_split(
+            '/\\s+/',
+            $scopeText,
+            -1,
+            PREG_SPLIT_NO_EMPTY
+        ) ?: [];
+
+        if (
+            !in_array(
+                'https://www.googleapis.com/auth/spreadsheets',
+                $scopes,
+                true
+            )
+        ) {
+            throw new RuntimeException(
+                'Token Google Sheets belum memiliki izin tulis. ' .
+                'Hubungkan ulang OAuth menggunakan scope spreadsheets.'
+            );
+        }
     }
 
     /*

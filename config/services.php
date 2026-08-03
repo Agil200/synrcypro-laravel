@@ -115,6 +115,57 @@ return [
             )
         ),
 
+                /*
+        |--------------------------------------------------------------------------
+        | Spreadsheet UPDATE_DATA_KARYAWAN
+        |--------------------------------------------------------------------------
+        |
+        | Menyimpan perubahan identitas, kontak, tempat tinggal,
+        | kamar mess, dan pas foto karyawan.
+        |
+        */
+
+        'update_data_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_UPDATE_DATA_SPREADSHEET_ID',
+                env(
+                    'GOOGLE_SHEETS_MASTER_DATABASE_SPREADSHEET_ID'
+                )
+            )
+        ),
+
+        'update_data_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_UPDATE_DATA_RANGE',
+                "'UPDATE_DATA_KARYAWAN'!A:L"
+            )
+        ),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Spreadsheet UPDATE_STATUS_KARYAWAN
+        |--------------------------------------------------------------------------
+        |
+        | Menyimpan perubahan MUTASI, PROMOSI, RESIGN, dan PHK.
+        |
+        */
+
+        'update_status_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_UPDATE_STATUS_SPREADSHEET_ID',
+                env(
+                    'GOOGLE_SHEETS_MASTER_DATABASE_SPREADSHEET_ID'
+                )
+            )
+        ),
+
+        'update_status_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_UPDATE_STATUS_RANGE',
+                "'UPDATE_STATUS_KARYAWAN'!A:J"
+            )
+        ),
+
         /*
         |--------------------------------------------------------------------------
         | Spreadsheet Monitoring SHE

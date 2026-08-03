@@ -209,6 +209,29 @@ Route::middleware('auth')->group(function () {
             )->name('atr.pic-roster');
         });
 
+/*
+|--------------------------------------------------------------------------
+| Admin Database Karyawan
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('database/employees')
+    ->name('database.employees.')
+    ->controller(
+    \App\Http\Controllers\EmployeeAdminController::class
+)
+    ->middleware('throttle:20,1')
+    ->group(function () {
+        Route::post(
+            '/update-data',
+            'storeDataUpdate'
+        )->name('update-data');
+
+        Route::post(
+            '/update-status',
+            'storeStatusUpdate'
+        )->name('update-status');
+    });
 
     /*
      * Kompatibilitas untuk link lama yang masih memakai:

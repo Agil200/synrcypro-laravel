@@ -268,40 +268,27 @@ class GoogleOAuthController extends Controller
                 );
         }
 
-$allowedEmails = array_filter(
-    array_map(
-        function ($email) {
-            return strtolower(trim($email));
-        },
-        explode(
-            ',',
-            (string) config(
-                'services.google_sheets.allowed_email'
+        $allowedEmail = strtolower(
+            trim(
+                (string) config(
+                    'services.google_sheets.allowed_email'
+                )
             )
-        )
-    )
-);
-
-dd(
-    $googleEmail,
-    $allowedEmails
-);
-
-if (
-    ! in_array(
-        $googleEmail,
-        $allowedEmails,
-        true
-    )
-) {
-
-    return redirect()
-        ->to($returnUrl)
-        ->with(
-            'error',
-            'Email Google Anda belum terdaftar di SYNRGYPRO.'
         );
-}
+
+        if (
+            $allowedEmail !== '' &&
+            $googleEmail !== $allowedEmail
+        ) {
+            return redirect()
+                ->to($returnUrl)
+                ->with(
+                    'error',
+                    'Gunakan akun Google ' .
+                    $allowedEmail .
+                    ' untuk menghubungkan Spreadsheet.'
+                );
+        }
 
         $oldToken = [];
 
