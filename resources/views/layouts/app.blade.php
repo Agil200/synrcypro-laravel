@@ -31,7 +31,6 @@
     rel="shortcut icon"
     type="image/png"
     href="{{ asset('assets/images/syngypro-tab-v1.png') }}?v=20260804"
->
     >
 
     <link
