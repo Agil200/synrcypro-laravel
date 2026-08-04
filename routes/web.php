@@ -9,6 +9,7 @@ use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\MinePermitController;
 use App\Http\Controllers\ManpowerDashboardController;
 use App\Http\Controllers\McuFuController;
+use App\Http\Controllers\OperatorPortalController;
 use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
@@ -71,8 +72,38 @@ Route::get(
 
 Route::post(
     '/auth/guest',
-    [AuthController::class, 'loginAsGuest']
+    [OperatorPortalController::class, 'begin']
 )->name('auth.guest');
+
+/*
+|--------------------------------------------------------------------------
+| Portal Operator — Guest Read Only
+|--------------------------------------------------------------------------
+| Operator wajib memverifikasi NRP dan tanggal lahir. Portal ini tidak
+| menggunakan Auth::login, sehingga tidak dapat membuka route admin yang
+| berada di dalam middleware auth.
+*/
+
+Route::get(
+    '/operator/access',
+    [OperatorPortalController::class, 'accessForm']
+)->name('operator.access');
+
+Route::post(
+    '/operator/access',
+    [OperatorPortalController::class, 'verify']
+)->middleware('throttle:10,1')
+    ->name('operator.verify');
+
+Route::get(
+    '/operator/dashboard',
+    [OperatorPortalController::class, 'dashboard']
+)->name('operator.dashboard');
+
+Route::post(
+    '/operator/logout',
+    [OperatorPortalController::class, 'logout']
+)->name('operator.logout');
 
 /*
 |--------------------------------------------------------------------------
