@@ -57,6 +57,25 @@
         (int) (
             $syncMeta['mapped_rows'] ?? 0
         ) > 0;
+
+    $currentEmployeeRole = strtoupper(
+        trim(
+            (string) (
+                auth()->user()?->role ?? ''
+            )
+        )
+    );
+
+    $canManageEmployeeData = in_array(
+        $currentEmployeeRole,
+        [
+            'ADMIN',
+            'ADMINISTRATOR',
+            'SUPER ADMIN',
+            'OPERATOR',
+        ],
+        true
+    );
 @endphp
 
 <div class="db-page-title employee-page-head">
@@ -151,6 +170,18 @@
 @if (session('error'))
     <div class="employee-alert danger">
         {{ session('error') }}
+    </div>
+@endif
+
+@if ($errors->any())
+    <div class="employee-alert danger employee-validation-alert">
+        <strong>Data belum dapat disimpan.</strong>
+
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
 @endif
 
@@ -1001,6 +1032,24 @@
                 KIRIM EMAIL
             </a>
 
+            @if ($canManageEmployeeData)
+                <button
+                    type="button"
+                    class="db-button employee-edit-button"
+                    id="employeeOpenUpdateData"
+                >
+                    PERBARUI DATA
+                </button>
+
+                <button
+                    type="button"
+                    class="db-button employee-status-button"
+                    id="employeeOpenStatusUpdate"
+                >
+                    UBAH STATUS
+                </button>
+            @endif
+
             <button
                 type="button"
                 class="db-button secondary"
@@ -1011,6 +1060,542 @@
         </footer>
     </section>
 </div>
+
+@if ($canManageEmployeeData)
+    {{--
+    |--------------------------------------------------------------------------
+    | Modal Perbarui Data Karyawan
+    |--------------------------------------------------------------------------
+    --}}
+    <div
+        class="employee-action-modal"
+        id="employeeUpdateDataModal"
+        hidden
+    >
+        <div
+            class="employee-action-backdrop"
+            data-employee-action-close="update-data"
+        ></div>
+
+        <section
+            class="employee-action-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="employeeUpdateDataTitle"
+            tabindex="-1"
+        >
+            <header class="employee-action-header">
+                <div>
+                    <span class="employee-modal-eyebrow">
+                        ADMIN DATABASE KARYAWAN
+                    </span>
+
+                    <h2 id="employeeUpdateDataTitle">
+                        Perbarui Data Karyawan
+                    </h2>
+
+                    <p>
+                        Isi data terbaru. Data akan ditambahkan ke
+                        UPDATE_DATA_KARYAWAN.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="employee-modal-close"
+                    data-employee-action-close="update-data"
+                    aria-label="Tutup form perbarui data"
+                >
+                    ×
+                </button>
+            </header>
+
+            <form
+                method="POST"
+                action="{{ route('database.employees.update-data') }}"
+                class="employee-action-form"
+                id="employeeUpdateDataForm"
+            >
+                @csrf
+
+                <input
+                    type="hidden"
+                    name="form_context"
+                    value="update-data"
+                >
+
+                @if (
+                    old('form_context') === 'update-data' &&
+                    $errors->any()
+                )
+                    <div class="employee-form-errors">
+                        <strong>Periksa kembali data berikut:</strong>
+
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="employee-action-summary">
+                    <div>
+                        <small>Karyawan</small>
+                        <strong id="employeeUpdateSummaryName">-</strong>
+                    </div>
+
+                    <div>
+                        <small>NRP</small>
+                        <strong id="employeeUpdateSummaryNrp">-</strong>
+                    </div>
+                </div>
+
+                <div class="employee-form-grid">
+                    <label class="employee-form-field">
+                        <span>NRP Karyawan</span>
+                        <input
+                            type="text"
+                            name="nrp_karyawan"
+                            id="employeeUpdateNrp"
+                            value="{{ old('nrp_karyawan') }}"
+                            maxlength="50"
+                            readonly
+                            required
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>Nama Lengkap</span>
+                        <input
+                            type="text"
+                            name="nama_lengkap_karyawan"
+                            id="employeeUpdateName"
+                            value="{{ old('nama_lengkap_karyawan') }}"
+                            maxlength="255"
+                            autocomplete="name"
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>Nomor HP Aktif</span>
+                        <input
+                            type="text"
+                            name="no_hp_aktif"
+                            id="employeeUpdatePhone"
+                            value="{{ old('no_hp_aktif') }}"
+                            maxlength="50"
+                            inputmode="tel"
+                            autocomplete="tel"
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>Email Aktif</span>
+                        <input
+                            type="email"
+                            name="email_aktif"
+                            id="employeeUpdateEmail"
+                            value="{{ old('email_aktif') }}"
+                            maxlength="255"
+                            autocomplete="email"
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>Tanggal Lahir</span>
+                        <input
+                            type="date"
+                            name="tanggal_lahir"
+                            id="employeeUpdateBirthDate"
+                            value="{{ old('tanggal_lahir') }}"
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>Status Tempat Tinggal</span>
+                        <select
+                            name="status_tempat_tinggal"
+                            id="employeeUpdateResidence"
+                        >
+                            <option value="">
+                                Tidak diubah
+                            </option>
+                            <option
+                                value="MESS"
+                                @selected(
+                                    old('status_tempat_tinggal') === 'MESS'
+                                )
+                            >
+                                MESS
+                            </option>
+                            <option
+                                value="NON MESS"
+                                @selected(
+                                    old('status_tempat_tinggal') === 'NON MESS'
+                                )
+                            >
+                                NON MESS
+                            </option>
+                        </select>
+                    </label>
+
+                    <label
+                        class="employee-form-field"
+                        id="employeeUpdateBuildingField"
+                    >
+                        <span>Nomor Gedung</span>
+                        <input
+                            type="text"
+                            name="nomor_gedung"
+                            id="employeeUpdateBuilding"
+                            value="{{ old('nomor_gedung') }}"
+                            maxlength="100"
+                        >
+                    </label>
+
+                    <label
+                        class="employee-form-field"
+                        id="employeeUpdateRoomField"
+                    >
+                        <span>Nomor Kamar Mess</span>
+                        <input
+                            type="text"
+                            name="nomor_kamar_mess"
+                            id="employeeUpdateRoom"
+                            value="{{ old('nomor_kamar_mess') }}"
+                            maxlength="100"
+                        >
+                    </label>
+
+                    <label class="employee-form-field employee-form-wide">
+                        <span>Link Pas Foto</span>
+                        <input
+                            type="text"
+                            name="pass_foto"
+                            id="employeeUpdatePhoto"
+                            value="{{ old('pass_foto') }}"
+                            maxlength="2048"
+                            placeholder="Tempel link Google Drive pas foto"
+                        >
+                        <small>
+                            Kosongkan apabila link pas foto tidak berubah.
+                        </small>
+                    </label>
+
+                    <label class="employee-form-field employee-form-wide">
+                        <span>
+                            Alasan Perubahan
+                            <b>*</b>
+                        </span>
+                        <textarea
+                            name="alasan_perubahan"
+                            id="employeeUpdateReason"
+                            rows="3"
+                            maxlength="1000"
+                            required
+                            placeholder="Contoh: pembaruan nomor HP dan kamar mess"
+                        >{{ old('alasan_perubahan') }}</textarea>
+                    </label>
+                </div>
+
+                <div
+                    class="employee-form-note"
+                    id="employeeUpdateResidenceNote"
+                    hidden
+                >
+                    Status NON MESS akan menghapus data gedung dan kamar
+                    yang tersimpan sebelumnya.
+                </div>
+
+                <footer class="employee-action-footer">
+                    <button
+                        type="button"
+                        class="db-button secondary"
+                        data-employee-action-close="update-data"
+                    >
+                        BATAL
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="db-button employee-edit-button"
+                        id="employeeUpdateSubmit"
+                    >
+                        SIMPAN PERUBAHAN DATA
+                    </button>
+                </footer>
+            </form>
+        </section>
+    </div>
+
+    {{--
+    |--------------------------------------------------------------------------
+    | Modal Perubahan Status Karyawan
+    |--------------------------------------------------------------------------
+    --}}
+    <div
+        class="employee-action-modal"
+        id="employeeStatusUpdateModal"
+        hidden
+    >
+        <div
+            class="employee-action-backdrop"
+            data-employee-action-close="update-status"
+        ></div>
+
+        <section
+            class="employee-action-dialog employee-status-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="employeeStatusUpdateTitle"
+            tabindex="-1"
+        >
+            <header class="employee-action-header status">
+                <div>
+                    <span class="employee-modal-eyebrow">
+                        ADMIN DATABASE KARYAWAN
+                    </span>
+
+                    <h2 id="employeeStatusUpdateTitle">
+                        Ubah Status Karyawan
+                    </h2>
+
+                    <p>
+                        Pilih MUTASI, PROMOSI, RESIGN, atau PHK.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="employee-modal-close"
+                    data-employee-action-close="update-status"
+                    aria-label="Tutup form perubahan status"
+                >
+                    ×
+                </button>
+            </header>
+
+            <form
+                method="POST"
+                action="{{ route('database.employees.update-status') }}"
+                class="employee-action-form"
+                id="employeeStatusUpdateForm"
+            >
+                @csrf
+
+                <input
+                    type="hidden"
+                    name="form_context"
+                    value="update-status"
+                >
+
+                <input
+                    type="hidden"
+                    name="nama_karyawan_display"
+                    id="employeeStatusNameHidden"
+                    value="{{ old('nama_karyawan_display') }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="jabatan_sekarang_display"
+                    id="employeeStatusCurrentPositionHidden"
+                    value="{{ old('jabatan_sekarang_display') }}"
+                >
+
+                <input
+                    type="hidden"
+                    name="site_sekarang_display"
+                    id="employeeStatusCurrentSiteHidden"
+                    value="{{ old('site_sekarang_display') }}"
+                >
+
+                @if (
+                    old('form_context') === 'update-status' &&
+                    $errors->any()
+                )
+                    <div class="employee-form-errors">
+                        <strong>Periksa kembali data berikut:</strong>
+
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="employee-action-summary status-summary">
+                    <div>
+                        <small>Karyawan</small>
+                        <strong id="employeeStatusSummaryName">-</strong>
+                    </div>
+
+                    <div>
+                        <small>NRP</small>
+                        <strong id="employeeStatusSummaryNrp">-</strong>
+                    </div>
+
+                    <div>
+                        <small>Jabatan Sekarang</small>
+                        <strong id="employeeStatusCurrentPosition">-</strong>
+                    </div>
+
+                    <div>
+                        <small>Site Sekarang</small>
+                        <strong id="employeeStatusCurrentSite">-</strong>
+                    </div>
+                </div>
+
+                <div class="employee-form-grid">
+                    <label class="employee-form-field">
+                        <span>NRP Karyawan</span>
+                        <input
+                            type="text"
+                            name="nrp_karyawan"
+                            id="employeeStatusNrp"
+                            value="{{ old('nrp_karyawan') }}"
+                            maxlength="50"
+                            readonly
+                            required
+                        >
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>
+                            Jenis Perubahan
+                            <b>*</b>
+                        </span>
+                        <select
+                            name="jenis_perubahan"
+                            id="employeeStatusType"
+                            required
+                        >
+                            <option value="">
+                                Pilih jenis perubahan
+                            </option>
+                            @foreach (
+                                ['MUTASI', 'PROMOSI', 'RESIGN', 'PHK']
+                                as $statusType
+                            )
+                                <option
+                                    value="{{ $statusType }}"
+                                    @selected(
+                                        old('jenis_perubahan') ===
+                                        $statusType
+                                    )
+                                >
+                                    {{ $statusType }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <label class="employee-form-field">
+                        <span>
+                            Tanggal Efektif
+                            <b>*</b>
+                        </span>
+                        <input
+                            type="date"
+                            name="tanggal_efektif"
+                            id="employeeStatusEffectiveDate"
+                            value="{{ old('tanggal_efektif') }}"
+                            required
+                        >
+                    </label>
+
+                    <label
+                        class="employee-form-field"
+                        id="employeeStatusPositionField"
+                        hidden
+                    >
+                        <span>
+                            Jabatan Baru
+                            <b>*</b>
+                        </span>
+                        <input
+                            type="text"
+                            name="jabatan_baru"
+                            id="employeeStatusNewPosition"
+                            value="{{ old('jabatan_baru') }}"
+                            maxlength="255"
+                            disabled
+                        >
+                    </label>
+
+                    <label
+                        class="employee-form-field"
+                        id="employeeStatusSiteField"
+                        hidden
+                    >
+                        <span>
+                            Site Baru
+                            <b>*</b>
+                        </span>
+                        <input
+                            type="text"
+                            name="site_baru"
+                            id="employeeStatusNewSite"
+                            value="{{ old('site_baru') }}"
+                            maxlength="255"
+                            disabled
+                        >
+                    </label>
+
+                    <div class="employee-form-field">
+                        <span>Status Baru Otomatis</span>
+                        <div
+                            class="employee-auto-status"
+                            id="employeeStatusAutomaticValue"
+                        >
+                            Pilih jenis perubahan
+                        </div>
+                    </div>
+
+                    <label class="employee-form-field employee-form-wide">
+                        <span>
+                            Alasan / Keterangan
+                            <b>*</b>
+                        </span>
+                        <textarea
+                            name="alasan_keterangan"
+                            id="employeeStatusReason"
+                            rows="4"
+                            maxlength="1000"
+                            required
+                            placeholder="Jelaskan alasan perubahan status"
+                        >{{ old('alasan_keterangan') }}</textarea>
+                    </label>
+                </div>
+
+                <div class="employee-form-note warning">
+                    Data karyawan tidak dihapus. Perubahan dicatat sebagai
+                    riwayat pada UPDATE_STATUS_KARYAWAN.
+                </div>
+
+                <footer class="employee-action-footer">
+                    <button
+                        type="button"
+                        class="db-button secondary"
+                        data-employee-action-close="update-status"
+                    >
+                        BATAL
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="db-button employee-status-button"
+                        id="employeeStatusSubmit"
+                    >
+                        SIMPAN PERUBAHAN STATUS
+                    </button>
+                </footer>
+            </form>
+        </section>
+    </div>
+@endif
 
 <style>
 .employee-page-head {
@@ -1846,6 +2431,356 @@ body.employee-modal-open {
     background: #fef2f2;
 }
 
+.employee-validation-alert strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.employee-validation-alert ul,
+.employee-form-errors ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.employee-edit-button {
+    color: #ffffff;
+    background: #0f8a62;
+}
+
+.employee-edit-button:hover {
+    background: #087a55;
+}
+
+.employee-status-button {
+    color: #ffffff;
+    background: #c45a24;
+}
+
+.employee-status-button:hover {
+    background: #a94718;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Modal Form Admin Database Karyawan
+|--------------------------------------------------------------------------
+*/
+
+.employee-action-modal[hidden],
+.employee-action-modal [hidden] {
+    display: none !important;
+}
+
+.employee-action-modal {
+    position: fixed;
+    z-index: 1350;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+}
+
+.employee-action-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .76);
+    backdrop-filter: blur(4px);
+}
+
+.employee-action-dialog {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: min(860px, calc(100vw - 36px));
+    max-height: min(92vh, 860px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, .42);
+}
+
+.employee-status-dialog {
+    width: min(780px, calc(100vw - 36px));
+}
+
+.employee-action-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    color: #ffffff;
+    background:
+        linear-gradient(
+            110deg,
+            #0f172a 0%,
+            #1f3b4d 62%,
+            #0f8a62 100%
+        );
+}
+
+.employee-action-header.status {
+    background:
+        linear-gradient(
+            110deg,
+            #0f172a 0%,
+            #493228 62%,
+            #c45a24 100%
+        );
+}
+
+.employee-action-header h2 {
+    margin: 0;
+    font-size: clamp(19px, 2.4vw, 27px);
+    line-height: 1.15;
+}
+
+.employee-action-header p {
+    margin: 6px 0 0;
+    color: #dbeafe;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.employee-action-form {
+    min-height: 0;
+    overflow: auto;
+    padding: 18px 20px 0;
+}
+
+.employee-form-errors {
+    margin-bottom: 13px;
+    padding: 10px 12px;
+    border: 1px solid #fca5a5;
+    border-radius: 10px;
+    color: #b91c1c;
+    background: #fef2f2;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.employee-form-errors strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.employee-action-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 14px;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    background: #f8fafc;
+}
+
+.employee-action-summary.status-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.employee-action-summary div {
+    min-width: 0;
+}
+
+.employee-action-summary small,
+.employee-action-summary strong {
+    display: block;
+}
+
+.employee-action-summary small {
+    margin-bottom: 3px;
+    color: #64748b;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.employee-action-summary strong {
+    overflow-wrap: anywhere;
+    color: #172033;
+    font-size: 10px;
+}
+
+.employee-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
+}
+
+.employee-form-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.employee-form-field > span {
+    color: #172033;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.employee-form-field > span b {
+    color: #dc2626;
+}
+
+.employee-form-field input,
+.employee-form-field select,
+.employee-form-field textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    color: #172033;
+    background: #ffffff;
+    font: inherit;
+    font-size: 11px;
+    outline: none;
+    transition:
+        border-color .18s ease,
+        box-shadow .18s ease;
+}
+
+.employee-form-field input,
+.employee-form-field select {
+    min-height: 39px;
+    padding: 0 11px;
+}
+
+.employee-form-field textarea {
+    min-height: 82px;
+    padding: 10px 11px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.employee-form-field input:focus,
+.employee-form-field select:focus,
+.employee-form-field textarea:focus {
+    border-color: #147df5;
+    box-shadow: 0 0 0 3px rgba(20, 125, 245, .12);
+}
+
+.employee-form-field input[readonly] {
+    color: #475569;
+    background: #f1f5f9;
+}
+
+.employee-form-field input:disabled,
+.employee-form-field select:disabled {
+    cursor: not-allowed;
+    opacity: .6;
+    background: #f1f5f9;
+}
+
+.employee-form-field > small {
+    color: #64748b;
+    font-size: 8px;
+    line-height: 1.4;
+}
+
+.employee-form-wide {
+    grid-column: 1 / -1;
+}
+
+.employee-auto-status {
+    display: flex;
+    min-height: 39px;
+    align-items: center;
+    padding: 0 11px;
+    border: 1px dashed #94a3b8;
+    border-radius: 9px;
+    color: #475569;
+    background: #f8fafc;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.employee-auto-status.active {
+    border-color: #86efac;
+    color: #087a45;
+    background: #f0fdf4;
+}
+
+.employee-auto-status.inactive {
+    border-color: #fca5a5;
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.employee-form-note {
+    margin-top: 13px;
+    padding: 9px 11px;
+    border: 1px solid #93c5fd;
+    border-radius: 9px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.employee-form-note.warning {
+    border-color: #fcd34d;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.employee-action-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 18px -20px 0;
+    padding: 13px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.employee-action-footer button:disabled {
+    cursor: wait;
+    opacity: .68;
+}
+
+@media (max-width: 760px) {
+    .employee-action-modal {
+        padding: 9px;
+    }
+
+    .employee-action-dialog,
+    .employee-status-dialog {
+        width: calc(100vw - 18px);
+        max-height: 96vh;
+        border-radius: 13px;
+    }
+
+    .employee-action-header,
+    .employee-action-form {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .employee-form-grid,
+    .employee-action-summary,
+    .employee-action-summary.status-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .employee-action-footer {
+        margin-right: -14px;
+        margin-left: -14px;
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+    .employee-action-footer .db-button {
+        flex: 1 1 145px;
+        justify-content: center;
+    }
+}
+
 </style>
 
 <script>
@@ -2316,3 +3251,616 @@ document.addEventListener('DOMContentLoaded', function () {
     );
 });
 </script>
+
+@if ($canManageEmployeeData)
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const detailModal =
+        document.getElementById('employeeDetailModal');
+
+    const updateModal =
+        document.getElementById('employeeUpdateDataModal');
+
+    const statusModal =
+        document.getElementById('employeeStatusUpdateModal');
+
+    const updateDialog = updateModal?.querySelector(
+        '.employee-action-dialog'
+    );
+
+    const statusDialog = statusModal?.querySelector(
+        '.employee-action-dialog'
+    );
+
+    const openUpdateButton =
+        document.getElementById('employeeOpenUpdateData');
+
+    const openStatusButton =
+        document.getElementById('employeeOpenStatusUpdate');
+
+    const updateForm =
+        document.getElementById('employeeUpdateDataForm');
+
+    const statusForm =
+        document.getElementById('employeeStatusUpdateForm');
+
+    const updateResidence =
+        document.getElementById('employeeUpdateResidence');
+
+    const updateBuilding =
+        document.getElementById('employeeUpdateBuilding');
+
+    const updateRoom =
+        document.getElementById('employeeUpdateRoom');
+
+    const updateBuildingField =
+        document.getElementById('employeeUpdateBuildingField');
+
+    const updateRoomField =
+        document.getElementById('employeeUpdateRoomField');
+
+    const updateResidenceNote =
+        document.getElementById('employeeUpdateResidenceNote');
+
+    const statusType =
+        document.getElementById('employeeStatusType');
+
+    const statusPositionField =
+        document.getElementById('employeeStatusPositionField');
+
+    const statusSiteField =
+        document.getElementById('employeeStatusSiteField');
+
+    const statusNewPosition =
+        document.getElementById('employeeStatusNewPosition');
+
+    const statusNewSite =
+        document.getElementById('employeeStatusNewSite');
+
+    const statusAutomaticValue =
+        document.getElementById(
+            'employeeStatusAutomaticValue'
+        );
+
+    let currentEmployee = null;
+    let lastActionTrigger = null;
+
+    function cleanValue(value) {
+        const normalized = String(value ?? '').trim();
+
+        return normalized === '-' ? '' : normalized;
+    }
+
+    function setInputValue(id, value) {
+        const input = document.getElementById(id);
+
+        if (input) {
+            input.value = cleanValue(value);
+        }
+    }
+
+    function setDisplayText(id, value) {
+        const target = document.getElementById(id);
+
+        if (!target) {
+            return;
+        }
+
+        const normalized = cleanValue(value);
+        target.textContent = normalized || '-';
+    }
+
+    function normalizeDateForInput(value) {
+        const text = cleanValue(value);
+
+        if (text === '') {
+            return '';
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+            return text;
+        }
+
+        const numericMatch = text.match(
+            /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/
+        );
+
+        if (numericMatch) {
+            return [
+                numericMatch[3],
+                numericMatch[2].padStart(2, '0'),
+                numericMatch[1].padStart(2, '0'),
+            ].join('-');
+        }
+
+        const monthMap = {
+            JAN: '01',
+            FEB: '02',
+            MAR: '03',
+            APR: '04',
+            MAY: '05',
+            MEI: '05',
+            JUN: '06',
+            JUL: '07',
+            AUG: '08',
+            AGU: '08',
+            SEP: '09',
+            OCT: '10',
+            OKT: '10',
+            NOV: '11',
+            DEC: '12',
+            DES: '12',
+        };
+
+        const namedMatch = text
+            .toUpperCase()
+            .match(/^(\d{1,2})[\s\-]([A-Z]{3})[\s\-](\d{4})$/);
+
+        if (namedMatch && monthMap[namedMatch[2]]) {
+            return [
+                namedMatch[3],
+                monthMap[namedMatch[2]],
+                namedMatch[1].padStart(2, '0'),
+            ].join('-');
+        }
+
+        return '';
+    }
+
+    function parseEmployeeTrigger(trigger) {
+        try {
+            return JSON.parse(
+                trigger.dataset.employee || '{}'
+            );
+        } catch (error) {
+            console.error(
+                'Data detail karyawan tidak valid.',
+                error
+            );
+            return null;
+        }
+    }
+
+    function openActionModal(modal, dialog, trigger) {
+        if (!modal || !dialog) {
+            return;
+        }
+
+        lastActionTrigger = trigger || null;
+        modal.hidden = false;
+        document.body.classList.add(
+            'employee-modal-open'
+        );
+
+        window.requestAnimationFrame(function () {
+            dialog.focus();
+        });
+    }
+
+    function closeActionModal(modal) {
+        if (!modal || modal.hidden) {
+            return;
+        }
+
+        modal.hidden = true;
+
+        if (!detailModal || detailModal.hidden) {
+            document.body.classList.remove(
+                'employee-modal-open'
+            );
+        }
+
+        lastActionTrigger?.focus();
+        lastActionTrigger = null;
+    }
+
+    function normalizeResidence(value) {
+        const residence = cleanValue(value).toUpperCase();
+
+        if (residence.includes('NON')) {
+            return 'NON MESS';
+        }
+
+        if (residence.includes('MESS')) {
+            return 'MESS';
+        }
+
+        return '';
+    }
+
+    function updateResidenceFields() {
+        const isNonMess =
+            updateResidence?.value === 'NON MESS';
+
+        if (updateBuilding) {
+            updateBuilding.disabled = isNonMess;
+
+            if (isNonMess) {
+                updateBuilding.value = '';
+            }
+        }
+
+        if (updateRoom) {
+            updateRoom.disabled = isNonMess;
+
+            if (isNonMess) {
+                updateRoom.value = '';
+            }
+        }
+
+        if (updateBuildingField) {
+            updateBuildingField.classList.toggle(
+                'is-disabled',
+                isNonMess
+            );
+        }
+
+        if (updateRoomField) {
+            updateRoomField.classList.toggle(
+                'is-disabled',
+                isNonMess
+            );
+        }
+
+        if (updateResidenceNote) {
+            updateResidenceNote.hidden = !isNonMess;
+        }
+    }
+
+    function fillUpdateForm(data, preserveReason) {
+        const employee = data || {};
+
+        setInputValue('employeeUpdateNrp', employee.nrp);
+        setInputValue('employeeUpdateName', employee.nama);
+        setInputValue('employeeUpdatePhone', employee.noHp);
+        setInputValue('employeeUpdateEmail', employee.email);
+        setInputValue(
+            'employeeUpdateBirthDate',
+            normalizeDateForInput(employee.tanggalLahir)
+        );
+        setInputValue(
+            'employeeUpdateResidence',
+            normalizeResidence(employee.statusTinggal)
+        );
+        setInputValue('employeeUpdateBuilding', employee.gedung);
+        setInputValue('employeeUpdateRoom', employee.kamar);
+        setInputValue(
+            'employeeUpdatePhoto',
+            employee.fotoOpenUrl || employee.fotoUrl
+        );
+
+        if (!preserveReason) {
+            setInputValue('employeeUpdateReason', '');
+        }
+
+        setDisplayText(
+            'employeeUpdateSummaryName',
+            employee.nama
+        );
+        setDisplayText(
+            'employeeUpdateSummaryNrp',
+            employee.nrp
+        );
+
+        updateResidenceFields();
+    }
+
+    function statusForType(type) {
+        if (type === 'MUTASI' || type === 'PROMOSI') {
+            return 'AKTIF';
+        }
+
+        if (type === 'RESIGN') {
+            return 'RESIGN';
+        }
+
+        if (type === 'PHK') {
+            return 'PHK';
+        }
+
+        return '';
+    }
+
+    function updateStatusFields() {
+        const type = String(statusType?.value || '')
+            .toUpperCase();
+
+        const needsPosition = [
+            'MUTASI',
+            'PROMOSI',
+        ].includes(type);
+
+        const needsSite = type === 'MUTASI';
+
+        if (statusPositionField) {
+            statusPositionField.hidden = !needsPosition;
+        }
+
+        if (statusNewPosition) {
+            statusNewPosition.disabled = !needsPosition;
+            statusNewPosition.required = needsPosition;
+
+            if (!needsPosition) {
+                statusNewPosition.value = '';
+            }
+        }
+
+        if (statusSiteField) {
+            statusSiteField.hidden = !needsSite;
+        }
+
+        if (statusNewSite) {
+            statusNewSite.disabled = !needsSite;
+            statusNewSite.required = needsSite;
+
+            if (!needsSite) {
+                statusNewSite.value = '';
+            }
+        }
+
+        const automaticStatus = statusForType(type);
+
+        if (statusAutomaticValue) {
+            statusAutomaticValue.textContent =
+                automaticStatus || 'Pilih jenis perubahan';
+
+            statusAutomaticValue.classList.toggle(
+                'active',
+                automaticStatus === 'AKTIF'
+            );
+
+            statusAutomaticValue.classList.toggle(
+                'inactive',
+                ['RESIGN', 'PHK'].includes(automaticStatus)
+            );
+        }
+    }
+
+    function fillStatusForm(data, preserveValues) {
+        const employee = data || {};
+
+        setInputValue('employeeStatusNrp', employee.nrp);
+        setInputValue(
+            'employeeStatusNameHidden',
+            employee.nama
+        );
+        setInputValue(
+            'employeeStatusCurrentPositionHidden',
+            employee.jabatan
+        );
+        setInputValue(
+            'employeeStatusCurrentSiteHidden',
+            employee.site
+        );
+
+        setDisplayText(
+            'employeeStatusSummaryName',
+            employee.nama
+        );
+        setDisplayText(
+            'employeeStatusSummaryNrp',
+            employee.nrp
+        );
+        setDisplayText(
+            'employeeStatusCurrentPosition',
+            employee.jabatan
+        );
+        setDisplayText(
+            'employeeStatusCurrentSite',
+            employee.site
+        );
+
+        if (!preserveValues) {
+            setInputValue('employeeStatusType', '');
+            setInputValue('employeeStatusEffectiveDate', '');
+            setInputValue('employeeStatusNewPosition', '');
+            setInputValue('employeeStatusNewSite', '');
+            setInputValue('employeeStatusReason', '');
+        }
+
+        updateStatusFields();
+    }
+
+    document
+        .querySelectorAll('.employee-detail-trigger')
+        .forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                currentEmployee = parseEmployeeTrigger(trigger);
+            });
+        });
+
+    openUpdateButton?.addEventListener(
+        'click',
+        function () {
+            if (!currentEmployee) {
+                return;
+            }
+
+            fillUpdateForm(currentEmployee, false);
+            openActionModal(
+                updateModal,
+                updateDialog,
+                openUpdateButton
+            );
+        }
+    );
+
+    openStatusButton?.addEventListener(
+        'click',
+        function () {
+            if (!currentEmployee) {
+                return;
+            }
+
+            fillStatusForm(currentEmployee, false);
+            openActionModal(
+                statusModal,
+                statusDialog,
+                openStatusButton
+            );
+        }
+    );
+
+    updateResidence?.addEventListener(
+        'change',
+        updateResidenceFields
+    );
+
+    statusType?.addEventListener(
+        'change',
+        updateStatusFields
+    );
+
+    document
+        .querySelectorAll(
+            '[data-employee-action-close="update-data"]'
+        )
+        .forEach(function (button) {
+            button.addEventListener('click', function () {
+                closeActionModal(updateModal);
+            });
+        });
+
+    document
+        .querySelectorAll(
+            '[data-employee-action-close="update-status"]'
+        )
+        .forEach(function (button) {
+            button.addEventListener('click', function () {
+                closeActionModal(statusModal);
+            });
+        });
+
+    updateForm?.addEventListener('submit', function (event) {
+        if (
+            !window.confirm(
+                'Simpan pembaruan data karyawan ini?'
+            )
+        ) {
+            event.preventDefault();
+            return;
+        }
+
+        const submitButton =
+            document.getElementById('employeeUpdateSubmit');
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'MENYIMPAN...';
+        }
+    });
+
+    statusForm?.addEventListener('submit', function (event) {
+        const type = String(statusType?.value || '')
+            .toUpperCase();
+
+        const employeeName = cleanValue(
+            document.getElementById(
+                'employeeStatusNameHidden'
+            )?.value
+        );
+
+        const confirmationMessage = [
+            'RESIGN',
+            'PHK',
+        ].includes(type)
+            ? 'Konfirmasi ' + type + ' untuk ' +
+                (employeeName || 'karyawan ini') + '?'
+            : 'Simpan perubahan ' + type + ' untuk ' +
+                (employeeName || 'karyawan ini') + '?';
+
+        if (!window.confirm(confirmationMessage)) {
+            event.preventDefault();
+            return;
+        }
+
+        const submitButton =
+            document.getElementById('employeeStatusSubmit');
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'MENYIMPAN...';
+        }
+    });
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            if (statusModal && !statusModal.hidden) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                closeActionModal(statusModal);
+                return;
+            }
+
+            if (updateModal && !updateModal.hidden) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                closeActionModal(updateModal);
+            }
+        },
+        true
+    );
+
+    const oldFormContext = @json(old('form_context'));
+
+    if (oldFormContext === 'update-data') {
+        currentEmployee = {
+            nrp: @json(old('nrp_karyawan')),
+            nama: @json(old('nama_lengkap_karyawan')),
+            noHp: @json(old('no_hp_aktif')),
+            email: @json(old('email_aktif')),
+            tanggalLahir: @json(old('tanggal_lahir')),
+            statusTinggal: @json(old('status_tempat_tinggal')),
+            gedung: @json(old('nomor_gedung')),
+            kamar: @json(old('nomor_kamar_mess')),
+            fotoOpenUrl: @json(old('pass_foto')),
+        };
+
+        fillUpdateForm(currentEmployee, true);
+        setInputValue(
+            'employeeUpdateReason',
+            @json(old('alasan_perubahan'))
+        );
+        openActionModal(updateModal, updateDialog, null);
+    }
+
+    if (oldFormContext === 'update-status') {
+        currentEmployee = {
+            nrp: @json(old('nrp_karyawan')),
+            nama: @json(old('nama_karyawan_display')),
+            jabatan: @json(old('jabatan_sekarang_display')),
+            site: @json(old('site_sekarang_display')),
+        };
+
+        fillStatusForm(currentEmployee, true);
+        setInputValue(
+            'employeeStatusType',
+            @json(old('jenis_perubahan'))
+        );
+        setInputValue(
+            'employeeStatusEffectiveDate',
+            @json(old('tanggal_efektif'))
+        );
+        setInputValue(
+            'employeeStatusNewPosition',
+            @json(old('jabatan_baru'))
+        );
+        setInputValue(
+            'employeeStatusNewSite',
+            @json(old('site_baru'))
+        );
+        setInputValue(
+            'employeeStatusReason',
+            @json(old('alasan_keterangan'))
+        );
+        updateStatusFields();
+        openActionModal(statusModal, statusDialog, null);
+    }
+});
+</script>
+@endif
