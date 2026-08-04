@@ -209,8 +209,19 @@ class EmployeeAdminController extends Controller
             $room = '__CLEAR__';
         }
 
+        /*
+         * Timestamp dibuat oleh Laravel saat tombol Simpan ditekan.
+         * Nilainya tetap dan mengikuti timezone aplikasi.
+         */
+        $timestamp = now(
+            (string) config(
+                'app.timezone',
+                'Asia/Jakarta'
+            )
+        )->format('Y-m-d H:i:s');
+
         $row = [
-            now()->format('Y-m-d H:i:s'),
+            $timestamp,
             $nrp,
             (string) (
                 $validated['nama_lengkap_karyawan'] ?? ''
@@ -363,8 +374,19 @@ class EmployeeAdminController extends Controller
             ? (string) ($validated['site_baru'] ?? '')
             : '';
 
+        /*
+         * Timestamp dibuat oleh Laravel saat tombol Simpan ditekan.
+         * Nilainya tetap dan mengikuti timezone aplikasi.
+         */
+        $timestamp = now(
+            (string) config(
+                'app.timezone',
+                'Asia/Jakarta'
+            )
+        )->format('Y-m-d H:i:s');
+
         $row = [
-            now()->format('Y-m-d H:i:s'),
+            $timestamp,
             $nrp,
             trim((string) ($employee['nama'] ?? '')),
             $changeType,
