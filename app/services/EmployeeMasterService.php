@@ -36,6 +36,7 @@ class EmployeeMasterService
         'no_hp',
         'email',
         'status_tinggal',
+        'alamat_lengkap',
     ];
 
     public function __construct(
@@ -95,6 +96,329 @@ class EmployeeMasterService
                 $exception
             );
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ringkasan Dashboard Database Karyawan
+    |--------------------------------------------------------------------------
+    | Dashboard hanya membaca snapshot yang sama dengan halaman Database
+    | Karyawan. Tidak ada query Google Sheets tambahan sehingga cache,
+    | backup, dan mekanisme fallback yang sudah ada tetap dipertahankan.
+    */
+
+    public function dashboardSummary(): array
+    {
+        $snapshot = $this->snapshot();
+
+        $employees = collect(
+            $snapshot['employees'] ?? []
+        )
+            ->filter(
+                fn ($employee): bool =>
+                    is_array($employee) &&
+                    trim(
+                        (string) (
+                            $employee['nrp'] ?? ''
+                        )
+                    ) !== ''
+            )
+            ->values();
+
+        $totalEmployees = $employees->count();
+
+        $statusCounts = collect([
+            'AKTIF' => 0,
+            'NEW HIRE' => 0,
+            'RESIGN' => 0,
+            'PHK' => 0,
+            'NON AKTIF' => 0,
+            'LAINNYA' => 0,
+            'BELUM DATA' => 0,
+        ]);
+
+        $residenceCounts = collect([
+            'MESS' => 0,
+            'NON MESS' => 0,
+            'BELUM DATA' => 0,
+        ]);
+
+        $positionCounts = collect();
+
+        foreach ($employees as $employee) {
+            $statusBucket =
+                $this->dashboardStatusBucket(
+                    (string) (
+                        $employee['status_karyawan'] ?? ''
+                    )
+                );
+
+            $statusCounts->put(
+                $statusBucket,
+                (int) $statusCounts->get(
+                    $statusBucket,
+                    0
+                ) + 1
+            );
+
+            $residenceBucket =
+                $this->dashboardResidenceBucket(
+                    (string) (
+                        $employee['status_tinggal'] ?? ''
+                    )
+                );
+
+            $residenceCounts->put(
+                $residenceBucket,
+                (int) $residenceCounts->get(
+                    $residenceBucket,
+                    0
+                ) + 1
+            );
+
+            $position =
+                $this->dashboardPositionLabel(
+                    (string) (
+                        $employee['jabatan'] ?? ''
+                    )
+                );
+
+            $positionCounts->put(
+                $position,
+                (int) $positionCounts->get(
+                    $position,
+                    0
+                ) + 1
+            );
+        }
+
+        $positionCounts = $positionCounts
+            ->sortDesc();
+
+        $topPositionLimit = 12;
+
+        $topPositions = $positionCounts
+            ->take($topPositionLimit);
+
+        $otherPositionCount = max(
+            0,
+            (int) $positionCounts->sum() -
+            (int) $topPositions->sum()
+        );
+
+        if ($otherPositionCount > 0) {
+            $topPositions->put(
+                'JABATAN LAINNYA',
+                $otherPositionCount
+            );
+        }
+
+        return [
+            'totals' => [
+                'employees' => $totalEmployees,
+                'active' => (int) $statusCounts->get(
+                    'AKTIF',
+                    0
+                ),
+                'mess' => (int) $residenceCounts->get(
+                    'MESS',
+                    0
+                ),
+                'non_mess' => (int) $residenceCounts->get(
+                    'NON MESS',
+                    0
+                ),
+                'residence_unknown' =>
+                    (int) $residenceCounts->get(
+                        'BELUM DATA',
+                        0
+                    ),
+            ],
+
+            'status_distribution' =>
+                $this->dashboardDistribution(
+                    $statusCounts->all(),
+                    $totalEmployees
+                ),
+
+            'residence_distribution' =>
+                $this->dashboardDistribution(
+                    $residenceCounts->all(),
+                    $totalEmployees
+                ),
+
+            'position_distribution' =>
+                $this->dashboardDistribution(
+                    $topPositions->all(),
+                    max(
+                        1,
+                        (int) $positionCounts->sum()
+                    )
+                ),
+
+            'position_distinct_count' =>
+                $positionCounts->count(),
+
+            'position_top_limit' =>
+                $topPositionLimit,
+
+            'meta' =>
+                is_array($snapshot['meta'] ?? null)
+                    ? $snapshot['meta']
+                    : [],
+        ];
+    }
+
+    private function dashboardDistribution(
+        array $counts,
+        int $total
+    ): array {
+        $result = [];
+
+        foreach ($counts as $label => $count) {
+            $count = max(
+                0,
+                (int) $count
+            );
+
+            if ($count === 0) {
+                continue;
+            }
+
+            $result[] = [
+                'label' => (string) $label,
+                'count' => $count,
+                'percentage' =>
+                    $total > 0
+                        ? round(
+                            ($count / $total) * 100,
+                            1
+                        )
+                        : 0,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function dashboardStatusBucket(
+        string $status
+    ): string {
+        $status = $this->dashboardNormalizedValue(
+            $status
+        );
+
+        if (
+            $status === '' ||
+            $status === '-'
+        ) {
+            return 'BELUM DATA';
+        }
+
+        if (
+            str_contains($status, 'PHK') ||
+            str_contains($status, 'TERMINATION')
+        ) {
+            return 'PHK';
+        }
+
+        if (
+            str_contains($status, 'RESIGN') ||
+            str_contains(
+                $status,
+                'MENGUNDURKAN DIRI'
+            )
+        ) {
+            return 'RESIGN';
+        }
+
+        if (
+            str_contains($status, 'NON AKTIF') ||
+            str_contains($status, 'TIDAK AKTIF') ||
+            str_contains($status, 'INACTIVE')
+        ) {
+            return 'NON AKTIF';
+        }
+
+        if (
+            str_contains($status, 'NEW HIRE') ||
+            str_contains($status, 'KARYAWAN BARU')
+        ) {
+            return 'NEW HIRE';
+        }
+
+        if (
+            str_contains($status, 'AKTIF') ||
+            str_contains($status, 'ACTIVE')
+        ) {
+            return 'AKTIF';
+        }
+
+        return 'LAINNYA';
+    }
+
+    private function dashboardResidenceBucket(
+        string $residence
+    ): string {
+        $residence = $this->dashboardNormalizedValue(
+            str_replace(
+                ['_', '-'],
+                ' ',
+                $residence
+            )
+        );
+
+        if (
+            in_array(
+                $residence,
+                [
+                    'NON MESS',
+                    'NONMESS',
+                ],
+                true
+            )
+        ) {
+            return 'NON MESS';
+        }
+
+        if ($residence === 'MESS') {
+            return 'MESS';
+        }
+
+        return 'BELUM DATA';
+    }
+
+    private function dashboardPositionLabel(
+        string $position
+    ): string {
+        $position = $this->dashboardNormalizedValue(
+            $position
+        );
+
+        if (
+            $position === '' ||
+            $position === '-'
+        ) {
+            return 'BELUM DATA JABATAN';
+        }
+
+        return $position;
+    }
+
+    private function dashboardNormalizedValue(
+        string $value
+    ): string {
+        $value = strtoupper(
+            trim($value)
+        );
+
+        return trim(
+            preg_replace(
+                '/\s+/',
+                ' ',
+                $value
+            ) ?? ''
+        );
     }
 
     /*
@@ -1349,6 +1673,14 @@ class EmployeeMasterService
                         )
                     ),
 
+                'alamat_lengkap' =>
+                    $this->valueOrDash(
+                        $this->cell(
+                            $row,
+                            $columns['alamat_lengkap']
+                        )
+                    ),
+
                 'source_row' =>
                     $rowIndex + 1,
             ];
@@ -1549,6 +1881,14 @@ class EmployeeMasterService
                 'PAS FOTO',
                 'FOTO',
             ],
+
+            'alamat_lengkap' => [
+                'ALAMAT LENGKAP',
+                'ALAMAT RUMAH',
+                'ALAMAT DOMISILI',
+                'DOMISILI LENGKAP',
+                'ALAMAT',
+            ],
         ];
     }
 
@@ -1570,6 +1910,7 @@ class EmployeeMasterService
             'kamar' => 'Kamar',
             'gedung_kamar' => 'Gedung/Kamar Gabungan',
             'foto' => 'Pas Foto',
+            'alamat_lengkap' => 'Alamat Lengkap',
         ];
     }
 

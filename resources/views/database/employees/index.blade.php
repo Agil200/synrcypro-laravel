@@ -1,3 +1,12 @@
+{{--
+|--------------------------------------------------------------------------
+| SYNRGYPRO DATABASE KARYAWAN — STEP 7.1 s.d. 7.6 FINAL
+|--------------------------------------------------------------------------
+| Struktur halaman lama dipertahankan.
+| Penambahan final: tombol admin, modal Perbarui Data, modal Ubah Status,
+| POST route Laravel + CSRF, validasi/replay error, dan kartu alamat HC.
+--}}
+
 @php
     $syncStatus = (string) (
         $syncMeta['status'] ?? 'error'
@@ -272,6 +281,8 @@
             'site' => 'Site',
             'kamar' => 'Kamar',
             'gedung_kamar' => 'Gedung/Kamar Gabungan',
+            'alamat_lengkap' => 'Alamat Lengkap',
+            'alamat' => 'Alamat Lengkap',
         ];
 
         $missingLabels = collect(
@@ -628,6 +639,12 @@
                                 $employee['no_hp'] ?? '-',
                             'email' =>
                                 $employee['email'] ?? '-',
+                            'alamatLengkap' =>
+                                $employee['alamat_lengkap'] ??
+                                $employee['alamat'] ??
+                                $employee['ALAMAT_LENGKAP'] ??
+                                $employee['ALAMAT'] ??
+                                '-',
                             'fotoUrl' =>
                                 $employee['foto_url'] ?? null,
                             'fotoOpenUrl' =>
@@ -997,6 +1014,60 @@
                         </div>
                     </dl>
                 </div>
+
+                <div
+                    class="employee-information-section employee-address-section"
+                >
+                    <div class="employee-section-title-row">
+                        <h3>Alamat Lengkap</h3>
+
+                        <span class="employee-source-badge">
+                            SUMBER DATA HC
+                        </span>
+                    </div>
+
+                    <div class="employee-address-card">
+                        <span
+                            class="employee-address-icon"
+                            aria-hidden="true"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                width="22"
+                                height="22"
+                                fill="none"
+                            >
+                                <path
+                                    d="M12 21s7-5.15 7-12A7 7 0 0 0 5 9c0 6.85 7 12 7 12Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                                <circle
+                                    cx="12"
+                                    cy="9"
+                                    r="2.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                />
+                            </svg>
+                        </span>
+
+                        <div class="employee-address-content">
+                            <small>Alamat rumah / domisili karyawan</small>
+
+                            <p id="employeeModalAlamatLengkap">
+                                -
+                            </p>
+                        </div>
+                    </div>
+
+                    <p class="employee-address-note">
+                        Pembaruan alamat mengikuti data resmi HC pada sheet
+                        <strong>DATA_ALAMAT_KARYAWAN</strong>.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -1149,6 +1220,15 @@
                         <small>NRP</small>
                         <strong id="employeeUpdateSummaryNrp">-</strong>
                     </div>
+                </div>
+
+                <div class="employee-hc-address-preview">
+                    <div>
+                        <span>Alamat Lengkap</span>
+                        <small>READ ONLY · SUMBER HC</small>
+                    </div>
+
+                    <p id="employeeUpdateSummaryAddress">-</p>
                 </div>
 
                 <div class="employee-form-grid">
@@ -2128,6 +2208,176 @@ body.employee-modal-open {
     line-height: 1.35;
 }
 
+.employee-address-section {
+    position: relative;
+    overflow: hidden;
+    border-color: #bfdbfe;
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f8fbff 58%,
+            #eef6ff 100%
+        );
+}
+
+.employee-address-section::after {
+    position: absolute;
+    right: -34px;
+    bottom: -42px;
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(20, 125, 245, .07);
+    content: "";
+    pointer-events: none;
+}
+
+.employee-section-title-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid #dbeafe;
+}
+
+.employee-section-title-row h3 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.employee-source-badge {
+    display: inline-flex;
+    min-height: 24px;
+    align-items: center;
+    padding: 0 9px;
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    color: #087a45;
+    background: #ecfdf5;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .06em;
+    white-space: nowrap;
+}
+
+.employee-address-card {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .88);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .05);
+}
+
+.employee-address-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 12px;
+    color: #ffffff;
+    background:
+        linear-gradient(
+            135deg,
+            #147df5,
+            #0f5fc2
+        );
+    box-shadow: 0 8px 18px rgba(20, 125, 245, .22);
+}
+
+.employee-address-content {
+    min-width: 0;
+}
+
+.employee-address-content small {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.employee-address-content p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #172033;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+.employee-address-note {
+    position: relative;
+    z-index: 1;
+    margin: 9px 2px 0;
+    color: #64748b;
+    font-size: 8px;
+    line-height: 1.45;
+}
+
+.employee-address-note strong {
+    color: #334155;
+}
+
+.employee-hc-address-preview {
+    display: grid;
+    grid-template-columns: minmax(150px, .38fr) minmax(0, 1fr);
+    gap: 12px;
+    margin: 0 22px 16px;
+    padding: 12px 14px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            135deg,
+            #eff6ff,
+            #ffffff
+        );
+}
+
+.employee-hc-address-preview > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.employee-hc-address-preview span {
+    color: #172033;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.employee-hc-address-preview small {
+    color: #147df5;
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: .08em;
+}
+
+.employee-hc-address-preview p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #334155;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.55;
+    white-space: pre-line;
+}
+
 .employee-modal-footer {
     display: flex;
     flex-wrap: wrap;
@@ -2781,6 +3031,19 @@ body.employee-modal-open {
     }
 }
 
+@media (max-width: 760px) {
+    .employee-hc-address-preview {
+        grid-template-columns: 1fr;
+        margin-right: 15px;
+        margin-left: 15px;
+    }
+
+    .employee-section-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
 </style>
 
 <script>
@@ -2890,6 +3153,7 @@ document.addEventListener('DOMContentLoaded', function () {
         employeeModalGedungKamar: 'gedungKamar',
         employeeModalNoHp: 'noHp',
         employeeModalEmail: 'email',
+        employeeModalAlamatLengkap: 'alamatLengkap',
     };
 
     function setText(id, value) {
@@ -3541,6 +3805,10 @@ document.addEventListener('DOMContentLoaded', function () {
             'employeeUpdateSummaryNrp',
             employee.nrp
         );
+        setDisplayText(
+            'employeeUpdateSummaryAddress',
+            employee.alamatLengkap
+        );
 
         updateResidenceFields();
     }
@@ -3819,6 +4087,7 @@ document.addEventListener('DOMContentLoaded', function () {
             gedung: @json(old('nomor_gedung')),
             kamar: @json(old('nomor_kamar_mess')),
             fotoOpenUrl: @json(old('pass_foto')),
+            alamatLengkap: '-',
         };
 
         fillUpdateForm(currentEmployee, true);

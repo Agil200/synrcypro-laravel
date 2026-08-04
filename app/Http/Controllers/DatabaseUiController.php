@@ -18,9 +18,23 @@ class DatabaseUiController extends Controller
 
     public function dashboard(): View
     {
+        $dashboardSummary =
+            $this->employeeMaster
+                ->dashboardSummary();
+
         return $this->render(
             'database.dashboard',
-            'dashboard'
+            'dashboard',
+            [
+                'dashboardSummary' =>
+                    $dashboardSummary,
+                'sourceUrl' =>
+                    $this->employeeMaster
+                        ->sourceUrl(),
+                'googleConnected' =>
+                    $this->employeeMaster
+                        ->isGoogleConnected(),
+            ]
         );
     }
 
