@@ -90,7 +90,7 @@
 
     .mcu-toolbar {
         display: grid;
-        grid-template-columns: minmax(210px, 1.25fr) repeat(3, minmax(150px, .7fr)) auto;
+        grid-template-columns: minmax(210px, 1.25fr) repeat(4, minmax(140px, .7fr)) auto;
         gap: 10px;
         align-items: end;
         padding: 16px 20px;
@@ -444,6 +444,21 @@
                     @foreach ($jenisMcuOptions as $option)
                         <option value="{{ $option }}" @selected($selectedJenisMcu === $option)>
                             {{ $option }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="mcu-field">
+                <label for="mcuTahun">Tahun MCU</label>
+                <select name="tahun" id="mcuTahun" class="mcu-select">
+                    <option value="">Semua tahun</option>
+                    @foreach ($tahunOptions as $tahun)
+                        <option
+                            value="{{ $tahun }}"
+                            @selected((string) $selectedTahun === (string) $tahun)
+                        >
+                            {{ $tahun }}
                         </option>
                     @endforeach
                 </select>

@@ -33,13 +33,15 @@ class McuFuController extends Controller
         $kehadiran = trim((string) $request->query('kehadiran', ''));
         $keterangan = trim((string) $request->query('keterangan', ''));
         $jenisMcu = trim((string) $request->query('jenis_mcu', ''));
+        $tahun = trim((string) $request->query('tahun', ''));
 
         $filteredRows = $this->filterRows(
             $allRows,
             $search,
             $kehadiran,
             $keterangan,
-            $jenisMcu
+            $jenisMcu,
+            $tahun
         );
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 25)));
@@ -59,18 +61,18 @@ class McuFuController extends Controller
         $statistics = [
             'total' => $allRows->count(),
             'filtered' => $filteredRows->count(),
-            'hadir' => $allRows->filter(
+            'hadir' => $filteredRows->filter(
                 fn (array $row): bool =>
                     $this->normalize($row['kehadiran'] ?? '') === 'HADIR'
             )->count(),
-            'tidak_hadir' => $allRows->filter(
+            'tidak_hadir' => $filteredRows->filter(
                 fn (array $row): bool =>
                     str_contains(
                         $this->normalize($row['kehadiran'] ?? ''),
                         'TIDAK HADIR'
                     )
             )->count(),
-            'done_review' => $allRows->filter(
+            'done_review' => $filteredRows->filter(
                 fn (array $row): bool =>
                     str_contains(
                         $this->normalize($row['keterangan'] ?? ''),
@@ -87,9 +89,11 @@ class McuFuController extends Controller
             'selectedKehadiran' => $kehadiran,
             'selectedKeterangan' => $keterangan,
             'selectedJenisMcu' => $jenisMcu,
+            'selectedTahun' => $tahun,
             'kehadiranOptions' => $this->options($allRows, 'kehadiran'),
             'keteranganOptions' => $this->options($allRows, 'keterangan'),
             'jenisMcuOptions' => $this->options($allRows, 'jenis_mcu'),
+            'tahunOptions' => $this->yearOptions($allRows),
             'sheetError' => $snapshot['error'],
             'isStale' => $snapshot['is_stale'],
             'lastSyncedAt' => $snapshot['synced_at'],
@@ -105,7 +109,8 @@ class McuFuController extends Controller
             trim((string) $request->query('search', '')),
             trim((string) $request->query('kehadiran', '')),
             trim((string) $request->query('keterangan', '')),
-            trim((string) $request->query('jenis_mcu', ''))
+            trim((string) $request->query('jenis_mcu', '')),
+            trim((string) $request->query('tahun', ''))
         )->values();
 
         return response()->json([
@@ -354,7 +359,8 @@ class McuFuController extends Controller
         string $search,
         string $kehadiran,
         string $keterangan,
-        string $jenisMcu
+        string $jenisMcu,
+        string $tahun
     ): Collection {
         $searchNormal = mb_strtolower($search);
 
@@ -395,7 +401,39 @@ class McuFuController extends Controller
                     $this->normalize($row['jenis_mcu'] ?? '') ===
                     $this->normalize($jenisMcu)
             )
+            ->filter(
+                fn (array $row): bool =>
+                    $tahun === '' ||
+                    $this->extractYear($row['tanggal_mcu'] ?? '') === $tahun
+            )
             ->values();
+    }
+
+    private function yearOptions(Collection $rows): array
+    {
+        return $rows
+            ->pluck('tanggal_mcu')
+            ->map(fn (mixed $value): ?string => $this->extractYear($value))
+            ->filter(fn (?string $year): bool => $year !== null)
+            ->unique()
+            ->sortDesc()
+            ->values()
+            ->all();
+    }
+
+    private function extractYear(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/(?<!\d)((?:19|20)\d{2})(?!\d)/', $value, $matches) !== 1) {
+            return null;
+        }
+
+        return $matches[1];
     }
 
     private function options(Collection $rows, string $key): array

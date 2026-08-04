@@ -40,6 +40,7 @@ class StSpController extends Controller
         StSpRecord::create([
             'nrp' => $validated['nrp'],
             'nama' => $validated['nama'],
+            'jabatan' => $validated['jabatan'],
             'jenis_pelanggaran' => $validated['jenis_pelanggaran'],
             'tanggal' => $validated['tanggal'],
             'expired_date' => $tanggal
@@ -78,6 +79,7 @@ class StSpController extends Controller
         $data = [
             'nrp' => $validated['nrp'],
             'nama' => $validated['nama'],
+            'jabatan' => $validated['jabatan'],
             'jenis_pelanggaran' => $validated['jenis_pelanggaran'],
             'tanggal' => $validated['tanggal'],
             'expired_date' => $tanggal
@@ -228,6 +230,11 @@ class StSpController extends Controller
                             "%{$search}%"
                         )
                         ->orWhere(
+                            'jabatan',
+                            'like',
+                            "%{$search}%"
+                        )
+                        ->orWhere(
                             'jenis_pelanggaran',
                             'like',
                             "%{$search}%"
@@ -289,6 +296,8 @@ class StSpController extends Controller
                 'nrp' => ['required', 'string', 'max:50'],
 
                 'nama' => ['required', 'string', 'max:150'],
+
+                'jabatan' => ['required', 'string', 'max:150'],
 
                 'jenis_pelanggaran' => [
                     'required',

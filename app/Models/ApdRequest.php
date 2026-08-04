@@ -26,6 +26,11 @@ class ApdRequest extends Model
         'status_rompi',
         'status_kacamata',
         'status_ear_plug',
+        'tanggal_reject_helm',
+        'tanggal_reject_sepatu',
+        'tanggal_reject_rompi',
+        'tanggal_reject_kacamata',
+        'tanggal_reject_ear_plug',
         'picked_up_at',
         'created_by',
     ];
@@ -37,6 +42,11 @@ class ApdRequest extends Model
         'item_rompi' => 'boolean',
         'item_kacamata' => 'boolean',
         'item_ear_plug' => 'boolean',
+        'tanggal_reject_helm' => 'date',
+        'tanggal_reject_sepatu' => 'date',
+        'tanggal_reject_rompi' => 'date',
+        'tanggal_reject_kacamata' => 'date',
+        'tanggal_reject_ear_plug' => 'date',
         'picked_up_at' => 'datetime',
     ];
 
@@ -64,6 +74,7 @@ class ApdRequest extends Model
                     'key' => 'helm',
                     'label' => 'Helm',
                     'status' => $this->status_helm,
+                    'tanggal_reject' => $this->tanggal_reject_helm,
                 ]
                 : null,
 
@@ -72,6 +83,7 @@ class ApdRequest extends Model
                     'key' => 'sepatu_safety',
                     'label' => 'Sepatu Safety',
                     'status' => $this->status_sepatu,
+                    'tanggal_reject' => $this->tanggal_reject_sepatu,
                 ]
                 : null,
 
@@ -80,6 +92,7 @@ class ApdRequest extends Model
                     'key' => 'rompi',
                     'label' => 'Rompi',
                     'status' => $this->status_rompi,
+                    'tanggal_reject' => $this->tanggal_reject_rompi,
                 ]
                 : null,
 
@@ -88,6 +101,7 @@ class ApdRequest extends Model
                     'key' => 'kacamata',
                     'label' => 'Kacamata',
                     'status' => $this->status_kacamata,
+                    'tanggal_reject' => $this->tanggal_reject_kacamata,
                 ]
                 : null,
 
@@ -96,6 +110,7 @@ class ApdRequest extends Model
                     'key' => 'ear_plug',
                     'label' => 'Ear Plug',
                     'status' => $this->status_ear_plug,
+                    'tanggal_reject' => $this->tanggal_reject_ear_plug,
                 ]
                 : null,
         ]));

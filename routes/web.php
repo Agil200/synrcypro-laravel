@@ -307,6 +307,53 @@ Route::prefix('database/employees')
                 'index'
             )->name('index');
 
+            /*
+             * Lookup NRP ke MASTER_DATABASE untuk autofill Nama dan Jabatan.
+             */
+            Route::get(
+                '/employee-lookup',
+                'employeeLookup'
+            )->middleware('throttle:60,1')
+                ->name('employee.lookup');
+
+            /*
+             * Download Excel data Sepatu Safety berdasarkan bulan dan status.
+             */
+            Route::get(
+                '/export-shoes',
+                'exportShoes'
+            )->name('export.shoes');
+
+            /*
+             * Pengambilan Sepatu Safety.
+             * Route spesifik diletakkan sebelum route pengajuan dinamis.
+             */
+            Route::post(
+                '/pickup/store',
+                'pickup'
+            )->name('pickup.store');
+
+            Route::put(
+                '/pickup/{apdPickup}',
+                'updatePickup'
+            )->whereNumber('apdPickup')
+                ->name('pickup.update');
+
+            Route::delete(
+                '/pickup/{apdPickup}',
+                'destroyPickup'
+            )->whereNumber('apdPickup')
+                ->name('pickup.destroy');
+
+            Route::get(
+                '/pickup/{apdPickup}/photo',
+                'pickupPhoto'
+            )->whereNumber('apdPickup')
+                ->name('pickup.photo');
+
+            /*
+             * Pengajuan APD.
+             */
             Route::post(
                 '/',
                 'store'
@@ -315,27 +362,20 @@ Route::prefix('database/employees')
             Route::put(
                 '/{apdRequest}',
                 'update'
-            )->name('update');
+            )->whereNumber('apdRequest')
+                ->name('update');
 
             Route::patch(
                 '/{apdRequest}/status',
                 'updateStatus'
-            )->name('status');
+            )->whereNumber('apdRequest')
+                ->name('status');
 
             Route::delete(
                 '/{apdRequest}',
                 'destroy'
-            )->name('destroy');
-
-            Route::post(
-                '/pickup/store',
-                'pickup'
-            )->name('pickup.store');
-
-            Route::get(
-                '/pickup/{apdPickup}/photo',
-                'pickupPhoto'
-            )->name('pickup.photo');
+            )->whereNumber('apdRequest')
+                ->name('destroy');
         });
 
     /*

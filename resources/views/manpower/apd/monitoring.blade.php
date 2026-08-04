@@ -8,6 +8,7 @@
         'WAREHOUSE',
         'LOGISTIK',
         'READY',
+        'REJECT',
         'DIAMBIL',
     ];
 
@@ -15,26 +16,31 @@
         'helm' => [
             'checkbox' => 'item_helm',
             'status' => 'status_helm',
+            'reject_date' => 'tanggal_reject_helm',
             'label' => 'Helm',
         ],
         'sepatu_safety' => [
             'checkbox' => 'item_sepatu_safety',
             'status' => 'status_sepatu',
+            'reject_date' => 'tanggal_reject_sepatu',
             'label' => 'Sepatu Safety',
         ],
         'rompi' => [
             'checkbox' => 'item_rompi',
             'status' => 'status_rompi',
+            'reject_date' => 'tanggal_reject_rompi',
             'label' => 'Rompi',
         ],
         'kacamata' => [
             'checkbox' => 'item_kacamata',
             'status' => 'status_kacamata',
+            'reject_date' => 'tanggal_reject_kacamata',
             'label' => 'Kacamata',
         ],
         'ear_plug' => [
             'checkbox' => 'item_ear_plug',
             'status' => 'status_ear_plug',
+            'reject_date' => 'tanggal_reject_ear_plug',
             'label' => 'Ear Plug',
         ],
     ];
@@ -171,12 +177,20 @@
         background: var(--apd-purple);
     }
 
+    .apd-primary.green {
+        background: #15803d;
+    }
+
     .apd-primary:hover {
         background: var(--apd-red-dark);
     }
 
     .apd-primary.purple:hover {
         background: #4136c9;
+    }
+
+    .apd-primary.green:hover {
+        background: #166534;
     }
 
     .apd-alert {
@@ -413,6 +427,7 @@
         grid-template-columns:
             minmax(78px, 100px)
             minmax(115px, 1fr)
+            minmax(130px, 155px)
             68px;
         align-items: center;
         gap: 6px;
@@ -693,6 +708,51 @@
         border-color: #c7d7fe;
         color: #1e3a8a;
         background: #eff6ff;
+    }
+
+
+    .apd-reject-note {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 5px;
+        margin-top: 6px;
+        padding: 6px 8px;
+        border: 1px solid #f4b4b8;
+        border-radius: 7px;
+        color: #991b1b;
+        background: #fff1f2;
+        font-size: 9px;
+        font-weight: 900;
+    }
+
+    .apd-reject-date-field,
+    .apd-inline-reject-date {
+        display: grid;
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+    .apd-reject-date-field[hidden],
+    .apd-inline-reject-date[hidden] {
+        display: none !important;
+    }
+
+    .apd-reject-date-field label,
+    .apd-inline-reject-date label {
+        color: #991b1b;
+        font-size: 9px;
+        font-weight: 900;
+    }
+
+    .apd-inline-reject-date {
+        margin-top: 0;
+    }
+
+    .apd-inline-reject-date .apd-input {
+        min-height: 31px;
+        padding: 4px 7px;
+        font-size: 10px;
     }
 
     .apd-check-option.is-disabled {
@@ -1023,6 +1083,15 @@
                 >
                     📷 Pengambilan Ready
                 </button>
+
+
+                <button
+                    type="button"
+                    class="apd-primary green"
+                    id="openApdExport"
+                >
+                    ⬇ Download Excel
+                </button>
             </div>
         </div>
 
@@ -1202,7 +1271,7 @@
                                                 : array_slice(
                                                     $statusOrder,
                                                     0,
-                                                    4
+                                                    5
                                                 );
 
                                             $itemStatusIndex =
@@ -1246,6 +1315,20 @@
                                                     </span>
                                                 @endforeach
                                             </div>
+
+                                            @if ($itemStatus === 'REJECT')
+                                                <div class="apd-reject-note">
+                                                    <span>📅</span>
+                                                    <span>
+                                                        Keterangan: REJECT tanggal
+                                                        {{
+                                                            $apdItem['tanggal_reject']
+                                                                ?->format('d/m/Y')
+                                                            ?? '-'
+                                                        }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
@@ -1285,6 +1368,7 @@
                                                 class="
                                                     apd-status-update-form
                                                 "
+                                                data-status-update-form
                                             >
                                                 @csrf
                                                 @method('PATCH')
@@ -1306,6 +1390,7 @@
                                                     class="
                                                         apd-status-select
                                                     "
+                                                    data-inline-status-select
                                                     aria-label="{{
                                                         'Posisi '
                                                         .$apdItem['label']
@@ -1317,6 +1402,7 @@
                                                             'WAREHOUSE',
                                                             'LOGISTIK',
                                                             'READY',
+                                                            'REJECT',
                                                         ] as $step
                                                     )
                                                         <option
@@ -1331,6 +1417,37 @@
                                                         </option>
                                                     @endforeach
                                                 </select>
+
+                                                <div
+                                                    class="apd-inline-reject-date"
+                                                    data-inline-reject-date
+                                                    @hidden(
+                                                        $apdItem['status']
+                                                            !== 'REJECT'
+                                                    )
+                                                >
+                                                    <label>
+                                                        Tanggal Reject*
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        name="tanggal_reject"
+                                                        class="apd-input"
+                                                        value="{{
+                                                            $apdItem[
+                                                                'tanggal_reject'
+                                                            ]?->format('Y-m-d')
+                                                        }}"
+                                                        @required(
+                                                            $apdItem['status']
+                                                                === 'REJECT'
+                                                        )
+                                                        @disabled(
+                                                            $apdItem['status']
+                                                                !== 'REJECT'
+                                                        )
+                                                    >
+                                                </div>
 
                                                 <button
                                                     type="submit"
@@ -1352,90 +1469,60 @@
                             </td>
                             <td>
                                 <div class="apd-actions">
-                                    @if (! $item->pickup)
-                                        <button
-                                            type="button"
-                                            class="
-                                                apd-action
-                                                js-edit-apd
-                                            "
-                                            data-id="{{ $item->id }}"
-                                            data-tanggal="{{
-                                                $item->tanggal_pengajuan
-                                                    ?->format('Y-m-d')
-                                            }}"
-                                            data-nrp="{{ $item->nrp }}"
-                                            data-nama="{{ $item->nama }}"
-                                            data-jabatan="{{
-                                                $item->jabatan
-                                            }}"
-                                            data-ukuran="{{
-                                                $item->ukuran_sepatu
-                                            }}"
-                                            data-helm="{{
-                                                $item->item_helm ? 1 : 0
-                                            }}"
-                                            data-sepatu="{{
-                                                $item->item_sepatu_safety
-                                                    ? 1
-                                                    : 0
-                                            }}"
-                                            data-rompi="{{
-                                                $item->item_rompi ? 1 : 0
-                                            }}"
-                                            data-kacamata="{{
-                                                $item->item_kacamata
-                                                    ? 1
-                                                    : 0
-                                            }}"
-                                            data-earplug="{{
-                                                $item->item_ear_plug
-                                                    ? 1
-                                                    : 0
-                                            }}"
-                                            data-status-helm="{{
-                                                $item->status_helm
-                                            }}"
-                                            data-status-sepatu="{{
-                                                $item->status_sepatu
-                                            }}"
-                                            data-status-rompi="{{
-                                                $item->status_rompi
-                                            }}"
-                                            data-status-kacamata="{{
-                                                $item->status_kacamata
-                                            }}"
-                                            data-status-earplug="{{
-                                                $item->status_ear_plug
-                                            }}"
-                                        >
-                                            Edit
-                                        </button>
+                                    <button
+                                        type="button"
+                                        class="apd-action js-edit-apd"
+                                        data-id="{{ $item->id }}"
+                                        data-picked="{{ $item->pickup ? 1 : 0 }}"
+                                        data-tanggal="{{
+                                            $item->tanggal_pengajuan
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-nrp="{{ $item->nrp }}"
+                                        data-nama="{{ $item->nama }}"
+                                        data-jabatan="{{ $item->jabatan }}"
+                                        data-ukuran="{{ $item->ukuran_sepatu }}"
+                                        data-helm="{{ $item->item_helm ? 1 : 0 }}"
+                                        data-sepatu="{{
+                                            $item->item_sepatu_safety ? 1 : 0
+                                        }}"
+                                        data-rompi="{{ $item->item_rompi ? 1 : 0 }}"
+                                        data-kacamata="{{
+                                            $item->item_kacamata ? 1 : 0
+                                        }}"
+                                        data-earplug="{{
+                                            $item->item_ear_plug ? 1 : 0
+                                        }}"
+                                        data-status-helm="{{ $item->status_helm }}"
+                                        data-status-sepatu="{{ $item->status_sepatu }}"
+                                        data-status-rompi="{{ $item->status_rompi }}"
+                                        data-status-kacamata="{{ $item->status_kacamata }}"
+                                        data-status-earplug="{{ $item->status_ear_plug }}"
+                                        data-reject-helm="{{
+                                            $item->tanggal_reject_helm
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-reject-sepatu="{{
+                                            $item->tanggal_reject_sepatu
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-reject-rompi="{{
+                                            $item->tanggal_reject_rompi
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-reject-kacamata="{{
+                                            $item->tanggal_reject_kacamata
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-reject-earplug="{{
+                                            $item->tanggal_reject_ear_plug
+                                                ?->format('Y-m-d')
+                                        }}"
+                                    >
+                                        Edit
+                                    </button>
 
-                                        <form
-                                            method="POST"
-                                            action="{{
-                                                route(
-                                                    'apd.destroy',
-                                                    $item
-                                                )
-                                            }}"
-                                            class="js-delete-apd"
-                                        >
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button
-                                                type="submit"
-                                                class="
-                                                    apd-action
-                                                    danger
-                                                "
-                                            >
-                                                Hapus
-                                            </button>
-                                        </form>
-                                    @else
+                                    @if ($item->pickup)
                                         <a
                                             href="{{
                                                 route(
@@ -1450,6 +1537,25 @@
                                             Lihat Foto
                                         </a>
                                     @endif
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route('apd.destroy', $item) }}"
+                                        class="js-delete-apd"
+                                        data-has-pickup="{{
+                                            $item->pickup ? 1 : 0
+                                        }}"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button
+                                            type="submit"
+                                            class="apd-action danger"
+                                        >
+                                            Hapus
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -1560,7 +1666,7 @@
         </div>
 
         <div class="apd-table-wrap">
-            <table class="apd-table" style="min-width: 900px;">
+            <table class="apd-table" style="min-width: 1180px;">
                 <thead>
                     <tr>
                         <th>No</th>
@@ -1570,7 +1676,9 @@
                         <th>Ukuran</th>
                         <th>Diambil Oleh</th>
                         <th>Petugas</th>
+                        <th>Keterangan</th>
                         <th>Bukti Foto</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1603,6 +1711,7 @@
                             </td>
                             <td>{{ $pickup->diambil_oleh }}</td>
                             <td>{{ $pickup->petugas ?: '-' }}</td>
+                            <td>{{ $pickup->keterangan ?: '-' }}</td>
                             <td>
                                 <a
                                     href="{{
@@ -1618,10 +1727,64 @@
                                     Lihat Foto
                                 </a>
                             </td>
+                            <td>
+                                <div class="apd-actions">
+                                    <button
+                                        type="button"
+                                        class="apd-action js-edit-pickup"
+                                        data-id="{{ $pickup->id }}"
+                                        data-tanggal="{{
+                                            $pickup->tanggal_pengambilan
+                                                ?->format('Y-m-d')
+                                        }}"
+                                        data-diambil-oleh="{{
+                                            $pickup->diambil_oleh
+                                        }}"
+                                        data-petugas="{{ $pickup->petugas }}"
+                                        data-keterangan="{{
+                                            $pickup->keterangan
+                                        }}"
+                                        data-photo-url="{{
+                                            route(
+                                                'apd.pickup.photo',
+                                                $pickup
+                                            )
+                                        }}"
+                                    >
+                                        Edit
+                                    </button>
+
+                                    <form
+                                        method="POST"
+                                        action="{{
+                                            route(
+                                                'apd.pickup.destroy',
+                                                $pickup
+                                            )
+                                        }}"
+                                        class="js-delete-pickup"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <input
+                                            type="hidden"
+                                            name="bulan"
+                                            value="{{ $bulan }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="apd-action danger"
+                                        >
+                                            Hapus
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="apd-empty">
+                            <td colspan="10" class="apd-empty">
                                 Belum ada riwayat pengambilan.
                             </td>
                         </tr>
@@ -1691,9 +1854,16 @@
                             maxlength="50"
                             autocomplete="off"
                             data-shoe-nrp-input
+                            data-employee-lookup-nrp
                             required
                         >
                     </div>
+
+                    <div
+                        class="apd-inline-note apd-full"
+                        data-employee-lookup-notice
+                        hidden
+                    ></div>
 
                     <div
                         class="apd-inline-note apd-full"
@@ -1708,8 +1878,10 @@
                             name="nama"
                             id="apdNama"
                             class="apd-input"
+                            data-employee-name
                             value="{{ old('nama') }}"
                             maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -1721,8 +1893,10 @@
                             name="jabatan"
                             id="apdJabatan"
                             class="apd-input"
+                            data-employee-position
                             value="{{ old('jabatan') }}"
                             maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -1766,7 +1940,7 @@
 
                         <p class="apd-calendar-help">
                             Setiap barang yang dipilih memiliki status
-                            SHE, WAREHOUSE, LOGISTIK, atau READY.
+                            SHE, WAREHOUSE, LOGISTIK, READY, atau REJECT.
                             Sepatu Safety yang sudah pernah diambil tidak
                             dapat diajukan kembali dengan NRP yang sama.
                         </p>
@@ -1811,6 +1985,7 @@
                                         'WAREHOUSE',
                                         'LOGISTIK',
                                         'READY',
+                                        'REJECT',
                                     ] as $step
                                 )
                                     <label class="apd-status-option">
@@ -1832,6 +2007,29 @@
                                         </span>
                                     </label>
                                 @endforeach
+                            </div>
+
+                            <div
+                                class="apd-reject-date-field"
+                                data-reject-date-field="{{ $key }}"
+                                hidden
+                            >
+                                <label for="create_reject_{{ $key }}">
+                                    Tanggal Reject {{ $definition['label'] }}*
+                                </label>
+                                <input
+                                    type="date"
+                                    name="{{ $definition['reject_date'] }}"
+                                    id="create_reject_{{ $key }}"
+                                    class="apd-input"
+                                    value="{{
+                                        old($definition['reject_date'])
+                                    }}"
+                                    disabled
+                                >
+                                <p class="apd-calendar-help">
+                                    Wajib diisi ketika status REJECT dipilih.
+                                </p>
                             </div>
                         </div>
                     @endforeach
@@ -1911,9 +2109,16 @@
                             maxlength="50"
                             autocomplete="off"
                             data-shoe-nrp-input
+                            data-employee-lookup-nrp
                             required
                         >
                     </div>
+
+                    <div
+                        class="apd-inline-note apd-full"
+                        data-employee-lookup-notice
+                        hidden
+                    ></div>
 
                     <div
                         class="apd-inline-note apd-full"
@@ -1928,7 +2133,9 @@
                             name="nama"
                             id="editApdNama"
                             class="apd-input"
+                            data-employee-name
                             maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -1942,7 +2149,9 @@
                             name="jabatan"
                             id="editApdJabatan"
                             class="apd-input"
+                            data-employee-position
                             maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -2013,15 +2222,22 @@
                                 Saat Ini
                             </label>
 
+                            @php
+                                $editStatusSteps = [
+                                    'SHE',
+                                    'WAREHOUSE',
+                                    'LOGISTIK',
+                                    'READY',
+                                    'REJECT',
+                                ];
+
+                                if ($key === 'sepatu_safety') {
+                                    $editStatusSteps[] = 'DIAMBIL';
+                                }
+                            @endphp
+
                             <div class="apd-status-options">
-                                @foreach (
-                                    [
-                                        'SHE',
-                                        'WAREHOUSE',
-                                        'LOGISTIK',
-                                        'READY',
-                                    ] as $step
-                                )
+                                @foreach ($editStatusSteps as $step)
                                     <label class="apd-status-option">
                                         <input
                                             type="radio"
@@ -2038,6 +2254,27 @@
                                         </span>
                                     </label>
                                 @endforeach
+                            </div>
+
+                            <div
+                                class="apd-reject-date-field"
+                                data-reject-date-field="{{ $key }}"
+                                hidden
+                            >
+                                <label for="edit_reject_{{ $key }}">
+                                    Tanggal Reject {{ $definition['label'] }}*
+                                </label>
+                                <input
+                                    type="date"
+                                    name="{{ $definition['reject_date'] }}"
+                                    id="edit_reject_{{ $key }}"
+                                    class="apd-input"
+                                    data-edit-reject-date="{{ $key }}"
+                                    disabled
+                                >
+                                <p class="apd-calendar-help">
+                                    Wajib diisi ketika status REJECT dipilih.
+                                </p>
                             </div>
                         </div>
                     @endforeach
@@ -2056,6 +2293,218 @@
                     class="apd-primary apd-submit-primary"
                 >
                     Submit Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Download Excel Sepatu Safety --}}
+<div
+    class="apd-modal"
+    id="apdExportModal"
+    aria-hidden="true"
+    hidden
+>
+    <div class="apd-dialog pickup">
+        <form
+            method="GET"
+            action="{{ route('apd.export.shoes') }}"
+        >
+            <div class="apd-modal-header">
+                <h2>Download Excel Sepatu Safety</h2>
+                <button
+                    type="button"
+                    class="apd-close js-close-apd"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="apd-modal-body">
+                <div class="apd-form-grid">
+                    <div class="apd-field">
+                        <label for="exportApdMonth">
+                            Bulan Pengajuan
+                        </label>
+                        <input
+                            type="month"
+                            name="bulan"
+                            id="exportApdMonth"
+                            class="apd-input"
+                            value="{{ $bulan }}"
+                            required
+                        >
+                        <p class="apd-calendar-help">
+                            Nilai awal mengikuti kalender pada halaman monitoring.
+                        </p>
+                    </div>
+
+                    <div class="apd-field">
+                        <label for="exportShoeStatus">
+                            Posisi Sepatu
+                        </label>
+                        <select
+                            name="status"
+                            id="exportShoeStatus"
+                            class="apd-select"
+                            required
+                        >
+                            <option value="">Pilih posisi barang</option>
+                            @foreach ($exportShoeStatuses as $exportStatus)
+                                <option value="{{ $exportStatus }}">
+                                    {{ $exportStatus }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div
+                    class="apd-inline-note info"
+                    style="margin-top: 14px;"
+                >
+                    File hanya memuat pengajuan Sepatu Safety pada bulan
+                    dan posisi yang dipilih: SHE, WAREHOUSE, LOGISTIK,
+                    READY, atau REJECT.
+                </div>
+            </div>
+
+            <div class="apd-modal-footer">
+                <button
+                    type="button"
+                    class="apd-secondary js-close-apd"
+                >
+                    Batal
+                </button>
+                <button
+                    type="submit"
+                    class="apd-primary green apd-submit-primary"
+                >
+                    Download Excel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Edit Riwayat Pengambilan --}}
+<div
+    class="apd-modal"
+    id="apdPickupEditModal"
+    aria-hidden="true"
+    hidden
+>
+    <div class="apd-dialog pickup">
+        <form
+            method="POST"
+            action=""
+            enctype="multipart/form-data"
+            id="apdPickupEditForm"
+        >
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="bulan" value="{{ $bulan }}">
+
+            <div class="apd-modal-header">
+                <h2>Edit Riwayat Pengambilan</h2>
+                <button
+                    type="button"
+                    class="apd-close js-close-apd"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="apd-modal-body">
+                <div class="apd-form-grid">
+                    <div class="apd-field">
+                        <label for="editPickupDate">
+                            Tanggal Pengambilan
+                        </label>
+                        <input
+                            type="date"
+                            name="tanggal_pengambilan"
+                            id="editPickupDate"
+                            class="apd-input"
+                            required
+                        >
+                    </div>
+
+                    <div class="apd-field">
+                        <label for="editPickupBy">
+                            Diambil Oleh
+                        </label>
+                        <input
+                            type="text"
+                            name="diambil_oleh"
+                            id="editPickupBy"
+                            class="apd-input"
+                            maxlength="150"
+                            required
+                        >
+                    </div>
+
+                    <div class="apd-field">
+                        <label for="editPickupOfficer">Petugas</label>
+                        <input
+                            type="text"
+                            name="petugas"
+                            id="editPickupOfficer"
+                            class="apd-input"
+                            maxlength="150"
+                        >
+                    </div>
+
+                    <div class="apd-field">
+                        <label for="editPickupNote">Keterangan</label>
+                        <input
+                            type="text"
+                            name="keterangan"
+                            id="editPickupNote"
+                            class="apd-input"
+                            maxlength="1000"
+                        >
+                    </div>
+
+                    <div class="apd-field apd-full">
+                        <label for="editPickupPhoto">
+                            Ganti Foto Bukti (opsional)
+                        </label>
+                        <input
+                            type="file"
+                            name="bukti_foto"
+                            id="editPickupPhoto"
+                            class="apd-input"
+                            accept="image/jpeg,image/png,image/webp"
+                        >
+                        <p class="apd-calendar-help">
+                            Kosongkan apabila foto lama tidak ingin diganti.
+                            <a
+                                href="#"
+                                id="editPickupCurrentPhoto"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                Lihat foto saat ini
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="apd-modal-footer">
+                <button
+                    type="button"
+                    class="apd-secondary js-close-apd"
+                >
+                    Batal
+                </button>
+                <button
+                    type="submit"
+                    class="apd-primary apd-submit-primary"
+                >
+                    Simpan Perubahan
                 </button>
             </div>
         </form>
@@ -2313,9 +2762,21 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('apdEditModal');
     const pickupModal =
         document.getElementById('apdPickupModal');
+    const exportModal =
+        document.getElementById('apdExportModal');
+    const pickupEditModal =
+        document.getElementById('apdPickupEditModal');
 
     const updateUrl = @json(
         route('apd.update', ['apdRequest' => '__ID__'])
+    );
+
+    const employeeLookupUrl = @json(
+        route('apd.employee.lookup')
+    );
+
+    const pickupUpdateUrl = @json(
+        route('apd.pickup.update', ['apdPickup' => '__ID__'])
     );
 
     const shoePickupHistory = @json(
@@ -2399,6 +2860,264 @@ document.addEventListener('DOMContentLoaded', function () {
                     input.disabled = !shoeEnabled;
                 });
         }
+
+        syncRejectDateFields(container);
+    }
+
+    function syncRejectDateFields(container) {
+        if (!container) {
+            return;
+        }
+
+        container
+            .querySelectorAll('[data-item-status-panel]')
+            .forEach(function (panel) {
+                const checkedStatus = panel.querySelector(
+                    'input[type="radio"]:checked'
+                );
+                const rejectField = panel.querySelector(
+                    '[data-reject-date-field]'
+                );
+                const rejectInput = rejectField?.querySelector(
+                    'input[type="date"]'
+                );
+                const showRejectDate =
+                    checkedStatus?.value === 'REJECT'
+                    && panel.style.display !== 'none';
+
+                if (rejectField) {
+                    rejectField.hidden = !showRejectDate;
+                }
+
+                if (rejectInput) {
+                    rejectInput.disabled = !showRejectDate;
+                    rejectInput.required = showRejectDate;
+                }
+            });
+    }
+
+    function syncInlineRejectDate(form) {
+        const statusSelect = form?.querySelector(
+            '[data-inline-status-select]'
+        );
+        const rejectField = form?.querySelector(
+            '[data-inline-reject-date]'
+        );
+        const rejectInput = rejectField?.querySelector(
+            'input[type="date"]'
+        );
+        const showRejectDate = statusSelect?.value === 'REJECT';
+
+        if (rejectField) {
+            rejectField.hidden = !showRejectDate;
+        }
+
+        if (rejectInput) {
+            rejectInput.disabled = !showRejectDate;
+            rejectInput.required = showRejectDate;
+        }
+    }
+
+    function applyPickedShoeLock(container) {
+        if (!container || container !== editModal) {
+            return;
+        }
+
+        const hasPickup = container.dataset.hasPickup === '1';
+        const shoeToggle = container.querySelector(
+            '#edit_item_sepatu_safety'
+        );
+        const shoeOption = shoeToggle?.closest('.apd-check-option');
+        const shoeRadios = container.querySelectorAll(
+            'input[name="status_sepatu"]'
+        );
+
+        if (hasPickup) {
+            if (shoeToggle) {
+                shoeToggle.checked = true;
+                shoeToggle.disabled = true;
+            }
+
+            shoeOption?.classList.add('is-disabled');
+            shoeOption?.setAttribute(
+                'title',
+                'Sepatu sudah diambil. Hapus riwayat pengambilan untuk mengembalikannya menjadi READY.'
+            );
+
+            shoeRadios.forEach(function (radio) {
+                radio.disabled = true;
+            });
+        } else {
+            if (shoeToggle) {
+                shoeToggle.disabled = false;
+            }
+
+            shoeOption?.classList.remove('is-disabled');
+            shoeOption?.removeAttribute('title');
+        }
+    }
+
+    const employeeLookupTimers = new WeakMap();
+    const employeeLookupRequests = new WeakMap();
+
+    function employeeLookupFields(container) {
+        return {
+            nrp: container?.querySelector(
+                '[data-employee-lookup-nrp]'
+            ),
+            nama: container?.querySelector(
+                '[data-employee-name]'
+            ),
+            jabatan: container?.querySelector(
+                '[data-employee-position]'
+            ),
+            notice: container?.querySelector(
+                '[data-employee-lookup-notice]'
+            ),
+        };
+    }
+
+    function showEmployeeLookupNotice(
+        container,
+        message = '',
+        isInfo = false
+    ) {
+        const { notice } = employeeLookupFields(container);
+
+        if (!notice) {
+            return;
+        }
+
+        notice.textContent = message;
+        notice.hidden = message === '';
+        notice.classList.toggle('info', isInfo);
+    }
+
+    function clearEmployeeLookupFields(container) {
+        const { nama, jabatan } = employeeLookupFields(container);
+
+        if (nama) {
+            nama.value = '';
+        }
+
+        if (jabatan) {
+            jabatan.value = '';
+        }
+    }
+
+    async function lookupEmployee(container) {
+        const fields = employeeLookupFields(container);
+        const nrp = normalizeNrp(fields.nrp?.value);
+
+        if (!fields.nrp || nrp === '') {
+            employeeLookupRequests.get(container)?.abort();
+            clearEmployeeLookupFields(container);
+            showEmployeeLookupNotice(container);
+            return;
+        }
+
+        employeeLookupRequests.get(container)?.abort();
+
+        const controller = new AbortController();
+        employeeLookupRequests.set(container, controller);
+
+        showEmployeeLookupNotice(
+            container,
+            'Mencari NRP pada MASTER_DATABASE…',
+            true
+        );
+
+        try {
+            const url = new URL(
+                employeeLookupUrl,
+                window.location.origin
+            );
+            url.searchParams.set('nrp', nrp);
+
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                signal: controller.signal,
+            });
+
+            const payload = await response
+                .json()
+                .catch(function () {
+                    return {};
+                });
+
+            if (!response.ok || !payload.found) {
+                if (response.status === 404) {
+                    clearEmployeeLookupFields(container);
+                }
+
+                showEmployeeLookupNotice(
+                    container,
+                    payload.message
+                        || 'Data karyawan belum dapat ditemukan.'
+                );
+                return;
+            }
+
+            if (fields.nama) {
+                fields.nama.value =
+                    payload.employee?.nama || '';
+            }
+
+            if (fields.jabatan) {
+                fields.jabatan.value =
+                    payload.employee?.jabatan || '';
+            }
+
+            showEmployeeLookupNotice(
+                container,
+                payload.stale
+                    ? 'NRP ditemukan dari cache terakhir MASTER_DATABASE.'
+                    : 'NRP ditemukan. Nama dan jabatan terisi otomatis.',
+                true
+            );
+        } catch (error) {
+            if (error?.name === 'AbortError') {
+                return;
+            }
+
+            showEmployeeLookupNotice(
+                container,
+                'Gagal memeriksa NRP. Periksa koneksi Google Sheets lalu coba lagi.'
+            );
+        }
+    }
+
+    function scheduleEmployeeLookup(
+        container,
+        immediate = false
+    ) {
+        if (!container) {
+            return;
+        }
+
+        const oldTimer = employeeLookupTimers.get(container);
+
+        if (oldTimer) {
+            window.clearTimeout(oldTimer);
+        }
+
+        if (immediate) {
+            lookupEmployee(container);
+            return;
+        }
+
+        const timer = window.setTimeout(
+            function () {
+                lookupEmployee(container);
+            },
+            400
+        );
+
+        employeeLookupTimers.set(container, timer);
     }
 
     function normalizeNrp(value) {
@@ -2483,11 +3202,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         syncItemStatusFields(container);
+        applyPickedShoeLock(container);
     }
 
     document
         .getElementById('openApdCreate')
         ?.addEventListener('click', function () {
+            scheduleEmployeeLookup(createModal, true);
             applyShoeHistoryGuard(createModal);
             openModal(createModal);
         });
@@ -2496,6 +3217,12 @@ document.addEventListener('DOMContentLoaded', function () {
         .getElementById('openApdPickup')
         ?.addEventListener('click', function () {
             openModal(pickupModal);
+        });
+
+    document
+        .getElementById('openApdExport')
+        ?.addEventListener('click', function () {
+            openModal(exportModal);
         });
 
     document
@@ -2528,9 +3255,55 @@ document.addEventListener('DOMContentLoaded', function () {
         .querySelectorAll('.js-apd-item-toggle')
         .forEach(function (toggle) {
             toggle.addEventListener('change', function () {
-                syncItemStatusFields(
-                    toggle.closest('.apd-modal')
+                const modal = toggle.closest('.apd-modal');
+                syncItemStatusFields(modal);
+                applyPickedShoeLock(modal);
+            });
+        });
+
+
+    document
+        .querySelectorAll(
+            '[data-item-status-panel] input[type="radio"]'
+        )
+        .forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                syncRejectDateFields(
+                    radio.closest('.apd-modal')
                 );
+            });
+        });
+
+    document
+        .querySelectorAll('[data-status-update-form]')
+        .forEach(function (form) {
+            const select = form.querySelector(
+                '[data-inline-status-select]'
+            );
+
+            select?.addEventListener('change', function () {
+                syncInlineRejectDate(form);
+            });
+
+            syncInlineRejectDate(form);
+        });
+
+    document
+        .querySelectorAll('[data-employee-lookup-nrp]')
+        .forEach(function (input) {
+            input.addEventListener('input', function () {
+                scheduleEmployeeLookup(
+                    input.closest('.apd-modal')
+                );
+            });
+
+            ['change', 'blur'].forEach(function (eventName) {
+                input.addEventListener(eventName, function () {
+                    scheduleEmployeeLookup(
+                        input.closest('.apd-modal'),
+                        true
+                    );
+                });
             });
         });
 
@@ -2548,6 +3321,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyShoeHistoryGuard(createModal);
     applyShoeHistoryGuard(editModal);
+    scheduleEmployeeLookup(createModal, true);
 
     document
         .querySelectorAll('.js-edit-apd')
@@ -2624,11 +3398,34 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
 
+                const rejectDates = {
+                    helm: button.dataset.rejectHelm || '',
+                    sepatu_safety: button.dataset.rejectSepatu || '',
+                    rompi: button.dataset.rejectRompi || '',
+                    kacamata: button.dataset.rejectKacamata || '',
+                    ear_plug: button.dataset.rejectEarplug || '',
+                };
+
+                Object.entries(rejectDates)
+                    .forEach(function ([key, date]) {
+                        const input = editModal.querySelector(
+                            `[data-edit-reject-date="${key}"]`
+                        );
+
+                        if (input) {
+                            input.value = date;
+                        }
+                    });
+
                 editModal.dataset.existingShoe =
                     button.dataset.sepatu || '0';
+                editModal.dataset.hasPickup =
+                    button.dataset.picked || '0';
 
+                scheduleEmployeeLookup(editModal, true);
                 applyShoeHistoryGuard(editModal);
                 syncItemStatusFields(editModal);
+                applyPickedShoeLock(editModal);
                 openModal(editModal);
             });
         });
@@ -2637,11 +3434,73 @@ document.addEventListener('DOMContentLoaded', function () {
         .querySelectorAll('.js-delete-apd')
         .forEach(function (form) {
             form.addEventListener('submit', function (event) {
-                if (
-                    !window.confirm(
-                        'Hapus pengajuan APD ini?'
-                    )
-                ) {
+                const hasPickup = form.dataset.hasPickup === '1';
+                const message = hasPickup
+                    ? 'Hapus pengajuan APD beserta riwayat dan foto pengambilannya?'
+                    : 'Hapus pengajuan APD ini?';
+
+                if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+    document
+        .querySelectorAll('.js-edit-pickup')
+        .forEach(function (button) {
+            button.addEventListener('click', function () {
+                const form = document.getElementById(
+                    'apdPickupEditForm'
+                );
+
+                form.action = pickupUpdateUrl.replace(
+                    '__ID__',
+                    encodeURIComponent(button.dataset.id)
+                );
+
+                document.getElementById(
+                    'editPickupDate'
+                ).value = button.dataset.tanggal || '';
+
+                document.getElementById(
+                    'editPickupBy'
+                ).value = button.dataset.diambilOleh || '';
+
+                document.getElementById(
+                    'editPickupOfficer'
+                ).value = button.dataset.petugas || '';
+
+                document.getElementById(
+                    'editPickupNote'
+                ).value = button.dataset.keterangan || '';
+
+                const photoLink = document.getElementById(
+                    'editPickupCurrentPhoto'
+                );
+
+                if (photoLink) {
+                    photoLink.href = button.dataset.photoUrl || '#';
+                }
+
+                const photoInput = document.getElementById(
+                    'editPickupPhoto'
+                );
+
+                if (photoInput) {
+                    photoInput.value = '';
+                }
+
+                openModal(pickupEditModal);
+            });
+        });
+
+    document
+        .querySelectorAll('.js-delete-pickup')
+        .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!window.confirm(
+                    'Hapus riwayat pengambilan dan kembalikan status sepatu menjadi READY?'
+                )) {
                     event.preventDefault();
                 }
             });
@@ -2882,6 +3741,10 @@ document.addEventListener('DOMContentLoaded', function () {
         openModal(createModal);
     @elseif ($openModal === 'pickup')
         openModal(pickupModal);
+    @elseif ($openModal === 'export')
+        openModal(exportModal);
+    @elseif ($openModal === 'pickup-edit')
+        openModal(pickupEditModal);
     @endif
 });
 </script>

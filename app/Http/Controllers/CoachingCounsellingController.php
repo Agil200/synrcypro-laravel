@@ -32,6 +32,7 @@ class CoachingCounsellingController extends Controller
                 $subQuery
                     ->where('nrp', 'like', "%{$search}%")
                     ->orWhere('nama', 'like', "%{$search}%")
+                    ->orWhere('jabatan', 'like', "%{$search}%")
                     ->orWhere('materi', 'like', "%{$search}%")
                     ->orWhere('perihal', 'like', "%{$search}%")
                     ->orWhere('dibuat_oleh', 'like', "%{$search}%");
@@ -77,6 +78,7 @@ class CoachingCounsellingController extends Controller
         CoachingCounselling::create([
             'nrp' => $validated['nrp'],
             'nama' => $validated['nama'],
+            'jabatan' => $validated['jabatan'],
             'materi' => $validated['materi'],
             'perihal' => $validated['perihal'] ?? null,
             'tanggal' => $validated['tanggal'],
@@ -103,6 +105,7 @@ class CoachingCounsellingController extends Controller
         $data = [
             'nrp' => $validated['nrp'],
             'nama' => $validated['nama'],
+            'jabatan' => $validated['jabatan'],
             'materi' => $validated['materi'],
             'perihal' => $validated['perihal'] ?? null,
             'tanggal' => $validated['tanggal'],
@@ -163,6 +166,7 @@ class CoachingCounsellingController extends Controller
         return $request->validate([
             'nrp' => ['required', 'string', 'max:50'],
             'nama' => ['required', 'string', 'max:150'],
+            'jabatan' => ['required', 'string', 'max:150'],
             'materi' => ['required', 'string', 'max:255'],
             'perihal' => ['nullable', 'string', 'max:255'],
             'tanggal' => ['required', 'date'],

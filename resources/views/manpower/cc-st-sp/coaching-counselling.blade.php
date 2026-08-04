@@ -6,6 +6,26 @@
 
 @include('manpower.cc-st-sp.partials.styles')
 
+<style>
+    .ccsp-employee-lookup-note {
+        display: block;
+        margin-top: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+    .ccsp-employee-lookup-note[hidden] { display: none !important; }
+    .ccsp-employee-lookup-note.is-info { color: #1e40af; }
+    .ccsp-employee-lookup-note.is-success { color: #166534; }
+    .ccsp-employee-lookup-note.is-error { color: #b42318; }
+    .ccsp-reference-input[readonly] {
+        color: #344054;
+        background: #f7f8fa;
+        cursor: not-allowed;
+    }
+</style>
+
+
 <div class="ccsp-page">
     <section class="ccsp-card">
         <div class="ccsp-header">
@@ -63,7 +83,7 @@
                 <input type="hidden" name="bulan" value="{{ $bulan }}">
 
                 <label for="ccSearch">
-                    Cari NRP / Nama / Materi / Pembuat
+                    Cari NRP / Nama / Jabatan / Materi / Pembuat
                 </label>
 
                 <input
@@ -96,6 +116,7 @@
                         <th>No</th>
                         <th>NRP</th>
                         <th>Nama</th>
+                        <th>Jabatan</th>
                         <th>Materi</th>
                         <th>Perihal</th>
                         <th>Tanggal</th>
@@ -118,6 +139,7 @@
                             </td>
                             <td>{{ $item->nrp }}</td>
                             <td>{{ $item->nama ?: '-' }}</td>
+                            <td>{{ $item->jabatan ?: '-' }}</td>
                             <td>{{ $item->materi }}</td>
                             <td>{{ $item->perihal ?: '-' }}</td>
                             <td>{{ $item->tanggal?->format('d/m/Y') }}</td>
@@ -148,6 +170,7 @@
                                         data-id="{{ $item->id }}"
                                         data-nrp="{{ $item->nrp }}"
                                         data-nama="{{ $item->nama }}"
+                                        data-jabatan="{{ $item->jabatan }}"
                                         data-materi="{{ $item->materi }}"
                                         data-perihal="{{ $item->perihal }}"
                                         data-tanggal="{{
@@ -189,7 +212,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="ccsp-empty">
+                            <td colspan="12" class="ccsp-empty">
                                 Belum ada data pada {{ $labelBulan }}.
                             </td>
                         </tr>
@@ -322,8 +345,15 @@
                             class="ccsp-reference-input"
                             value="{{ old('nrp') }}"
                             maxlength="50"
+                            autocomplete="off"
+                            data-employee-lookup-nrp
                             required
                         >
+                        <small
+                            class="ccsp-employee-lookup-note"
+                            data-employee-lookup-note
+                            hidden
+                        ></small>
                     </div>
                 </div>
 
@@ -342,9 +372,28 @@
                             name="nama"
                             id="ccNama"
                             class="ccsp-reference-input"
+                            data-employee-name
                             value="{{ old('nama') }}"
                             maxlength="150"
                             autocomplete="name"
+                            readonly
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="ccsp-reference-row">
+                    <label for="ccJabatan" class="ccsp-reference-label">JABATAN*</label>
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="jabatan"
+                            id="ccJabatan"
+                            class="ccsp-reference-input"
+                            data-employee-position
+                            value="{{ old('jabatan') }}"
+                            maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -614,8 +663,15 @@
                             id="editCcNrp"
                             class="ccsp-reference-input"
                             maxlength="50"
+                            autocomplete="off"
+                            data-employee-lookup-nrp
                             required
                         >
+                        <small
+                            class="ccsp-employee-lookup-note"
+                            data-employee-lookup-note
+                            hidden
+                        ></small>
                     </div>
                 </div>
 
@@ -633,8 +689,26 @@
                             name="nama"
                             id="editCcNama"
                             class="ccsp-reference-input"
+                            data-employee-name
                             maxlength="150"
                             autocomplete="name"
+                            readonly
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="ccsp-reference-row">
+                    <label for="editCcJabatan" class="ccsp-reference-label">JABATAN*</label>
+                    <div class="ccsp-reference-control">
+                        <input
+                            type="text"
+                            name="jabatan"
+                            id="editCcJabatan"
+                            class="ccsp-reference-input"
+                            data-employee-position
+                            maxlength="150"
+                            readonly
                             required
                         >
                     </div>
@@ -821,6 +895,126 @@ document.addEventListener('DOMContentLoaded', function () {
         )
     );
 
+    const employeeLookupUrl = @json(
+        route('apd.employee.lookup')
+    );
+
+    const employeeLookupTimers = new WeakMap();
+    const employeeLookupRequests = new WeakMap();
+
+    function employeeLookupFields(container) {
+        return {
+            nrp: container?.querySelector('[data-employee-lookup-nrp]'),
+            nama: container?.querySelector('[data-employee-name]'),
+            jabatan: container?.querySelector('[data-employee-position]'),
+            note: container?.querySelector('[data-employee-lookup-note]'),
+        };
+    }
+
+    function showEmployeeLookupNote(container, message = '', state = 'info') {
+        const { note } = employeeLookupFields(container);
+        if (!note) return;
+        note.textContent = message;
+        note.hidden = message === '';
+        note.classList.remove('is-info', 'is-success', 'is-error');
+        if (message !== '') note.classList.add(`is-${state}`);
+    }
+
+    function clearEmployeeLookupFields(container) {
+        const { nama, jabatan } = employeeLookupFields(container);
+        if (nama) nama.value = '';
+        if (jabatan) jabatan.value = '';
+    }
+
+    async function lookupEmployee(container) {
+        const fields = employeeLookupFields(container);
+        const nrp = String(fields.nrp?.value || '').trim();
+        if (!fields.nrp || nrp === '') {
+            employeeLookupRequests.get(container)?.abort();
+            clearEmployeeLookupFields(container);
+            showEmployeeLookupNote(container);
+            return;
+        }
+
+        employeeLookupRequests.get(container)?.abort();
+        const controller = new AbortController();
+        employeeLookupRequests.set(container, controller);
+        showEmployeeLookupNote(container, 'Mencari NRP pada MASTER_DATABASE…', 'info');
+
+        try {
+            const url = new URL(employeeLookupUrl, window.location.origin);
+            url.searchParams.set('nrp', nrp);
+            const response = await fetch(url.toString(), {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                signal: controller.signal,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.found) {
+                if (response.status === 404) {
+                    clearEmployeeLookupFields(container);
+                }
+
+                showEmployeeLookupNote(
+                    container,
+                    payload.message || 'NRP tidak ditemukan pada MASTER_DATABASE.',
+                    'error'
+                );
+                return;
+            }
+            if (fields.nama) fields.nama.value = payload.employee?.nama || '';
+            if (fields.jabatan) fields.jabatan.value = payload.employee?.jabatan || '';
+            showEmployeeLookupNote(
+                container,
+                payload.stale
+                    ? 'NRP ditemukan dari cache terakhir MASTER_DATABASE.'
+                    : 'NRP ditemukan. Nama dan jabatan terisi otomatis.',
+                'success'
+            );
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            showEmployeeLookupNote(
+                container,
+                'Gagal memeriksa NRP. Periksa koneksi Google Sheets.',
+                'error'
+            );
+        }
+    }
+
+    function scheduleEmployeeLookup(container, immediate = false) {
+        if (!container) return;
+        const oldTimer = employeeLookupTimers.get(container);
+        if (oldTimer) window.clearTimeout(oldTimer);
+        if (immediate) {
+            lookupEmployee(container);
+            return;
+        }
+        employeeLookupTimers.set(
+            container,
+            window.setTimeout(() => lookupEmployee(container), 400)
+        );
+    }
+
+    function bindEmployeeLookup(container) {
+        const { nrp } = employeeLookupFields(container);
+        if (!nrp) return;
+        nrp.addEventListener('input', function () {
+            clearEmployeeLookupFields(container);
+            scheduleEmployeeLookup(container);
+        });
+        nrp.addEventListener('change', () => scheduleEmployeeLookup(container, true));
+        nrp.addEventListener('blur', () => scheduleEmployeeLookup(container, true));
+        if (nrp.value.trim() !== '') scheduleEmployeeLookup(container, true);
+    }
+
+    bindEmployeeLookup(createModal);
+    bindEmployeeLookup(editModal);
+
+
     function openModal(modal) {
         if (!modal) {
             return;
@@ -889,6 +1083,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('editCcNama').value =
                     button.dataset.nama || '';
 
+                document.getElementById('editCcJabatan').value =
+                    button.dataset.jabatan || '';
+
                 document.getElementById('editCcMateri').value =
                     button.dataset.materi || '';
 
@@ -907,6 +1104,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('editCcDibuatOleh').value =
                     button.dataset.dibuatOleh || '';
 
+                scheduleEmployeeLookup(editModal, true);
                 openModal(editModal);
             });
         });
