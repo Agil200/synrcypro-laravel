@@ -1,1103 +1,137 @@
 @php
-    $monthLabel = $monthLabel ?? 'Juni 2026';
+    use Carbon\Carbon;
+    $periodValue = $period ? Carbon::parse($period)->format('Y-m') : '';
 @endphp
 
-<div class="db-page-title">
+<style>
+.atrc-title{margin-bottom:12px}.atrc-title h1{font-size:24px;margin:0;color:#10213d}.atrc-title p{margin:3px 0 0;color:#60708a;font-size:12px}.atrc-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.atrc-kpi{background:#fff;border:1px solid #d9e2ee;border-radius:13px;box-shadow:0 5px 16px rgba(15,35,65,.05);padding:15px;display:flex;align-items:center;gap:12px}.atrc-kpi i{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:20px}.atrc-kpi.total i{background:#e9f2ff}.atrc-kpi.done i{background:#dff7ea}.atrc-kpi.pending i{background:#ffe4e8}.atrc-kpi small{display:block;color:#718099;font-size:8px;font-weight:900}.atrc-kpi strong{font-size:24px;color:#14213a}.atrc-panel{background:#fff;border:1px solid #d9e2ee;border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);margin-bottom:12px;overflow:hidden}.atrc-filter{display:grid;grid-template-columns:190px minmax(210px,1fr) minmax(240px,1.4fr) 160px auto;gap:9px;padding:14px}.atrc-field label{display:block;font-size:9px;font-weight:900;color:#2e415c;margin-bottom:5px}.atrc-input,.atrc-select{width:100%;height:39px;border:1px solid #cbd7e6;border-radius:9px;padding:0 11px;background:#fff}.atrc-actions{display:flex;gap:6px;align-items:end}.atrc-btn{height:39px;padding:0 14px;border:0;border-radius:9px;font-size:10px;font-weight:900;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.atrc-btn.primary{background:#1677ff;color:#fff}.atrc-btn.light{background:#eef3f8;color:#2d405b}.atrc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;padding:12px}.atrc-card{border:1px solid #dfe7f1;border-radius:13px;padding:13px;background:#fff;position:relative}.atrc-card.called{border-color:#bfe8cf;background:#fbfffc}.atrc-person{display:flex;gap:10px;align-items:flex-start}.atrc-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff1c6;color:#875e00;font-weight:900;flex:none}.atrc-person h3{font-size:12px;margin:0;color:#172640}.atrc-person p{font-size:9px;color:#6e7e94;margin:2px 0}.atrc-score{margin-left:auto;text-align:right}.atrc-score strong{font-size:22px;color:#e6384b}.atrc-score small{display:block;font-size:7px;color:#8c99aa}.atrc-detail{margin-top:11px;background:#f7f9fc;border-radius:9px;padding:9px;font-size:9px}.atrc-line{display:flex;justify-content:space-between;gap:10px;margin-bottom:5px}.atrc-line:last-child{margin-bottom:0}.atrc-line span{color:#718099}.atrc-line b{color:#233650;text-align:right}.atrc-card-actions{display:flex;gap:6px;margin-top:10px}.atrc-call{flex:1;height:34px;border:0;border-radius:8px;background:#e6384b;color:#fff;font-size:9px;font-weight:900;cursor:pointer}.atrc-print{height:34px;padding:0 10px;border-radius:8px;background:#e6f7ed;color:#0a8347;text-decoration:none;font-size:9px;font-weight:900;display:inline-flex;align-items:center}.atrc-status{position:absolute;right:10px;top:10px;padding:4px 7px;border-radius:999px;background:#dff7ea;color:#078446;font-size:7px;font-weight:900}.atrc-empty{padding:45px;text-align:center;color:#7b899c}.atrc-pages{padding:12px 15px;border-top:1px solid #e7edf4}.atrc-flash{padding:11px 14px;border-radius:10px;margin-bottom:10px;font-size:11px}.atrc-flash.success{background:#e5f8ed;color:#087b42;border:1px solid #bcebd0}.atrc-flash.error{background:#ffe8eb;color:#b11d32;border:1px solid #ffc8d0}
+.atrc-modal{position:fixed;inset:0;background:rgba(7,18,35,.63);display:none;align-items:center;justify-content:center;z-index:5000;padding:16px}.atrc-modal.open{display:flex}.atrc-dialog{background:#fff;border-radius:17px;width:min(720px,100%);max-height:94vh;overflow:auto;box-shadow:0 25px 70px rgba(0,0,0,.28)}.atrc-modal-head{display:flex;justify-content:space-between;align-items:center;padding:17px 19px;border-bottom:1px solid #e1e8f1}.atrc-modal-head h2{font-size:17px;margin:0;color:#172640}.atrc-close{border:0;background:none;font-size:22px;color:#8a98aa;cursor:pointer}.atrc-modal-body{padding:17px}.atrc-summary{background:#f5f8fc;border-radius:11px;padding:12px;margin-bottom:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:7px}.atrc-summary div{display:flex;justify-content:space-between;gap:10px;font-size:10px}.atrc-summary span{color:#77869b}.atrc-summary b{color:#1c304c;text-align:right}.atrc-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}.atrc-form-field.full{grid-column:1/-1}.atrc-form-field label{display:block;font-size:9px;font-weight:900;color:#344760;margin-bottom:5px;text-transform:uppercase}.atrc-form-field input,.atrc-form-field select,.atrc-form-field textarea{width:100%;border:1px solid #cbd7e6;border-radius:9px;padding:10px;font:inherit;font-size:11px}.atrc-form-field textarea{min-height:120px;resize:vertical}.atrc-materials{display:flex;gap:10px;flex-wrap:wrap}.atrc-material{border:1px solid #d7e1ed;border-radius:9px;padding:9px 12px;font-size:10px;font-weight:800}.atrc-modal-actions{display:flex;gap:8px;justify-content:flex-end;padding:14px 19px;border-top:1px solid #e1e8f1}.atrc-save{height:39px;border:0;border-radius:9px;padding:0 17px;background:#e6384b;color:#fff;font-weight:900;font-size:10px;cursor:pointer}.atrc-cancel{height:39px;border:1px solid #cbd7e6;border-radius:9px;padding:0 17px;background:#fff;color:#344760;font-weight:900;font-size:10px;cursor:pointer}
+@media(max-width:1100px){.atrc-grid{grid-template-columns:repeat(2,1fr)}.atrc-filter{grid-template-columns:1fr 1fr}.atrc-actions{grid-column:1/-1}}@media(max-width:700px){.atrc-kpis{grid-template-columns:1fr}.atrc-grid{grid-template-columns:1fr}.atrc-filter{grid-template-columns:1fr}.atrc-actions{grid-column:auto}.atrc-form-grid,.atrc-summary{grid-template-columns:1fr}}
+</style>
+
+<div class="atrc-title">
     <h1>Dokumentasi Pemanggilan</h1>
-    <p>
-        Dokumentasi karyawan dengan nilai ATR di bawah standar.
-    </p>
+    <p>Digitalisasi form Coaching &amp; Counseling No. Dokumen {{ config('atr.document_number') }}.</p>
 </div>
 
-<section class="db-panel">
-    <div class="db-filter-grid">
-        <div class="db-field">
-            <label for="atrCallPeriodFilter">Bulan</label>
+@if (session('success'))<div class="atrc-flash success">{{ session('success') }}</div>@endif
+@if ($errors->any())<div class="atrc-flash error">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
 
-            <select
-                class="db-select"
-                id="atrCallPeriodFilter"
-            >
-                <option value="{{ $monthLabel }}">
-                    {{ $monthLabel }}
-                </option>
-            </select>
-        </div>
-
-        <div class="db-field">
-            <label for="atrCallRoleFilter">
-                Posisi / Jabatan
-            </label>
-
-            <select
-                class="db-select"
-                id="atrCallRoleFilter"
-            >
-                <option value="">Semua Posisi</option>
-
-                @foreach (
-                    $employees
-                        ->pluck('jabatan')
-                        ->filter()
-                        ->unique()
-                        ->sort()
-                    as $role
-                )
-                    <option value="{{ strtolower($role) }}">
-                        {{ $role }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div class="db-field">
-            <label for="atrCallSearch">
-                Cari Karyawan
-            </label>
-
-            <input
-                class="db-input"
-                id="atrCallSearch"
-                type="search"
-                placeholder="Cari NRP atau nama…"
-                autocomplete="off"
-            >
-        </div>
-    </div>
-</section>
-
-<div
-    class="db-call-grid"
-    id="atrCallGrid"
->
-    @forelse ($employees as $employee)
-        @php
-            $called = (bool) data_get(
-                $employee,
-                'called',
-                false
-            );
-
-            $employeeId = (string) data_get(
-                $employee,
-                'id',
-                data_get($employee, 'nrp', '')
-            );
-
-            $employeeName = (string) data_get(
-                $employee,
-                'nama',
-                '-'
-            );
-
-            $employeeNrp = (string) data_get(
-                $employee,
-                'nrp',
-                '-'
-            );
-
-            $employeeRole = (string) data_get(
-                $employee,
-                'jabatan',
-                '-'
-            );
-
-            $employeeRosterGroup = (string) data_get(
-                $employee,
-                'roster_group',
-                '-'
-            );
-
-            $employeePicPrimary = (string) data_get(
-                $employee,
-                'pic_primary',
-                '-'
-            );
-
-            $employeePicBackup = (string) data_get(
-                $employee,
-                'pic_backup',
-                '-'
-            );
-
-            $picEffectiveFrom = (string) data_get(
-                $employee,
-                'pic_effective_from',
-                '-'
-            );
-
-            $picEffectiveTo = (string) data_get(
-                $employee,
-                'pic_effective_to',
-                ''
-            );
-
-            $employeePicEffective =
-                $picEffectiveTo !== ''
-                    ? $picEffectiveFrom . ' – ' . $picEffectiveTo
-                    : 'Mulai ' . $picEffectiveFrom;
-
-            $employeePeriod = (string) data_get(
-                $employee,
-                'period',
-                $monthLabel
-            );
-
-            $employeeScore = (string) data_get(
-                $employee,
-                'atr',
-                '-'
-            );
-
-            $employeeSick = (string) data_get(
-                $employee,
-                's',
-                0
-            );
-
-            $employeePermission = (string) data_get(
-                $employee,
-                'i',
-                0
-            );
-
-            $employeeAlpha = (string) data_get(
-                $employee,
-                'a',
-                0
-            );
-        @endphp
-
-        <article
-            class="db-call-card"
-            data-atr-call-card
-            data-employee-id="{{ $employeeId }}"
-            data-nrp="{{ $employeeNrp }}"
-            data-name="{{ $employeeName }}"
-            data-role="{{ $employeeRole }}"
-            data-roster-group="{{ $employeeRosterGroup }}"
-            data-pic-primary="{{ $employeePicPrimary }}"
-            data-pic-backup="{{ $employeePicBackup }}"
-            data-pic-effective="{{ $employeePicEffective }}"
-            data-period="{{ $employeePeriod }}"
-            data-score="{{ $employeeScore }}"
-            data-sick="{{ $employeeSick }}"
-            data-permission="{{ $employeePermission }}"
-            data-alpha="{{ $employeeAlpha }}"
-        >
-            <div class="db-call-body">
-                <strong class="db-call-name">
-                    {{ $employeeName }}
-                </strong>
-
-                <p>
-                    {{ $employeeRole }}<br>
-                    NRP: {{ $employeeNrp }}<br>
-                    Roster: {{ $employeeRosterGroup }}
-                </p>
-
-                <strong class="db-call-score">
-                    {{ $employeeScore }}
-                </strong>
-            </div>
-
-            @if ($called)
-                <span class="db-call-action done">
-                    ✓ Sudah Dipanggil
-                </span>
-            @else
-                <button
-                    type="button"
-                    class="db-call-action db-call-action-button"
-                    data-call-open
-                >
-                    🔔 Lakukan Pemanggilan
-                </button>
-            @endif
-        </article>
-    @empty
-        <div class="db-call-empty">
-            Data karyawan belum tersedia.
-        </div>
-    @endforelse
+<div class="atrc-kpis">
+    <article class="atrc-kpi total"><i>☎</i><div><small>TOTAL PEMANGGILAN</small><strong>{{ number_format($callStats['total']) }}</strong></div></article>
+    <article class="atrc-kpi pending"><i>!</i><div><small>BELUM DOKUMENTASI</small><strong>{{ number_format($callStats['belum']) }}</strong></div></article>
+    <article class="atrc-kpi done"><i>✓</i><div><small>SUDAH SELESAI</small><strong>{{ number_format($callStats['sudah']) }}</strong></div></article>
 </div>
 
-<p
-    class="db-call-empty"
-    id="atrCallFilterEmpty"
-    hidden
->
-    Data tidak ditemukan berdasarkan filter.
-</p>
-
-{{-- Backdrop modal --}}
-<div
-    class="atr-call-backdrop"
-    id="atrCallBackdrop"
-    aria-hidden="true"
-></div>
-
-{{-- Modal dokumentasi pemanggilan --}}
-<section
-    class="atr-call-modal"
-    id="atrCallModal"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="atrCallModalTitle"
-    aria-hidden="true"
->
-    <div class="atr-call-modal-header">
-        <h2
-            class="atr-call-modal-title"
-            id="atrCallModalTitle"
-        >
-            <span aria-hidden="true">🔔</span>
-            Dokumentasi Pemanggilan
-        </h2>
-
-        <button
-            type="button"
-            class="atr-call-close"
-            id="atrCallClose"
-            aria-label="Tutup modal"
-        >
-            &times;
-        </button>
-    </div>
-
-    <form
-        class="atr-call-modal-body"
-        id="atrCallForm"
-        enctype="multipart/form-data"
-        data-submit-url="{{ $atrDocumentationEndpoint ?? '' }}"
-    >
-        @csrf
-
-        <input
-            type="hidden"
-            name="employee_id"
-            id="atrCallEmployeeId"
-        >
-
-        <input
-            type="hidden"
-            name="nrp"
-            id="atrCallEmployeeNrp"
-        >
-
-        <input
-            type="hidden"
-            name="period"
-            id="atrCallEmployeePeriodInput"
-        >
-
-        <input
-            type="hidden"
-            name="roster_group"
-            id="atrCallRosterGroupInput"
-        >
-
-        <input
-            type="hidden"
-            name="pic_primary"
-            id="atrCallPicPrimaryInput"
-        >
-
-        <input
-            type="hidden"
-            name="pic_backup"
-            id="atrCallPicBackupInput"
-        >
-
-        <div class="atr-call-info">
-            <div class="atr-call-info-row">
-                <span>Operator</span>
-                <strong id="atrCallEmployeeName">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>Roster / Unit</span>
-                <strong id="atrCallRosterGroup">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>PIC Roster</span>
-                <strong id="atrCallPicPrimary">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>PIC Pendamping</span>
-                <strong id="atrCallPicBackup">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>Berlaku PIC</span>
-                <strong id="atrCallPicEffective">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>Periode ATR</span>
-                <strong id="atrCallEmployeePeriod">-</strong>
-            </div>
-
-            <div class="atr-call-info-row">
-                <span>ATR · S/I/A</span>
-
-                <strong
-                    class="atr-call-score"
-                    id="atrCallEmployeeScore"
-                >
-                    -
-                </strong>
-            </div>
-        </div>
-
-        <label
-            class="atr-call-upload-label"
-            for="atrCallFile"
-        >
-            Upload Bukti Pemanggilan
-        </label>
-
-        <input
-            type="file"
-            name="document"
-            id="atrCallFile"
-            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-            hidden
-        >
-
-        <label
-            class="atr-call-dropzone"
-            id="atrCallDropzone"
-            for="atrCallFile"
-        >
-            <span>
-                <span
-                    class="atr-call-upload-icon"
-                    aria-hidden="true"
-                >
-                    📷
-                </span>
-
-                <strong>
-                    Klik untuk pilih foto / dokumen
-                </strong>
-
-                <small>
-                    JPG, PNG, PDF — maksimal 5MB
-                </small>
-
-                <span
-                    class="atr-call-file-name"
-                    id="atrCallFileName"
-                ></span>
-            </span>
-        </label>
-
-        <p
-            class="atr-call-error"
-            id="atrCallError"
-            role="alert"
-        ></p>
-
-        <div class="atr-call-actions">
-            <button
-                type="submit"
-                class="atr-call-save"
-                id="atrCallSave"
-            >
-                ✓ Simpan Dokumentasi
-            </button>
-
-            <button
-                type="button"
-                class="atr-call-cancel"
-                id="atrCallCancel"
-            >
-                Batal
-            </button>
-        </div>
-
-        <p class="atr-call-timestamp-note">
-            ◷ Timestamp upload otomatis dicatat sistem
-        </p>
+<section class="atrc-panel">
+    <form class="atrc-filter" method="GET" action="{{ route('database.atr.calls') }}">
+        <div class="atrc-field"><label>Periode</label><select class="atrc-select" name="period">@foreach($periodOptions as $option)<option value="{{ $option->format('Y-m') }}" @selected($periodValue === $option->format('Y-m'))>{{ $option->locale('id')->translatedFormat('F Y') }}</option>@endforeach</select></div>
+        <div class="atrc-field"><label>Jabatan</label><select class="atrc-select" name="job_title"><option value="">Semua Jabatan</option>@foreach($jobOptions as $job)<option value="{{ $job }}" @selected(request('job_title')===$job)>{{ $job }}</option>@endforeach</select></div>
+        <div class="atrc-field"><label>Cari Karyawan</label><input class="atrc-input" name="search" value="{{ request('search') }}" placeholder="Cari NRP atau nama..."></div>
+        <div class="atrc-field"><label>Status Dokumentasi</label><select class="atrc-select" name="call_status"><option value="">Semua Status</option><option value="belum" @selected(request('call_status')==='belum')>Belum</option><option value="sudah" @selected(request('call_status')==='sudah')>Sudah</option></select></div>
+        <div class="atrc-actions"><button class="atrc-btn primary">TERAPKAN</button><a class="atrc-btn light" href="{{ route('database.atr.calls') }}">RESET</a></div>
     </form>
 </section>
 
-<style>
-    .db-call-action-button {
-        width: 100%;
-        border: 0;
-        cursor: pointer;
-        font-family: inherit;
-    }
+<section class="atrc-panel">
+    @if ($records->isEmpty())
+        <div class="atrc-empty">Tidak ada karyawan dengan status PEMANGGILAN pada filter ini.</div>
+    @else
+        <div class="atrc-grid">
+            @foreach ($records as $record)
+                <article class="atrc-card {{ $record->latestCoaching ? 'called' : '' }}">
+                    @if($record->latestCoaching)<span class="atrc-status">SELESAI</span>@endif
+                    <div class="atrc-person">
+                        <div class="atrc-avatar">{{ strtoupper(substr($record->employee_name,0,2)) }}</div>
+                        <div><h3>{{ $record->employee_name }}</h3><p>{{ $record->job_title ?: '-' }}</p><p>NRP: {{ $record->nrp }}</p></div>
+                        <div class="atrc-score"><strong>{{ number_format((float)$record->atr,1) }}%</strong><small>ATR</small></div>
+                    </div>
+                    <div class="atrc-detail">
+                        <div class="atrc-line"><span>Periode</span><b>{{ $record->period->locale('id')->translatedFormat('F Y') }}</b></div>
+                        <div class="atrc-line"><span>Sakit / Izin / Alpa</span><b>{{ $record->sick }} / {{ $record->permission }} / {{ $record->alpha }}</b></div>
+                        <div class="atrc-line"><span>Site</span><b>{{ $record->site ?: '-' }}</b></div>
+                    </div>
+                    <div class="atrc-card-actions">
+                        <button type="button" class="atrc-call" data-call="{{ json_encode([
+                            'id' => $record->id,
+                            'nrp' => $record->nrp,
+                            'name' => $record->employee_name,
+                            'job' => $record->job_title,
+                            'period' => $record->period->locale('id')->translatedFormat('F Y'),
+                            'atr' => number_format((float) $record->atr, 1) . '%',
+                            'sia' => $record->sick . ' / ' . $record->permission . ' / ' . $record->alpha,
+                        ], JSON_UNESCAPED_UNICODE) }}">{{ $record->latestCoaching ? 'BUAT DOKUMENTASI BARU' : 'LAKUKAN PEMANGGILAN' }}</button>
+                        @if($record->latestCoaching)
+                            <a target="_blank" class="atrc-print" href="{{ route('database.atr.coaching.print',$record->latestCoaching) }}">CETAK</a>
+                            @php($evidence = $record->latestCoaching->attachments->firstWhere('type', 'EVIDENCE'))
+                            @if($evidence)
+                                <a target="_blank" class="atrc-print" href="{{ route('database.atr.attachments.show', [$record->latestCoaching, $evidence]) }}">BUKTI</a>
+                            @endif
+                        @endif
+                    </div>
+                </article>
+            @endforeach
+        </div>
+        <div class="atrc-pages">{{ $records->links() }}</div>
+    @endif
+</section>
 
-    .db-call-action-button:hover {
-        filter: brightness(.94);
-    }
-
-    .db-call-score {
-        color: #f59e0b;
-        font-size: 21px;
-    }
-
-    .db-call-name {
-        display: block;
-        font-size: 14px;
-    }
-
-    .db-call-empty {
-        grid-column: 1 / -1;
-        margin: 0;
-        padding: 24px;
-        border: 1px dashed #cbd5e1;
-        border-radius: 12px;
-        color: #64748b;
-        background: #fff;
-        text-align: center;
-    }
-
-    .atr-call-backdrop {
-        position: fixed;
-        z-index: 9000;
-        inset: 0;
-        visibility: hidden;
-        opacity: 0;
-        background: rgba(15, 23, 42, .62);
-        backdrop-filter: blur(2px);
-        pointer-events: none;
-        transition:
-            opacity .2s ease,
-            visibility .2s ease;
-    }
-
-    .atr-call-backdrop.is-open {
-        visibility: visible;
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .atr-call-modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        z-index: 9001;
-        width: min(385px, calc(100vw - 28px));
-        max-height: calc(100vh - 28px);
-        overflow: auto;
-        visibility: hidden;
-        opacity: 0;
-        border-radius: 18px;
-        background: #fff;
-        box-shadow: 0 26px 80px rgba(15, 23, 42, .34);
-        transform: translate(-50%, -46%) scale(.97);
-        pointer-events: none;
-        transition:
-            opacity .2s ease,
-            transform .2s ease,
-            visibility .2s ease;
-    }
-
-    .atr-call-modal.is-open {
-        visibility: visible;
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-        pointer-events: auto;
-    }
-
-    .atr-call-modal-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-        padding: 18px 20px 12px;
-    }
-
-    .atr-call-modal-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0;
-        color: #172033;
-        font-size: 18px;
-        font-weight: 900;
-    }
-
-    .atr-call-close {
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 50%;
-        color: #94a3b8;
-        background: transparent;
-        cursor: pointer;
-        font-size: 25px;
-        line-height: 1;
-    }
-
-    .atr-call-close:hover {
-        color: #0f172a;
-        background: #f1f5f9;
-    }
-
-    .atr-call-modal-body {
-        padding: 0 20px 19px;
-    }
-
-    .atr-call-info {
-        padding: 13px;
-        border-radius: 10px;
-        background: #f8fafc;
-    }
-
-    .atr-call-info-row {
-        display: grid;
-        grid-template-columns: 90px minmax(0, 1fr);
-        gap: 10px;
-        align-items: start;
-        margin-bottom: 6px;
-        color: #64748b;
-        font-size: 12px;
-    }
-
-    .atr-call-info-row:last-child {
-        margin-bottom: 0;
-    }
-
-    .atr-call-info-row strong {
-        color: #273247;
-        text-align: right;
-        overflow-wrap: anywhere;
-    }
-
-    .atr-call-info-row .atr-call-score {
-        color: #ef3340;
-    }
-
-    .atr-call-upload-label {
-        display: block;
-        margin: 16px 0 8px;
-        color: #64748b;
-        font-size: 11px;
-        font-weight: 900;
-        text-transform: uppercase;
-    }
-
-    .atr-call-dropzone {
-        display: grid;
-        min-height: 108px;
-        place-items: center;
-        padding: 16px;
-        border: 1px dashed #cbd5e1;
-        border-radius: 11px;
-        color: #64748b;
-        background: #f8fafc;
-        cursor: pointer;
-        text-align: center;
-        transition:
-            border-color .16s ease,
-            background .16s ease;
-    }
-
-    .atr-call-dropzone:hover,
-    .atr-call-dropzone.has-file {
-        border-color: #ef3340;
-        background: #fff7f8;
-    }
-
-    .atr-call-dropzone > span {
-        display: grid;
-        gap: 5px;
-        justify-items: center;
-    }
-
-    .atr-call-upload-icon {
-        font-size: 27px;
-    }
-
-    .atr-call-dropzone strong {
-        color: #64748b;
-        font-size: 12px;
-    }
-
-    .atr-call-dropzone small {
-        color: #94a3b8;
-        font-size: 10px;
-    }
-
-    .atr-call-file-name {
-        max-width: 290px;
-        color: #172033;
-        font-size: 10px;
-        font-weight: 800;
-        overflow-wrap: anywhere;
-    }
-
-    .atr-call-error {
-        min-height: 16px;
-        margin: 7px 0 0;
-        color: #dc2626;
-        font-size: 11px;
-        font-weight: 700;
-    }
-
-    .atr-call-actions {
-        display: grid;
-        gap: 7px;
-        margin-top: 5px;
-    }
-
-    .atr-call-save,
-    .atr-call-cancel {
-        min-height: 36px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 12px;
-        font-weight: 900;
-    }
-
-    .atr-call-save {
-        border: 1px solid #ea3343;
-        color: #fff;
-        background: #ea3343;
-    }
-
-    .atr-call-save:hover {
-        background: #d92536;
-    }
-
-    .atr-call-save:disabled {
-        cursor: wait;
-        opacity: .65;
-    }
-
-    .atr-call-cancel {
-        border: 1px solid #64748b;
-        color: #64748b;
-        background: #fff;
-    }
-
-    .atr-call-timestamp-note {
-        margin: 12px 0 0;
-        color: #777;
-        font-size: 9px;
-        text-align: center;
-    }
-
-    body.atr-call-modal-open {
-        overflow: hidden;
-    }
-</style>
+<div class="atrc-modal" id="atrcModal" aria-hidden="true">
+    <div class="atrc-dialog">
+        <div class="atrc-modal-head"><h2>🔔 Coaching &amp; Counseling ATR</h2><button class="atrc-close" type="button" id="atrcClose">×</button></div>
+        <form method="POST" action="{{ route('database.atr.calls.store') }}" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="atr_record_id" id="atrcRecordId" value="{{ old('atr_record_id') }}">
+            <div class="atrc-modal-body">
+                <div class="atrc-summary">
+                    <div><span>Nama</span><b id="atrcName">-</b></div><div><span>NRP / Jabatan</span><b id="atrcNrpJob">-</b></div>
+                    <div><span>Periode</span><b id="atrcPeriod">-</b></div><div><span>ATR · S/I/A</span><b id="atrcAtr">-</b></div>
+                </div>
+                <div class="atrc-form-grid">
+                    <div class="atrc-form-field"><label>Tanggal</label><input type="date" name="coaching_date" value="{{ old('coaching_date', now()->format('Y-m-d')) }}" required></div>
+                    <div class="atrc-form-field"><label>Shift</label><select name="shift" required><option value="DAY" @selected(old('shift')==='DAY')>DAY</option><option value="NIGHT" @selected(old('shift')==='NIGHT')>NIGHT</option><option value="NON SHIFT" @selected(old('shift')==='NON SHIFT')>NON SHIFT</option></select></div>
+                    <div class="atrc-form-field"><label>Lokasi</label><input name="location" value="{{ old('location') }}" placeholder="Contoh: Office Produksi" required></div>
+                    <div class="atrc-form-field"><label>Waktu</label><input type="time" name="coaching_time" value="{{ old('coaching_time', now()->format('H:i')) }}" required></div>
+                    <div class="atrc-form-field full"><label>Materi</label><div class="atrc-materials"><label class="atrc-material"><input type="checkbox" name="material_personal" value="1" @checked(old('material_personal'))> PRIBADI</label><label class="atrc-material"><input type="checkbox" name="material_family" value="1" @checked(old('material_family'))> KELUARGA</label><label class="atrc-material"><input type="checkbox" name="material_work" value="1" @checked(old('material_work'))> PEKERJAAN</label></div></div>
+                    <div class="atrc-form-field full"><label>Keterangan / Hasil Coaching</label><textarea name="notes" placeholder="Tuliskan penyebab, pembahasan, komitmen, dan tindak lanjut..." required>{{ old('notes') }}</textarea></div>
+                    <div class="atrc-form-field"><label>Dibuat Oleh</label><input name="created_by_name" value="{{ old('created_by_name', auth()->user()?->name ?? auth()->user()?->email) }}" required></div>
+                    <div class="atrc-form-field"><label>Bukti Pemanggilan *</label><input type="file" name="evidence" accept=".jpg,.jpeg,.png,.pdf" required></div>
+                    <div class="atrc-form-field"><label>Tanda Tangan Karyawan</label><input type="file" name="employee_signature" accept=".jpg,.jpeg,.png"></div>
+                    <div class="atrc-form-field"><label>Tanda Tangan Pembuat</label><input type="file" name="coach_signature" accept=".jpg,.jpeg,.png"></div>
+                </div>
+            </div>
+            <div class="atrc-modal-actions"><button type="button" class="atrc-cancel" id="atrcCancel">BATAL</button><button type="submit" class="atrc-save">SIMPAN DOKUMENTASI</button></div>
+        </form>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const modal =
-        document.getElementById('atrCallModal');
-
-    const backdrop =
-        document.getElementById('atrCallBackdrop');
-
-    const closeButton =
-        document.getElementById('atrCallClose');
-
-    const cancelButton =
-        document.getElementById('atrCallCancel');
-
-    const form =
-        document.getElementById('atrCallForm');
-
-    const fileInput =
-        document.getElementById('atrCallFile');
-
-    const dropzone =
-        document.getElementById('atrCallDropzone');
-
-    const fileName =
-        document.getElementById('atrCallFileName');
-
-    const errorText =
-        document.getElementById('atrCallError');
-
-    const saveButton =
-        document.getElementById('atrCallSave');
-
-    const employeeId =
-        document.getElementById('atrCallEmployeeId');
-
-    const employeeNrp =
-        document.getElementById('atrCallEmployeeNrp');
-
-    const employeePeriodInput =
-        document.getElementById('atrCallEmployeePeriodInput');
-
-    const employeeName =
-        document.getElementById('atrCallEmployeeName');
-
-    const rosterGroupInput =
-        document.getElementById('atrCallRosterGroupInput');
-
-    const picPrimaryInput =
-        document.getElementById('atrCallPicPrimaryInput');
-
-    const picBackupInput =
-        document.getElementById('atrCallPicBackupInput');
-
-    const rosterGroup =
-        document.getElementById('atrCallRosterGroup');
-
-    const picPrimary =
-        document.getElementById('atrCallPicPrimary');
-
-    const picBackup =
-        document.getElementById('atrCallPicBackup');
-
-    const picEffective =
-        document.getElementById('atrCallPicEffective');
-
-    const employeePeriod =
-        document.getElementById('atrCallEmployeePeriod');
-
-    const employeeScore =
-        document.getElementById('atrCallEmployeeScore');
-
-    const searchInput =
-        document.getElementById('atrCallSearch');
-
-    const roleFilter =
-        document.getElementById('atrCallRoleFilter');
-
-    const filterEmpty =
-        document.getElementById('atrCallFilterEmpty');
-
-    let activeCard = null;
-
-    function setError(message) {
-        if (errorText) {
-            errorText.textContent = message || '';
-        }
-    }
-
-    function resetFile() {
-        if (fileInput) {
-            fileInput.value = '';
-        }
-
-        if (fileName) {
-            fileName.textContent = '';
-        }
-
-        dropzone?.classList.remove('has-file');
-    }
-
-    function openModal(card) {
-        if (!modal || !backdrop || !form || !card) {
-            return;
-        }
-
-        activeCard = card;
-        form.reset();
-        resetFile();
-        setError('');
-
-        const scoreSummary =
-            (card.dataset.score || '-') +
-            ' · S:' +
-            (card.dataset.sick || '0') +
-            ' I:' +
-            (card.dataset.permission || '0') +
-            ' A:' +
-            (card.dataset.alpha || '0');
-
-        employeeId.value =
-            card.dataset.employeeId || '';
-
-        employeeNrp.value =
-            card.dataset.nrp || '';
-
-        employeePeriodInput.value =
-            card.dataset.period || '';
-
-        employeeName.textContent =
-            card.dataset.name || '-';
-
-        rosterGroupInput.value =
-            card.dataset.rosterGroup || '';
-
-        picPrimaryInput.value =
-            card.dataset.picPrimary || '';
-
-        picBackupInput.value =
-            card.dataset.picBackup || '';
-
-        rosterGroup.textContent =
-            card.dataset.rosterGroup || '-';
-
-        picPrimary.textContent =
-            card.dataset.picPrimary || '-';
-
-        picBackup.textContent =
-            card.dataset.picBackup || '-';
-
-        picEffective.textContent =
-            card.dataset.picEffective || '-';
-
-        employeePeriod.textContent =
-            card.dataset.period || '-';
-
-        employeeScore.textContent =
-            scoreSummary;
-
-        modal.classList.add('is-open');
-        backdrop.classList.add('is-open');
-
-        modal.setAttribute('aria-hidden', 'false');
-        backdrop.setAttribute('aria-hidden', 'false');
-
-        document.body.classList.add(
-            'atr-call-modal-open'
-        );
-
-        window.setTimeout(function () {
-            closeButton?.focus();
-        }, 50);
-    }
-
-    function closeModal() {
-        if (!modal || !backdrop) {
-            return;
-        }
-
-        modal.classList.remove('is-open');
-        backdrop.classList.remove('is-open');
-
-        modal.setAttribute('aria-hidden', 'true');
-        backdrop.setAttribute('aria-hidden', 'true');
-
-        document.body.classList.remove(
-            'atr-call-modal-open'
-        );
-
-        const previousCard = activeCard;
-        activeCard = null;
-
-        previousCard
-            ?.querySelector('[data-call-open]')
-            ?.focus();
-    }
-
-    function validateFile(file) {
-        if (!file) {
-            return 'Pilih bukti pemanggilan terlebih dahulu.';
-        }
-
-        const allowedTypes = [
-            'image/jpeg',
-            'image/png',
-            'application/pdf'
-        ];
-
-        if (!allowedTypes.includes(file.type)) {
-            return 'Format file harus JPG, PNG, atau PDF.';
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            return 'Ukuran file maksimal 5MB.';
-        }
-
-        return '';
-    }
-
-    function applyFilters() {
-        const keyword =
-            (searchInput?.value || '')
-                .trim()
-                .toLowerCase();
-
-        const selectedRole =
-            (roleFilter?.value || '')
-                .trim()
-                .toLowerCase();
-
-        let visibleCount = 0;
-
-        document
-            .querySelectorAll('[data-atr-call-card]')
-            .forEach(function (card) {
-                const haystack = [
-                    card.dataset.nrp,
-                    card.dataset.name,
-                    card.dataset.role,
-                    card.dataset.rosterGroup,
-                    card.dataset.picPrimary,
-                    card.dataset.picBackup
-                ]
-                    .join(' ')
-                    .toLowerCase();
-
-                const matchesKeyword =
-                    keyword === '' ||
-                    haystack.includes(keyword);
-
-                const matchesRole =
-                    selectedRole === '' ||
-                    (card.dataset.role || '')
-                        .toLowerCase() === selectedRole;
-
-                const visible =
-                    matchesKeyword && matchesRole;
-
-                card.hidden = !visible;
-
-                if (visible) {
-                    visibleCount += 1;
-                }
-            });
-
-        if (filterEmpty) {
-            filterEmpty.hidden = visibleCount !== 0;
-        }
-    }
-
-    document.addEventListener('click', function (event) {
-        const openButton =
-            event.target.closest('[data-call-open]');
-
-        if (!openButton) {
-            return;
-        }
-
-        const card =
-            openButton.closest('[data-atr-call-card]');
-
-        openModal(card);
-    });
-
-    [closeButton, cancelButton, backdrop]
-        .forEach(function (element) {
-            element?.addEventListener(
-                'click',
-                closeModal
-            );
+    const modal = document.getElementById('atrcModal');
+    const close = () => { modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); };
+    document.querySelectorAll('[data-call]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const data = JSON.parse(this.dataset.call);
+            document.getElementById('atrcRecordId').value = data.id;
+            document.getElementById('atrcName').textContent = data.name;
+            document.getElementById('atrcNrpJob').textContent = data.nrp + ' / ' + (data.job || '-');
+            document.getElementById('atrcPeriod').textContent = data.period;
+            document.getElementById('atrcAtr').textContent = data.atr + ' · ' + data.sia;
+            modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
         });
-
-    document.addEventListener('keydown', function (event) {
-        if (
-            event.key === 'Escape' &&
-            modal?.classList.contains('is-open')
-        ) {
-            closeModal();
-        }
     });
-
-    fileInput?.addEventListener('change', function () {
-        const selectedFile =
-            fileInput.files?.[0] || null;
-
-        setError('');
-
-        if (!selectedFile) {
-            resetFile();
-            return;
-        }
-
-        fileName.textContent = selectedFile.name;
-        dropzone?.classList.add('has-file');
-    });
-
-    searchInput?.addEventListener(
-        'input',
-        applyFilters
-    );
-
-    roleFilter?.addEventListener(
-        'change',
-        applyFilters
-    );
-
-    form?.addEventListener('submit', async function (event) {
-        event.preventDefault();
-
-        if (!activeCard) {
-            return;
-        }
-
-        const selectedFile =
-            fileInput?.files?.[0] || null;
-
-        const validationError =
-            validateFile(selectedFile);
-
-        if (validationError) {
-            setError(validationError);
-            return;
-        }
-
-        const submitUrl =
-            form.dataset.submitUrl || '';
-
-        if (!submitUrl) {
-            setError(
-                'Endpoint penyimpanan belum diaktifkan. ' +
-                'Modal dan pemilihan file sudah berfungsi.'
-            );
-            return;
-        }
-
-        saveButton.disabled = true;
-        saveButton.textContent = 'Menyimpan...';
-
-        try {
-            const response = await fetch(
-                submitUrl,
-                {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        Accept: 'application/json'
-                    }
-                }
-            );
-
-            const payload = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    payload.message ||
-                    'Dokumentasi gagal disimpan.'
-                );
-            }
-
-            const actionButton =
-                activeCard.querySelector(
-                    '[data-call-open]'
-                );
-
-            if (actionButton) {
-                const doneLabel =
-                    document.createElement('span');
-
-                doneLabel.className =
-                    'db-call-action done';
-
-                doneLabel.textContent =
-                    '✓ Sudah Dipanggil';
-
-                actionButton.replaceWith(doneLabel);
-            }
-
-            closeModal();
-        } catch (error) {
-            setError(
-                error.message ||
-                'Dokumentasi gagal disimpan.'
-            );
-        } finally {
-            saveButton.disabled = false;
-            saveButton.textContent =
-                '✓ Simpan Dokumentasi';
-        }
-    });
+    document.getElementById('atrcClose')?.addEventListener('click', close);
+    document.getElementById('atrcCancel')?.addEventListener('click', close);
+    modal?.addEventListener('click', function (event) { if (event.target === modal) close(); });
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape') close(); });
+    @if($errors->any() && old('atr_record_id'))
+        const oldRecordId = {{ (int) old('atr_record_id') }};
+        const oldButton = Array.from(document.querySelectorAll('[data-call]'))
+            .find(function (button) {
+                try { return JSON.parse(button.dataset.call).id === oldRecordId; }
+                catch (error) { return false; }
+            });
+        oldButton?.click();
+    @endif
 });
 </script>
