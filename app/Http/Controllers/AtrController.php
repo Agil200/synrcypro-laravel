@@ -28,12 +28,23 @@ class AtrController extends Controller
 
     public function summary(Request $request): View
     {
-        $period = $this->selectedPeriod($request);
+        /*
+         * Selalu sediakan nilai periode untuk Blade.
+         * Apabila database ATR masih kosong, gunakan bulan berjalan agar
+         * resources/views/database/atr/summary.blade.php tidak menerima
+         * variabel $period yang tidak tersedia.
+         */
+        $period = $this->selectedPeriod($request)
+            ?? now()->startOfMonth()->format('Y-m-d');
+
         $latestImportId = $this->latestImportIdForPeriod($period);
 
         $base = AtrRecord::query()
-            ->when($latestImportId, fn ($query) => $query->where('atr_import_id', $latestImportId))
-            ->when($period, fn ($query) => $query->whereDate('period', $period));
+            ->when(
+                $latestImportId !== null,
+                fn ($query) => $query->where('atr_import_id', $latestImportId)
+            )
+            ->whereDate('period', $period);
 
         $jobOptions = (clone $base)
             ->whereNotNull('job_title')
@@ -43,7 +54,6 @@ class AtrController extends Controller
             ->pluck('job_title');
 
         $filtered = $this->applyFilters(clone $base, $request);
-        $recordIds = (clone $filtered)->pluck('id');
 
         $stats = [
             'total' => (clone $filtered)->count(),
@@ -60,11 +70,13 @@ class AtrController extends Controller
             ->where('status', 'PEMANGGILAN')
             ->pluck('id');
 
-        $sudah = AtrCoachingCounseling::query()
-            ->whereIn('atr_record_id', $pemanggilanIds)
-            ->where('status', 'COMPLETED')
-            ->distinct('atr_record_id')
-            ->count('atr_record_id');
+        $sudah = $pemanggilanIds->isEmpty()
+            ? 0
+            : AtrCoachingCounseling::query()
+                ->whereIn('atr_record_id', $pemanggilanIds)
+                ->where('status', 'COMPLETED')
+                ->distinct()
+                ->count('atr_record_id');
 
         $progress = [
             'total' => $stats['pemanggilan'],
@@ -72,28 +84,33 @@ class AtrController extends Controller
             'belum' => max(0, $stats['pemanggilan'] - $sudah),
             'percentage' => $stats['pemanggilan'] > 0
                 ? round(($sudah / $stats['pemanggilan']) * 100, 1)
-                : 0,
+                : 0.0,
         ];
 
         $topAbsences = (clone $filtered)
             ->orderByRaw('(sick + permission + alpha) DESC')
+            ->orderByRaw('CASE WHEN atr IS NULL THEN 1 ELSE 0 END')
             ->orderBy('atr')
             ->limit(10)
             ->get();
 
-        return $this->render('database.atr.summary', 'atr-summary', [
-            'period' => $period,
-            'periodOptions' => $this->periodOptions(),
-            'jobOptions' => $jobOptions,
-            'stats' => $stats,
-            'progress' => $progress,
-            'topAbsences' => $topAbsences,
-            'thresholds' => [
-                'aman' => (float) config('atr.aman_minimum', 98.5),
-                'monitoring' => (float) config('atr.monitoring_minimum', 95.0),
-            ],
-            'hasData' => $recordIds->isNotEmpty(),
-        ]);
+        return $this->render(
+            'database.atr.summary',
+            'atr-summary',
+            [
+                'period' => $period,
+                'periodOptions' => $this->periodOptions($period),
+                'jobOptions' => $jobOptions,
+                'stats' => $stats,
+                'progress' => $progress,
+                'topAbsences' => $topAbsences,
+                'thresholds' => [
+                    'aman' => (float) config('atr.aman_minimum', 98.5),
+                    'monitoring' => (float) config('atr.monitoring_minimum', 95.0),
+                ],
+                'hasData' => $stats['total'] > 0,
+            ]
+        );
     }
 
     public function upload(Request $request): View
@@ -380,13 +397,19 @@ class AtrController extends Controller
                     ->startOfMonth()
                     ->format('Y-m-d');
             } catch (\Throwable) {
-                // Fallback ke periode terbaru.
+                // Periode URL tidak valid; gunakan periode terbaru.
             }
         }
 
         $latest = AtrRecord::query()->max('period');
 
-        return $latest ? Carbon::parse($latest)->format('Y-m-d') : null;
+        if ($latest) {
+            return Carbon::parse($latest)
+                ->startOfMonth()
+                ->format('Y-m-d');
+        }
+
+        return null;
     }
 
     private function latestImportIdForPeriod(?string $period): ?int
@@ -402,14 +425,36 @@ class AtrController extends Controller
         return $id ? (int) $id : null;
     }
 
-    private function periodOptions()
+    private function periodOptions(?string $selectedPeriod = null)
     {
-        return AtrRecord::query()
+        $options = AtrRecord::query()
             ->select('period')
+            ->whereNotNull('period')
             ->distinct()
             ->orderByDesc('period')
             ->pluck('period')
-            ->map(fn ($period) => Carbon::parse($period));
+            ->map(
+                fn ($period) => Carbon::parse($period)->startOfMonth()
+            );
+
+        /*
+         * Saat ATR belum pernah diimpor, dropdown tetap memiliki bulan
+         * berjalan agar halaman ringkasan dapat dibuka tanpa error.
+         */
+        if ($selectedPeriod !== null) {
+            $selected = Carbon::parse($selectedPeriod)->startOfMonth();
+            $exists = $options->contains(
+                fn (Carbon $option) => $option->format('Y-m') === $selected->format('Y-m')
+            );
+
+            if (! $exists) {
+                $options->prepend($selected);
+            }
+        }
+
+        return $options->unique(
+            fn (Carbon $period) => $period->format('Y-m')
+        )->values();
     }
 
     private function applyFilters($query, Request $request)

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ApdController;
+use App\Http\Controllers\AtrController;
 use App\Http\Controllers\BastAssetController;
 use App\Http\Controllers\CoachingCounsellingController;
 use App\Http\Controllers\StSpController;
@@ -213,31 +214,80 @@ Route::middleware('auth')->group(function () {
                 'syncEmployees'
             )->name('employees.sync');
 
-            Route::get(
-                '/atr',
-                'atrSummary'
-            )->name('atr.summary');
-
-            Route::get(
-                '/atr/upload',
-                'atrUpload'
-            )->name('atr.upload');
-
-            Route::get(
-                '/atr/import-history',
-                'atrHistory'
-            )->name('atr.history');
-
-            Route::get(
-                '/atr/call-documentation',
-                'atrCalls'
-            )->name('atr.calls');
-
-
+            /*
+             * PIC Roster masih menggunakan DatabaseUiController.
+             * Halaman ATR lainnya sudah dipindahkan ke AtrController.
+             */
             Route::get(
                 '/atr/pic-roster',
                 'atrPicRoster'
             )->name('atr.pic-roster');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ATR Karyawan — Backend Laravel
+    |--------------------------------------------------------------------------
+    | ATR_MTD/Apps Script hanya menjadi referensi prototype. Data ATR sekarang
+    | diproses melalui upload Excel dan disimpan ke database Laravel.
+    */
+
+    Route::prefix('database/atr')
+        ->name('database.atr.')
+        ->controller(AtrController::class)
+        ->group(function (): void {
+            Route::get(
+                '/',
+                'summary'
+            )->name('summary');
+
+            Route::get(
+                '/upload',
+                'upload'
+            )->name('upload');
+
+            Route::post(
+                '/upload/preview',
+                'preview'
+            )->middleware('throttle:10,1')
+                ->name('upload.preview');
+
+            Route::post(
+                '/upload/commit',
+                'commit'
+            )->middleware('throttle:5,1')
+                ->name('upload.commit');
+
+            Route::get(
+                '/template',
+                'downloadTemplate'
+            )->name('template');
+
+            Route::get(
+                '/import-history',
+                'history'
+            )->name('history');
+
+            Route::get(
+                '/call-documentation',
+                'calls'
+            )->name('calls');
+
+            Route::post(
+                '/call-documentation',
+                'storeCoaching'
+            )->middleware('throttle:20,1')
+                ->name('calls.store');
+
+            Route::get(
+                '/coaching/{coaching}/print',
+                'printCoaching'
+            )->name('coaching.print');
+
+            Route::get(
+                '/coaching/{coaching}/attachment/{attachment}',
+                'attachment'
+            )->name('attachments.show');
         });
 
 /*
