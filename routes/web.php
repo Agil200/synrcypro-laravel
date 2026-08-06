@@ -14,6 +14,7 @@ use App\Http\Controllers\OperatorPortalController;
 use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BNNController;
 
 /*
 |--------------------------------------------------------------------------
@@ -164,6 +165,58 @@ Route::middleware('auth')->group(function () {
         '/manpower/mine-permit/monitoring-mine-permit',
         '/manpower/mine-permit/dashboard'
     );
+
+ /*
+|--------------------------------------------------------------------------
+| Test BNN
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('manpower/bnn')
+    ->name('bnn.')
+    ->controller(BNNController::class)
+    ->group(function () {
+
+
+        // Form Input BNN
+        Route::get(
+            '/',
+            'index'
+        )->name('index');
+
+
+        // Simpan Data BNN
+        Route::post(
+            '/',
+            'store'
+        )->name('store');
+
+
+        // Dashboard BNN
+        Route::get(
+            '/dashboard',
+            'dashboard'
+        )->name('dashboard');
+
+
+        // Monitoring BNN
+        Route::get(
+            '/monitoring',
+            'monitoring'
+        )->name('monitoring');
+
+
+        // Cari NRP Master Database
+        Route::get(
+            '/cari/{nrp}',
+            'cariNRP'
+        )->name('cari');
+
+
+    });
+
+
+
 
     /*
     |--------------------------------------------------------------------------

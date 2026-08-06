@@ -995,54 +995,63 @@ body.syn-manpower-page {
 {{-- Penutup manpower-menu-group Mine Permit --}}
 </div>
 
-{{-- Test BNN --}}
+    {{-- Test BNN --}}
 <div class="manpower-menu-group">
-    <button
-        type="button"
-        class="manpower-menu-toggle"
-        aria-expanded="false"
-    >
-        <span class="manpower-menu-icon">
-            <img
-                src="{{ asset('assets/images/BNN.png') }}"
-                alt="Test BNN"
-            >
-        </span>
 
-        <span class="manpower-menu-label">
-            Test BNN
-        </span>
+<button
+type="button"
+class="manpower-menu-toggle"
+aria-expanded="false"
+>
 
-        <span
-            class="manpower-menu-arrow"
-            aria-hidden="true"
-        >
-            ›
-        </span>
-    </button>
+<span class="manpower-menu-icon">
+<img
+src="{{ asset('assets/images/BNN.png') }}"
+alt="Test BNN"
+>
+</span>
 
-    <div class="manpower-submenu">
-        <div class="manpower-submenu-inner">
-            <a
-                href="https://docs.google.com/spreadsheets/d/1V9LU2Ft9NpxHULY7cVWczqpclCDy_Vja6qWtr7la38o/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="manpower-submenu-link"
-            >
-                Daftar Test BNN
-            </a>
+<span class="manpower-menu-label">
+Test BNN
+</span>
 
-            <a
-                href="https://docs.google.com/spreadsheets/d/1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="manpower-submenu-link"
-            >
-                Monitoring Kehadiran
-            </a>
-        </div>
-    </div>
+<span class="manpower-menu-arrow">
+›
+</span>
+
+</button>
+
+
+<div class="manpower-submenu">
+
+<div class="manpower-submenu-inner">
+
+
+<a
+href="{{ route('bnn.index') }}"
+class="manpower-submenu-link
+{{ request()->routeIs('bnn.index') ? 'active' : '' }}"
+>
+Daftar Test BNN
+</a>
+
+
+
+<a
+href="{{ route('bnn.monitoring') }}"
+class="manpower-submenu-link
+{{ request()->routeIs('bnn.monitoring') ? 'active' : '' }}"
+>
+Monitoring Kehadiran
+</a>
+
+
 </div>
+
+</div>
+
+</div>
+         
 
     {{-- Berita Acara Asset --}}
 <div class="manpower-menu-group">
