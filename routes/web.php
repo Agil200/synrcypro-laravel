@@ -115,6 +115,23 @@ Route::post(
 
 Route::middleware('auth')->group(function () {
 
+
+    Route::prefix('manpower/bnn')
+    ->name('bnn.')
+    ->controller(\App\Http\Controllers\BNNController::class)
+    ->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+
+        Route::get('/dashboard', 'dashboard')->name('dashboard');
+
+        Route::get('/monitoring', 'monitoring')->name('monitoring');
+        Route::post('/monitoring/refresh', 'refresh')->name('refresh');
+        Route::get('/monitoring/data', 'data')->name('data');
+
+        Route::get('/cari/{nrp}', 'cariNRP')->name('cari');
+    });
+
     /*
     |--------------------------------------------------------------------------
     | Dashboard Utama

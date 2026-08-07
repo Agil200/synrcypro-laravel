@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AtrController extends Controller
 {
@@ -375,17 +376,85 @@ class AtrController extends Controller
         );
     }
 
-    public function downloadTemplate(): BinaryFileResponse
+    public function downloadTemplate(): StreamedResponse
     {
         $path = resource_path('templates/ATR_IMPORT_PRODUKSI.xlsx');
 
-        abort_unless(is_file($path), 404, 'Template ATR belum tersedia.');
+        /*
+         * Kirim file langsung dari resources/templates menggunakan streaming.
+         * Nama download diberi versi hash supaya browser tidak membuka file lama
+         * yang kebetulan memiliki nama sama di folder Downloads.
+         */
+        clearstatcache(true, $path);
 
-        return response()->download(
-            $path,
-            'ATR_IMPORT_PRODUKSI.xlsx'
+        abort_unless(
+            is_file($path) && is_readable($path),
+            404,
+            'Template ATR belum tersedia atau tidak dapat dibaca.'
+        );
+
+        $size = filesize($path);
+        $modifiedAt = filemtime($path);
+        $hash = hash_file('sha256', $path);
+
+        abort_unless(
+            $size !== false
+                && $modifiedAt !== false
+                && is_string($hash)
+                && $hash !== '',
+            500,
+            'Informasi template ATR gagal dibaca.'
+        );
+
+        $version = strtoupper(substr($hash, 0, 12));
+        $downloadName = "ATR_IMPORT_PRODUKSI_{$version}.xlsx";
+
+        return response()->streamDownload(
+            function () use ($path): void {
+                $stream = fopen($path, 'rb');
+
+                if ($stream === false) {
+                    throw new \RuntimeException(
+                        'Template ATR gagal dibuka untuk proses download.'
+                    );
+                }
+
+                try {
+                    while (! feof($stream)) {
+                        $chunk = fread($stream, 1024 * 1024);
+
+                        if ($chunk === false) {
+                            throw new \RuntimeException(
+                                'Template ATR gagal dibaca saat proses download.'
+                            );
+                        }
+
+                        echo $chunk;
+                    }
+                } finally {
+                    fclose($stream);
+                }
+            },
+            $downloadName,
+            [
+                'Content-Type' =>
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Length' => (string) $size,
+                'Cache-Control' =>
+                    'private, no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma' => 'no-cache',
+                'Expires' => '0',
+                'Last-Modified' => gmdate(
+                    'D, d M Y H:i:s',
+                    (int) $modifiedAt
+                ) . ' GMT',
+                'ETag' => '"' . $hash . '"',
+                'X-Template-SHA256' => $hash,
+                'X-Content-Type-Options' => 'nosniff',
+            ]
         );
     }
+
 
     private function selectedPeriod(Request $request): ?string
     {
