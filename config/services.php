@@ -2,13 +2,31 @@
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | Postmark
+    |--------------------------------------------------------------------------
+    */
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Resend
+    |--------------------------------------------------------------------------
+    */
+
     'resend' => [
         'key' => env('RESEND_KEY'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Amazon SES
+    |--------------------------------------------------------------------------
+    */
 
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
@@ -21,8 +39,15 @@ return [
         ),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Slack
+    |--------------------------------------------------------------------------
+    */
+
     'slack' => [
         'notifications' => [
+
             'bot_user_oauth_token' => env(
                 'SLACK_BOT_USER_OAUTH_TOKEN'
             ),
@@ -40,16 +65,23 @@ return [
     */
 
     'google' => [
+
         'client_id' => trim(
-            (string) env('GOOGLE_CLIENT_ID')
+            (string) env(
+                'GOOGLE_CLIENT_ID'
+            )
         ),
 
         'client_secret' => trim(
-            (string) env('GOOGLE_CLIENT_SECRET')
+            (string) env(
+                'GOOGLE_CLIENT_SECRET'
+            )
         ),
 
         'redirect' => trim(
-            (string) env('GOOGLE_REDIRECT_URI')
+            (string) env(
+                'GOOGLE_REDIRECT_URI'
+            )
         ),
     ],
 
@@ -60,6 +92,13 @@ return [
     */
 
     'google_sheets' => [
+
+        /*
+        |--------------------------------------------------------------------------
+        | OAuth Credentials
+        |--------------------------------------------------------------------------
+        */
+
         'client_id' => trim(
             (string) env(
                 'GOOGLE_SHEETS_CLIENT_ID',
@@ -115,7 +154,7 @@ return [
             )
         ),
 
-                /*
+        /*
         |--------------------------------------------------------------------------
         | Spreadsheet UPDATE_DATA_KARYAWAN
         |--------------------------------------------------------------------------
@@ -205,44 +244,91 @@ return [
         ),
 
         /*
-|--------------------------------------------------------------------------
-| Spreadsheet Monitoring MCU & Follow Up
-|--------------------------------------------------------------------------
-*/
+        |--------------------------------------------------------------------------
+        | Spreadsheet Monitoring MCU & Follow Up
+        |--------------------------------------------------------------------------
+        */
 
-'mcu_spreadsheet_id' => trim(
-    (string) env(
-        'GOOGLE_SHEETS_MCU_SPREADSHEET_ID'
-    )
-),
+        'mcu_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_MCU_SPREADSHEET_ID'
+            )
+        ),
 
-'mcu_range' => trim(
-    (string) env(
-        'GOOGLE_SHEETS_MCU_RANGE',
-        "'PRO'!A:I"
-    )
-),
+        'mcu_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_MCU_RANGE',
+                "'PRO'!A:I"
+            )
+        ),
 
-'mcu_sheet_gid' => (int) env(
-    'GOOGLE_SHEETS_MCU_SHEET_GID',
-    1692836561
-),
+        'mcu_sheet_gid' => (int) env(
+            'GOOGLE_SHEETS_MCU_SHEET_GID',
+            1692836561
+        ),
 
-'mcu_columns' => trim(
-    (string) env(
-        'GOOGLE_SHEETS_MCU_COLUMNS',
-        'A:I'
-    )
-),
+        'mcu_columns' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_MCU_COLUMNS',
+                'A:I'
+            )
+        ),
 
-'mcu_cache_ttl_seconds' => max(
-    60,
-    (int) env(
-        'GOOGLE_SHEETS_MCU_CACHE_TTL_SECONDS',
-        300
-    )
-),
+        'mcu_cache_ttl_seconds' => max(
+            60,
+            (int) env(
+                'GOOGLE_SHEETS_MCU_CACHE_TTL_SECONDS',
+                300
+            )
+        ),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Spreadsheet Monitoring Test BNN
+        |--------------------------------------------------------------------------
+        |
+        | Spreadsheet:
+        | https://docs.google.com/spreadsheets/d/
+        | 1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU
+        |
+        | Sheet GID:
+        | 615934612
+        |
+        */
+
+        'test_bnn_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_TEST_BNN_SPREADSHEET_ID'
+            )
+        ),
+
+        'test_bnn_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_TEST_BNN_RANGE',
+                "'DAFTAR TEST BNN'!A:AZ"
+            )
+        ),
+
+        'test_bnn_sheet_gid' => (int) env(
+            'GOOGLE_SHEETS_TEST_BNN_SHEET_GID',
+            615934612
+        ),
+
+        'test_bnn_columns' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_TEST_BNN_COLUMNS',
+                'A:AZ'
+            )
+        ),
+
+        'test_bnn_cache_ttl_seconds' => max(
+            60,
+            (int) env(
+                'GOOGLE_SHEETS_TEST_BNN_CACHE_TTL_SECONDS',
+                300
+            )
+        ),
+
     ],
-
 
 ];
