@@ -7,11 +7,21 @@
 .atru-flash{padding:11px 14px;border-radius:10px;margin-bottom:10px;font-size:11px}.atru-flash.success{background:#e5f8ed;color:#087b42;border:1px solid #bcebd0}.atru-flash.error{background:#ffe8eb;color:#b11d32;border:1px solid #ffc8d0}
 .atru-preview{margin-top:12px;background:#fff;border:1px solid #d9e2ee;border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);overflow:hidden}.atru-preview-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}.atru-stat{border:1px solid #dfe7f1;border-radius:10px;padding:12px;text-align:center}.atru-stat strong{display:block;font-size:22px;color:#172640}.atru-stat small{font-size:8px;color:#74839a;font-weight:800}.atru-stat.bad strong{color:#d7263d}.atru-stat.good strong{color:#129653}
 .atru-table-wrap{overflow:auto}.atru-table{width:100%;border-collapse:collapse;min-width:850px}.atru-table th{background:#f6f8fb;padding:9px;font-size:8px;color:#596a80;text-transform:uppercase;text-align:left}.atru-table td{padding:9px;border-top:1px solid #e7edf4;font-size:9px;color:#314761}.atru-errors{padding:12px}.atru-error-item{background:#fff1f3;border:1px solid #ffd0d7;border-radius:9px;padding:9px 11px;margin-bottom:7px;font-size:10px;color:#a7192e}.atru-error-item strong{display:block;margin-bottom:3px}.atru-commit{padding:14px 16px;border-top:1px solid #e1e8f1;display:flex;align-items:center;justify-content:space-between;gap:12px}.atru-commit p{margin:0;font-size:10px;color:#687992}
-@media(max-width:950px){.atru-grid{grid-template-columns:1fr}.atru-preview-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:540px){.atru-preview-stats{grid-template-columns:1fr}.atru-commit{align-items:stretch;flex-direction:column}}
+.atru-page-shell{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.atru-control-zone{flex:0 0 auto;position:relative;z-index:4}
+.atru-data-zone{flex:1 1 auto;min-height:0;display:flex;margin-top:10px;overflow:hidden}
+.atru-data-zone .atru-preview{flex:1 1 auto;min-height:0;margin-top:0;display:flex;flex-direction:column;overflow:hidden}
+.atru-preview-scroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.atru-preview-scroll .atru-table-wrap{overflow:auto}
+.atru-preview-scroll .atru-table thead th{position:sticky;top:0;z-index:3;background:#f6f8fb;box-shadow:0 1px 0 #dfe7f1}
 
-.atru-period-warning{margin:0 12px 12px;padding:14px;border:1px solid #ffd38a;border-radius:12px;background:#fff8e8;color:#805616}.atru-period-warning h3{margin:0 0 6px;font-size:14px;color:#8b5a00}.atru-period-warning p{margin:0 0 10px;font-size:10px;line-height:1.55}.atru-conflict-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.atru-conflict-box{padding:11px;border:1px solid #eadfca;border-radius:10px;background:#fff}.atru-conflict-box span{display:block;color:#8b795f;font-size:8px;font-weight:800;text-transform:uppercase;margin-bottom:5px}.atru-conflict-box strong{display:block;color:#2a3445;font-size:11px;line-height:1.45}.atru-conflict-meta{margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.atru-conflict-meta div{padding:9px;border-radius:9px;background:#fff;border:1px solid #eadfca;text-align:center}.atru-conflict-meta b{display:block;font-size:16px;color:#26364e}.atru-conflict-meta small{font-size:7px;color:#8a7960;font-weight:800}.atru-identical{margin-top:10px;padding:11px;border-radius:9px;background:#fff1f3;border:1px solid #ffc8d0;color:#9f1d31;font-size:10px;font-weight:800;line-height:1.5}.atru-change-note{margin-top:10px;padding:10px;border-radius:9px;background:#eef6ff;border:1px solid #cfe2ff;color:#24518e;font-size:9px;font-weight:700;line-height:1.5}.atru-lock{margin-top:10px;padding:10px;border-radius:9px;background:#ffe8eb;border:1px solid #ffc8d0;color:#a7192e;font-size:9px;font-weight:700;line-height:1.5}.atru-decision{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.atru-btn.cancel{background:#eef3f8;color:#40536d}.atru-btn.replace{background:#e88916;color:#fff}.atru-btn.append{background:#1677ff;color:#fff}.atru-btn[disabled]{opacity:.45;cursor:not-allowed}.atru-helper{display:block;margin-top:6px;color:#7b8796;font-size:8px;line-height:1.45}@media(max-width:900px){.atru-conflict-meta{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.atru-conflict-grid{grid-template-columns:1fr}.atru-conflict-meta{grid-template-columns:1fr}}
+@media(max-width:950px){.atru-page-shell{height:auto;overflow:visible}.atru-data-zone{display:block;overflow:visible}.atru-data-zone .atru-preview{min-height:420px}.atru-preview-scroll{max-height:460px}.atru-grid{grid-template-columns:1fr}.atru-preview-stats{grid-template-columns:repeat(2,1fr)}}@media(max-height:760px) and (min-width:951px){.atru-page-shell{height:auto;overflow:visible}.atru-data-zone{display:block;overflow:visible}.atru-preview-scroll{max-height:420px}}@media(max-width:540px){.atru-preview-stats{grid-template-columns:1fr}.atru-commit{align-items:stretch;flex-direction:column}}
+
+.atru-period-warning{margin:0 12px 12px;padding:14px;border:1px solid #ffd38a;border-radius:12px;background:#fff8e8;color:#805616}.atru-period-warning h3{margin:0 0 6px;font-size:14px;color:#8b5a00}.atru-period-warning p{margin:0 0 10px;font-size:10px;line-height:1.55}.atru-conflict-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.atru-conflict-box{padding:11px;border:1px solid #eadfca;border-radius:10px;background:#fff}.atru-conflict-box span{display:block;color:#8b795f;font-size:8px;font-weight:800;text-transform:uppercase;margin-bottom:5px}.atru-conflict-box strong{display:block;color:#2a3445;font-size:11px;line-height:1.45}.atru-conflict-meta{margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.atru-conflict-meta div{padding:9px;border-radius:9px;background:#fff;border:1px solid #eadfca;text-align:center}.atru-conflict-meta b{display:block;font-size:16px;color:#26364e}.atru-conflict-meta small{font-size:7px;color:#8a7960;font-weight:800}.atru-lock{margin-top:10px;padding:10px;border-radius:9px;background:#ffe8eb;border:1px solid #ffc8d0;color:#a7192e;font-size:9px;font-weight:700;line-height:1.5}.atru-decision{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.atru-btn.cancel{background:#eef3f8;color:#40536d}.atru-btn.replace{background:#e88916;color:#fff}.atru-btn.append{background:#1677ff;color:#fff}.atru-btn[disabled]{opacity:.45;cursor:not-allowed}.atru-helper{display:block;margin-top:6px;color:#7b8796;font-size:8px;line-height:1.45}@media(max-width:700px){.atru-conflict-grid{grid-template-columns:1fr}.atru-conflict-meta{grid-template-columns:1fr}}
 </style>
 
+<div class="atru-page-shell">
+<div class="atru-control-zone">
 <div class="atru-title">
     <h1>Upload Data ATR</h1>
     <p>Upload Excel satu sheet 00.MASTER_UPLOAD. Data mentah ATR dibaca langsung dan disimpan ke database Laravel.</p>
@@ -70,14 +80,17 @@
         </div>
     </section>
 </div>
+</div>
 
 @if (is_array($preview))
+<div class="atru-data-zone">
     <section class="atru-preview">
         <div class="atru-head">
             <h2>Preview Import — {{ $preview['original_name'] ?? '-' }}</h2>
             <small>Periksa hasil validasi sebelum menekan tombol Import Sekarang.</small>
         </div>
 
+        <div class="atru-preview-scroll">
         <div class="atru-preview-stats">
             <div class="atru-stat"><strong>{{ number_format($preview['employee_count'] ?? 0) }}</strong><small>KARYAWAN UNIK</small></div>
             <div class="atru-stat"><strong>{{ number_format($preview['total_rows'] ?? 0) }}</strong><small>TOTAL BARIS ATR</small></div>
@@ -143,11 +156,31 @@
                     ->locale('id')
                     ->translatedFormat('F Y');
             }
+
+            /*
+             * Conflict ditentukan backend berdasarkan PERIODE data ATR,
+             * bukan nama file. Blade hanya menampilkan hasil keputusan backend.
+             */
+            $hasPeriodConflict = is_array($conflict);
+
+            $replaceButtonLabel = $periodLabel
+                ? 'GANTI DATA ' . mb_strtoupper($periodLabel)
+                : 'GANTI DATA PERIODE INI';
+
+            $appendNewRows = (int) ($conflict['append_new_rows'] ?? 0);
+
+            $appendButtonLabel = $appendNewRows > 0
+                ? 'TAMBAH ' . number_format($appendNewRows) . ' NRP BARU'
+                : 'TIDAK ADA NRP BARU';
+
+            $newImportButtonLabel = $periodLabel
+                ? 'IMPORT ' . mb_strtoupper($periodLabel)
+                : 'IMPORT SEKARANG';
         @endphp
 
-        @if (is_array($conflict))
+        @if ($hasPeriodConflict)
             <div class="atru-period-warning">
-                <h3>⚠ PERIODE SUDAH ADA</h3>
+                <h3>⚠ PERIODE {{ mb_strtoupper($periodLabel ?? 'INI') }} SUDAH ADA</h3>
                 <p>
                     Data periode <strong>{{ $periodLabel ?? '-' }}</strong> sudah tersedia.
                     Pilih tindakan setelah memastikan file revisi sudah benar.
@@ -167,30 +200,10 @@
                 </div>
 
                 <div class="atru-conflict-meta">
-                    <div><b>{{ number_format($conflict['append_new_rows'] ?? 0) }}</b><small>NRP BARU</small></div>
-                    <div><b>{{ number_format($conflict['changed_rows'] ?? 0) }}</b><small>NRP BERUBAH</small></div>
-                    <div><b>{{ number_format($conflict['unchanged_rows'] ?? 0) }}</b><small>NRP TETAP</small></div>
-                    <div><b>{{ number_format($conflict['removed_rows_on_replace'] ?? 0) }}</b><small>NRP HILANG JIKA REPLACE</small></div>
+                    <div><b>{{ number_format($conflict['append_new_rows'] ?? 0) }}</b><small>NRP BARU JIKA DITAMBAH</small></div>
+                    <div><b>{{ number_format($conflict['append_duplicate_rows'] ?? 0) }}</b><small>NRP SUDAH ADA</small></div>
                     <div><b>{{ number_format($conflict['active_coaching_count'] ?? 0) }}</b><small>COACHING AKTIF</small></div>
                 </div>
-
-                @if (($conflict['is_identical_data'] ?? false) || ($conflict['is_identical_file'] ?? false))
-                    <div class="atru-identical">
-                        ⚠ FILE / DATA IDENTIK — snapshot aktif periode ini sudah sama dengan file yang dipreview.
-                        Tidak perlu melakukan REPLACE atau APPEND. Pilih BATAL lalu gunakan file revisi yang benar.
-                    </div>
-                @elseif (($conflict['changed_rows'] ?? 0) > 0 && ($conflict['append_new_rows'] ?? 0) > 0)
-                    <div class="atru-change-note">
-                        File baru berisi {{ number_format($conflict['append_new_rows']) }} NRP baru dan
-                        {{ number_format($conflict['changed_rows']) }} NRP lama yang berubah.
-                        Mode APPEND hanya menambahkan NRP baru; perubahan pada NRP lama hanya diterapkan jika memilih REPLACE SNAPSHOT PERIODE.
-                    </div>
-                @elseif (($conflict['changed_rows'] ?? 0) > 0)
-                    <div class="atru-change-note">
-                        Ada {{ number_format($conflict['changed_rows']) }} NRP lama yang datanya berubah.
-                        Gunakan REPLACE SNAPSHOT PERIODE untuk menerapkan perubahan tersebut.
-                    </div>
-                @endif
 
                 @if (($conflict['active_coaching_count'] ?? 0) > 0)
                     <div class="atru-lock">
@@ -202,14 +215,19 @@
             </div>
         @endif
 
+        </div>
+
         <div class="atru-commit">
             <p>
                 @if ($invalid > 0)
                     Import dikunci sampai seluruh baris invalid diperbaiki.
-                @elseif (is_array($conflict))
-                    <strong>REPLACE SNAPSHOT PERIODE</strong> = file baru menjadi snapshot penuh pengganti.<br>
-                    <strong>APPEND NRP BARU</strong> = mempertahankan snapshot lama dan hanya menambahkan NRP yang belum ada.
-                    <span class="atru-helper">NRP yang sudah ada tidak diubah pada mode TAMBAHKAN DATA. Untuk memperbarui ATR/posisi/data NRP lama, gunakan REPLACE SNAPSHOT PERIODE.</span>
+                @elseif ($hasPeriodConflict)
+                    <strong>{{ $replaceButtonLabel }}</strong> = file baru menjadi snapshot penuh pengganti periode {{ $periodLabel ?? '-' }}.<br>
+                    <strong>{{ $appendButtonLabel }}</strong> = mempertahankan snapshot lama dan hanya menambahkan NRP yang belum ada.
+                    <span class="atru-helper">
+                        Conflict muncul karena <b>periode data ATR</b> sudah memiliki snapshot aktif, bukan karena nama file sama.
+                        NRP yang sudah ada tidak diubah pada mode tambah data.
+                    </span>
                 @else
                     File siap diimpor sebagai snapshot baru periode {{ $periodLabel ?? '-' }}.
                 @endif
@@ -223,7 +241,7 @@
                 </form>
 
                 @if ($invalid === 0 && $valid > 0)
-                    @if (is_array($conflict))
+                    @if ($hasPeriodConflict)
                         <form method="POST" action="{{ route('database.atr.upload.commit') }}">
                             @csrf
                             <input type="hidden" name="preview_token" value="{{ $previewToken }}">
@@ -232,12 +250,8 @@
                             <button
                                 class="atru-btn replace"
                                 type="submit"
-                                @disabled(
-                                    ($conflict['active_coaching_count'] ?? 0) > 0
-                                    || ($conflict['is_identical_data'] ?? false)
-                                    || ($conflict['is_identical_file'] ?? false)
-                                )
-                            >REPLACE SNAPSHOT PERIODE</button>
+                                @disabled(($conflict['active_coaching_count'] ?? 0) > 0)
+                            >{{ $replaceButtonLabel }}</button>
                         </form>
 
                         <form method="POST" action="{{ route('database.atr.upload.commit') }}">
@@ -251,34 +265,24 @@
                                 @disabled(
                                     ($conflict['active_coaching_count'] ?? 0) > 0
                                     || ($conflict['append_new_rows'] ?? 0) === 0
-                                    || ($conflict['is_identical_data'] ?? false)
-                                    || ($conflict['is_identical_file'] ?? false)
                                 )
-                            >APPEND NRP BARU</button>
+                            >{{ $appendButtonLabel }}</button>
                         </form>
-
-                        @if (($conflict['append_new_rows'] ?? 0) === 0 && !($conflict['is_identical_data'] ?? false))
-                            <span class="atru-helper" style="width:100%;text-align:right">
-                                APPEND dinonaktifkan karena tidak ada NRP baru. Jika data NRP lama berubah, gunakan REPLACE.
-                            </span>
-                        @elseif (($conflict['is_identical_data'] ?? false) || ($conflict['is_identical_file'] ?? false))
-                            <span class="atru-helper" style="width:100%;text-align:right;color:#a7192e;font-weight:800">
-                                Tidak ada aksi import yang diperlukan karena file/data identik dengan snapshot aktif.
-                            </span>
-                        @endif
                     @else
                         <form method="POST" action="{{ route('database.atr.upload.commit') }}">
                             @csrf
                             <input type="hidden" name="preview_token" value="{{ $previewToken }}">
                             <input type="hidden" name="import_action" value="NEW">
-                            <button class="atru-btn green" type="submit">IMPORT SEKARANG</button>
+                            <button class="atru-btn green" type="submit">{{ $newImportButtonLabel }}</button>
                         </form>
                     @endif
                 @endif
             </div>
         </div>
     </section>
+</div>
 @endif
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

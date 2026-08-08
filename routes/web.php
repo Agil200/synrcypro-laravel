@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ApdController;
 use App\Http\Controllers\AtrController;
+use App\Http\Controllers\AtrPicRosterController;
 use App\Http\Controllers\BastAssetController;
 use App\Http\Controllers\CoachingCounsellingController;
 use App\Http\Controllers\StSpController;
@@ -324,14 +325,90 @@ Route::prefix('manpower/bnn')
                 'syncEmployees'
             )->name('employees.sync');
 
-            /*
-             * PIC Roster masih menggunakan DatabaseUiController.
-             * Halaman ATR lainnya sudah dipindahkan ke AtrController.
-             */
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | ATR Karyawan — Pengaturan PIC Roster
+    |--------------------------------------------------------------------------
+    | Master Auto PIC ATR Produksi.
+    | Semua mapping posisi ke PIC dikelola melalui AtrPicRosterController.
+    | Tidak ada lagi hardcode PC/DZ/DOZER/EXCAVATOR di AtrController.
+    */
+
+    Route::prefix('database/atr')
+        ->name('database.atr.')
+        ->controller(AtrPicRosterController::class)
+        ->group(function (): void {
             Route::get(
-                '/atr/pic-roster',
-                'atrPicRoster'
-            )->name('atr.pic-roster');
+                '/pic-roster',
+                'index'
+            )->name('pic-roster');
+
+            Route::post(
+                '/pic-roster/groups',
+                'storeGroup'
+            )->name('pic-roster.groups.store');
+
+            Route::post(
+                '/pic-roster/groups/{group}',
+                'updateGroup'
+            )->name('pic-roster.groups.update');
+
+            Route::post(
+                '/pic-roster/groups/{group}/toggle',
+                'toggleGroup'
+            )->name('pic-roster.groups.toggle');
+
+            Route::post(
+                '/pic-roster/rules',
+                'storeRule'
+            )->name('pic-roster.rules.store');
+
+            Route::post(
+                '/pic-roster/rules/{rule}',
+                'updateRule'
+            )->name('pic-roster.rules.update');
+
+            Route::post(
+                '/pic-roster/rules/{rule}/toggle',
+                'toggleRule'
+            )->name('pic-roster.rules.toggle');
+
+            /*
+            |--------------------------------------------------------------------------
+            | UI Sederhana PIC Roster — Daftar Mapping
+            |--------------------------------------------------------------------------
+            | Route lama groups/rules tetap dipertahankan untuk kompatibilitas.
+            | UI baru cukup memakai Tambah Mapping / Edit / Aktif-Nonaktif.
+            */
+
+            Route::post(
+                '/pic-roster/mappings',
+                'storeMapping'
+            )->name('pic-roster.mappings.store');
+
+            Route::post(
+                '/pic-roster/mappings/{rule}',
+                'updateMapping'
+            )->name('pic-roster.mappings.update');
+
+            Route::post(
+                '/pic-roster/mappings/{rule}/toggle',
+                'toggleMapping'
+            )->name('pic-roster.mappings.toggle');
+
+            /*
+            |--------------------------------------------------------------------------
+            | PIC ROSTER BULANAN
+            |--------------------------------------------------------------------------
+            | Struktur route lama tetap dipertahankan.
+            | Endpoint ini hanya menyimpan PIC per periode + kategori.
+            */
+            Route::post(
+                '/pic-roster/monthly',
+                'saveMonthlyRoster'
+            )->name('pic-roster.monthly.save');
         });
 
     /*

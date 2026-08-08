@@ -1,12 +1,3 @@
-{{--
-|--------------------------------------------------------------------------
-| SYNRGYPRO DATABASE KARYAWAN — STEP 7.1 s.d. 7.6 FINAL
-|--------------------------------------------------------------------------
-| Struktur halaman lama dipertahankan.
-| Penambahan final: tombol admin, modal Perbarui Data, modal Ubah Status,
-| POST route Laravel + CSRF, validasi/replay error, dan kartu alamat HC.
---}}
-
 @php
     $syncStatus = (string) (
         $syncMeta['status'] ?? 'error'
@@ -361,6 +352,47 @@
             >
                 Non Mess
             </option>
+
+            <option
+                value="unknown"
+                @selected(
+                    ($residence ?? 'all') === 'unknown'
+                )
+            >
+                Belum Data
+            </option>
+        </select>
+    </div>
+
+    <div class="db-field">
+        <label for="employeeStatus">
+            Status Karyawan
+        </label>
+
+        <select
+            id="employeeStatus"
+            name="status"
+            class="db-select"
+        >
+            @foreach ([
+                'ALL' => 'Semua Status',
+                'AKTIF' => 'Aktif',
+                'NEW HIRE' => 'New Hire',
+                'RESIGN' => 'Resign',
+                'PHK' => 'PHK',
+                'NON AKTIF' => 'Non Aktif',
+                'LAINNYA' => 'Lainnya',
+                'BELUM DATA' => 'Belum Data',
+            ] as $statusValue => $statusLabel)
+                <option
+                    value="{{ $statusValue }}"
+                    @selected(
+                        ($status ?? 'ALL') === $statusValue
+                    )
+                >
+                    {{ $statusLabel }}
+                </option>
+            @endforeach
         </select>
     </div>
 
@@ -1829,9 +1861,10 @@
 .employee-filter-grid {
     display: grid;
     grid-template-columns:
-        minmax(240px, 1fr)
-        185px
-        150px
+        minmax(220px, 1fr)
+        170px
+        170px
+        135px
         auto;
     gap: 9px;
     align-items: end;

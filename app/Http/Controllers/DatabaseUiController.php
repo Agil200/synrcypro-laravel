@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AtrCoachingCounseling;
+use App\Models\AtrRecord;
 use App\Services\EmployeeMasterService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
@@ -22,12 +26,21 @@ class DatabaseUiController extends Controller
             $this->employeeMaster
                 ->dashboardSummary();
 
+        /*
+         * ATR hanya ditampilkan sebagai widget monitoring.
+         * Data Database Karyawan dan ATR tetap terpisah.
+         */
+        $atrDashboardSummary =
+            $this->atrDashboardSummary();
+
         return $this->render(
             'database.dashboard',
             'dashboard',
             [
                 'dashboardSummary' =>
                     $dashboardSummary,
+                'atrDashboardSummary' =>
+                    $atrDashboardSummary,
                 'sourceUrl' =>
                     $this->employeeMaster
                         ->sourceUrl(),
@@ -65,6 +78,40 @@ class DatabaseUiController extends Controller
             )
         );
 
+        if (! in_array(
+            $residence,
+            ['all', 'mess', 'non-mess', 'unknown'],
+            true
+        )) {
+            $residence = 'all';
+        }
+
+        $status = strtoupper(
+            trim(
+                (string) $request->query(
+                    'status',
+                    'ALL'
+                )
+            )
+        );
+
+        if (! in_array(
+            $status,
+            [
+                'ALL',
+                'AKTIF',
+                'NEW HIRE',
+                'RESIGN',
+                'PHK',
+                'NON AKTIF',
+                'LAINNYA',
+                'BELUM DATA',
+            ],
+            true
+        )) {
+            $status = 'ALL';
+        }
+
         $perPage = (int) $request->query(
             'per_page',
             25
@@ -81,7 +128,8 @@ class DatabaseUiController extends Controller
         $filtered = $allEmployees
             ->filter(function (array $employee) use (
                 $search,
-                $residence
+                $residence,
+                $status
             ): bool {
                 $haystack = strtolower(
                     implode(
@@ -124,12 +172,32 @@ class DatabaseUiController extends Controller
                 );
 
                 $matchesResidence =
-                    $residence === 'all' ||
-                    $residenceValue === $residence;
+                    $residence === 'all'
+                    || $residenceValue === $residence
+                    || (
+                        $residence === 'unknown'
+                        && ! in_array(
+                            $residenceValue,
+                            ['mess', 'non-mess'],
+                            true
+                        )
+                    );
+
+                $statusBucket =
+                    $this->employeeStatusBucket(
+                        (string) (
+                            $employee['status_karyawan'] ?? ''
+                        )
+                    );
+
+                $matchesStatus =
+                    $status === 'ALL'
+                    || $statusBucket === $status;
 
                 return
-                    $matchesSearch &&
-                    $matchesResidence;
+                    $matchesSearch
+                    && $matchesResidence
+                    && $matchesStatus;
             })
             ->sortBy(
                 fn (array $employee): string =>
@@ -218,6 +286,7 @@ class DatabaseUiController extends Controller
                         ''
                     ),
                 'residence' => $residence,
+                'status' => $status,
                 'perPage' => $perPage,
                 'syncMeta' =>
                     $snapshot['meta'] ?? [],
@@ -687,6 +756,307 @@ class DatabaseUiController extends Controller
             ]
         );
     }
+
+    /**
+     * Ringkasan ATR terbaru untuk widget Dashboard Database Karyawan.
+     * Tidak membuat relationship data; hanya membaca snapshot ATR aktif.
+     */
+    private function atrDashboardSummary(): array
+    {
+        if (
+            ! Schema::hasTable('atr_records')
+            || ! Schema::hasTable('atr_imports')
+        ) {
+            return [
+                'available' => false,
+                'reason' => 'Modul ATR belum memiliki tabel data.',
+            ];
+        }
+
+        try {
+            $latestPeriodRaw = AtrRecord::query()
+                ->whereHas(
+                    'import',
+                    fn ($query) =>
+                        $query->where(
+                            'status',
+                            'COMPLETED'
+                        )
+                )
+                ->whereNotNull('period')
+                ->max('period');
+
+            if (! $latestPeriodRaw) {
+                return [
+                    'available' => false,
+                    'reason' =>
+                        'Belum ada snapshot ATR aktif.',
+                ];
+            }
+
+            $period = Carbon::parse(
+                $latestPeriodRaw
+            )->startOfMonth();
+
+            $latestImportId = AtrRecord::query()
+                ->whereHas(
+                    'import',
+                    fn ($query) =>
+                        $query->where(
+                            'status',
+                            'COMPLETED'
+                        )
+                )
+                ->whereDate(
+                    'period',
+                    $period->format('Y-m-d')
+                )
+                ->max('atr_import_id');
+
+            $base = AtrRecord::query()
+                ->whereHas(
+                    'import',
+                    fn ($query) =>
+                        $query->where(
+                            'status',
+                            'COMPLETED'
+                        )
+                )
+                ->whereDate(
+                    'period',
+                    $period->format('Y-m-d')
+                )
+                ->when(
+                    $latestImportId,
+                    fn ($query) =>
+                        $query->where(
+                            'atr_import_id',
+                            $latestImportId
+                        )
+                );
+
+            $stats = [
+                'total' =>
+                    (clone $base)->count(),
+                'aman' =>
+                    (clone $base)
+                        ->where('status', 'AMAN')
+                        ->count(),
+                'monitoring' =>
+                    (clone $base)
+                        ->where(
+                            'status',
+                            'MONITORING'
+                        )
+                        ->count(),
+                'pemanggilan' =>
+                    (clone $base)
+                        ->where(
+                            'status',
+                            'PEMANGGILAN'
+                        )
+                        ->count(),
+                'no_data' =>
+                    (clone $base)
+                        ->where(
+                            'status',
+                            'NO_DATA'
+                        )
+                        ->count(),
+            ];
+
+            $callIds = (clone $base)
+                ->where(
+                    'status',
+                    'PEMANGGILAN'
+                )
+                ->pluck('id');
+
+            $completedIds = collect();
+            $recallIds = collect();
+
+            if (
+                $callIds->isNotEmpty()
+                && Schema::hasTable(
+                    'atr_coaching_counselings'
+                )
+            ) {
+                $completedIds =
+                    AtrCoachingCounseling::query()
+                        ->whereIn(
+                            'atr_record_id',
+                            $callIds
+                        )
+                        ->where(
+                            'status',
+                            'COMPLETED'
+                        )
+                        ->pluck('atr_record_id')
+                        ->unique();
+
+                $recallIds =
+                    AtrCoachingCounseling::query()
+                        ->whereIn(
+                            'atr_record_id',
+                            $callIds
+                        )
+                        ->where(
+                            'status',
+                            'CANCELLED'
+                        )
+                        ->when(
+                            $completedIds->isNotEmpty(),
+                            fn ($query) =>
+                                $query->whereNotIn(
+                                    'atr_record_id',
+                                    $completedIds
+                                )
+                        )
+                        ->pluck('atr_record_id')
+                        ->unique();
+            }
+
+            $sudah = $completedIds->count();
+            $ulang = $recallIds->count();
+            $belum = max(
+                0,
+                $stats['pemanggilan']
+                - $sudah
+                - $ulang
+            );
+
+            return [
+                'available' => true,
+                'period' =>
+                    $period->format('Y-m'),
+                'period_label' =>
+                    $period
+                        ->locale('id')
+                        ->translatedFormat('F Y'),
+                'stats' => $stats,
+                'progress' => [
+                    'total' =>
+                        $stats['pemanggilan'],
+                    'sudah' => $sudah,
+                    'belum' => $belum,
+                    'ulang' => $ulang,
+                    'percentage' =>
+                        $stats['pemanggilan'] > 0
+                            ? round(
+                                (
+                                    $sudah
+                                    / $stats['pemanggilan']
+                                ) * 100,
+                                1
+                            )
+                            : 0.0,
+                ],
+            ];
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return [
+                'available' => false,
+                'reason' =>
+                    'Ringkasan ATR belum dapat dimuat.',
+            ];
+        }
+    }
+
+    /**
+     * Bucket status yang sama dengan Dashboard Database Karyawan.
+     * Dipakai agar klik chart membuka hasil filter yang tepat.
+     */
+    private function employeeStatusBucket(
+        string $status
+    ): string {
+        $status = strtoupper(
+            trim(
+                preg_replace(
+                    '/\s+/',
+                    ' ',
+                    str_replace(
+                        ['_', '-'],
+                        ' ',
+                        $status
+                    )
+                ) ?? ''
+            )
+        );
+
+        if (
+            $status === ''
+            || $status === '-'
+        ) {
+            return 'BELUM DATA';
+        }
+
+        if (
+            str_contains($status, 'PHK')
+            || str_contains(
+                $status,
+                'TERMINATION'
+            )
+        ) {
+            return 'PHK';
+        }
+
+        if (
+            str_contains(
+                $status,
+                'RESIGN'
+            )
+            || str_contains(
+                $status,
+                'MENGUNDURKAN DIRI'
+            )
+        ) {
+            return 'RESIGN';
+        }
+
+        if (
+            str_contains(
+                $status,
+                'NON AKTIF'
+            )
+            || str_contains(
+                $status,
+                'TIDAK AKTIF'
+            )
+            || str_contains(
+                $status,
+                'INACTIVE'
+            )
+        ) {
+            return 'NON AKTIF';
+        }
+
+        if (
+            str_contains(
+                $status,
+                'NEW HIRE'
+            )
+            || str_contains(
+                $status,
+                'KARYAWAN BARU'
+            )
+        ) {
+            return 'NEW HIRE';
+        }
+
+        if (
+            str_contains($status, 'AKTIF')
+            || str_contains(
+                $status,
+                'ACTIVE'
+            )
+        ) {
+            return 'AKTIF';
+        }
+
+        return 'LAINNYA';
+    }
+
 
     private function render(
         string $contentView,

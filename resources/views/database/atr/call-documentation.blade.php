@@ -35,6 +35,15 @@
 .atrc-kpi em{display:block;font-style:normal;color:#91a0b3;font-size:8px;margin-top:3px}
 
 .atrc-panel{background:#fff;border:1px solid var(--atrc-border);border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);margin-bottom:12px;overflow:hidden}
+.atrc-page-shell{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.atrc-control-zone{flex:0 0 auto;position:relative;z-index:4}
+.atrc-data-zone{flex:1 1 auto;min-height:0;display:flex;overflow:hidden}
+.atrc-queue-panel{flex:1 1 auto;min-height:0;margin-bottom:0;display:flex;flex-direction:column;overflow:hidden}
+.atrc-queue-panel>.atrc-queue-head,
+.atrc-queue-panel>.atrc-pages{flex:0 0 auto}
+.atrc-queue-panel>.atrc-grid{flex:1 1 auto;min-height:0;overflow:auto;align-content:start;overscroll-behavior:contain;scrollbar-gutter:stable}
+.atrc-queue-panel>.atrc-empty{flex:1 1 auto;min-height:0;display:grid;place-items:center;align-content:center}
+
 .atrc-filter{display:grid;grid-template-columns:190px minmax(210px,1fr) minmax(240px,1.4fr) 175px auto;gap:9px;padding:14px}
 .atrc-field label{display:block;font-size:9px;font-weight:900;color:#2e415c;margin-bottom:5px;text-transform:uppercase;letter-spacing:.18px}
 .atrc-input,.atrc-select{width:100%;height:39px;border:1px solid #cbd7e6;border-radius:9px;padding:0 11px;background:#fff;color:#243851;outline:none}
@@ -106,7 +115,7 @@
 .atrc-empty-icon{font-size:28px;margin-bottom:7px}
 .atrc-empty strong{display:block;color:#40536d;font-size:12px;margin-bottom:4px}
 .atrc-empty span{font-size:9px}
-.atrc-pages{padding:12px 15px;border-top:1px solid #e7edf4}
+.atrc-pages{padding:10px 15px;border-top:1px solid #e7edf4;background:#fff}
 
 .atrc-modal{position:fixed;inset:0;background:rgba(7,18,35,.63);display:none;align-items:center;justify-content:center;z-index:5000;padding:16px}
 .atrc-modal.open{display:flex}
@@ -143,10 +152,20 @@
 .atrc-danger-submit{height:39px;border:0;border-radius:9px;padding:0 17px;background:#e6384b;color:#fff;font-weight:900;font-size:10px;cursor:pointer}
 
 @media(max-width:1100px){
+    .atrc-page-shell{height:auto;overflow:visible}
+    .atrc-data-zone{display:block;overflow:visible}
+    .atrc-queue-panel{min-height:460px}
+    .atrc-queue-panel>.atrc-grid{max-height:520px}
     .atrc-kpis{grid-template-columns:repeat(2,1fr)}
     .atrc-grid{grid-template-columns:repeat(2,1fr)}
     .atrc-filter{grid-template-columns:1fr 1fr}
     .atrc-actions{grid-column:1/-1}
+}
+@media(max-height:760px) and (min-width:1101px){
+    .atrc-page-shell{height:auto;overflow:visible}
+    .atrc-data-zone{display:block;overflow:visible}
+    .atrc-queue-panel{min-height:420px}
+    .atrc-queue-panel>.atrc-grid{max-height:460px}
 }
 @media(max-width:700px){
     .atrc-title{display:block}
@@ -160,6 +179,8 @@
 }
 </style>
 
+<div class="atrc-page-shell">
+<div class="atrc-control-zone">
 <div class="atrc-title">
     <div>
         <h1>Dokumentasi Pemanggilan</h1>
@@ -269,8 +290,10 @@
         </a>
     </div>
 </section>
+</div>
 
-<section class="atrc-panel">
+<div class="atrc-data-zone">
+<section class="atrc-panel atrc-queue-panel">
     <div class="atrc-queue-head">
         <div>
             <h2>Daftar Karyawan Pemanggilan</h2>
@@ -433,6 +456,8 @@
         @endif
     @endif
 </section>
+</div>
+</div>
 
 <div class="atrc-modal" id="atrcModal" aria-hidden="true">
     <div class="atrc-dialog">
@@ -730,8 +755,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('atrcAtr').textContent =
             data.atr + ' · ' + data.sia;
 
-        // PIC Roster mengikuti mapping POSISI dan juga dipaksa di Controller.
-        createdBy.value = data.pic || '-';
+        // PIC Roster berasal dari Master PIC Roster. Controller menghitung ulang saat submit.
+        createdBy.value = data.pic || 'PIC BELUM TERDAFTAR';
 
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
@@ -775,7 +800,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (!leaderOk) {
-                message += '\n- Tanda Tangan Pimpinan / PIC Roster';
+                message += '\n- Tanda Tangan Pimpinan';
             }
 
             window.alert(message);

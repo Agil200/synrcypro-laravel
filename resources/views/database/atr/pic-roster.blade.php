@@ -1,288 +1,561 @@
 @php
-    use Illuminate\Support\Str;
+    $monthCount = $periodOptions->count();
 @endphp
 
 <style>
-.pr-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}
-.pr-title h1{margin:0;color:#10213d;font-size:24px}.pr-title p{margin:4px 0 0;color:#65758c;font-size:11px}
-.pr-badge{padding:7px 10px;border-radius:999px;border:1px solid #cfe0f4;background:#f4f8fd;color:#315a88;font-size:8px;font-weight:900}
-.pr-flash{padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:10px}.pr-flash.ok{background:#e7f8ee;border:1px solid #bdebcf;color:#087b42}.pr-flash.err{background:#ffecef;border:1px solid #ffc8d0;color:#b11d32}
-.pr-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}.pr-kpi{background:#fff;border:1px solid #dbe4ef;border-radius:13px;padding:13px 14px;box-shadow:0 5px 15px rgba(15,35,65,.05)}.pr-kpi small{display:block;color:#74839a;font-size:8px;font-weight:900}.pr-kpi strong{display:block;color:#152640;font-size:24px;margin-top:3px}.pr-kpi em{display:block;font-style:normal;color:#95a1b1;font-size:8px}
-.pr-panel{background:#fff;border:1px solid #dbe4ef;border-radius:13px;box-shadow:0 5px 16px rgba(15,35,65,.05);margin-bottom:12px;overflow:hidden}.pr-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e5ebf2;background:#fbfcfe}.pr-head h2{font-size:13px;margin:0;color:#182b48}.pr-head p{margin:3px 0 0;color:#7a8799;font-size:8px}
-.pr-body{padding:13px}.pr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pr-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.pr-form .full{grid-column:1/-1}.pr-field label{display:block;font-size:8px;font-weight:900;color:#344961;margin-bottom:4px;text-transform:uppercase}.pr-input,.pr-select{width:100%;height:37px;border:1px solid #cbd8e7;border-radius:8px;padding:0 10px;background:#fff;color:#213852}.pr-btn{height:36px;border:0;border-radius:8px;padding:0 12px;font-size:9px;font-weight:900;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.pr-btn.blue{background:#1677ff;color:#fff}.pr-btn.green{background:#0d9555;color:#fff}.pr-btn.red{background:#fff0f2;color:#bd2639;border:1px solid #efb8c0}.pr-btn.gray{background:#eef3f8;color:#31475f}.pr-btn.amber{background:#fff2d7;color:#865500;border:1px solid #f2d094}
-.pr-test{display:grid;grid-template-columns:1fr auto;gap:8px}.pr-result{margin-top:10px;border-radius:10px;padding:11px;border:1px solid #dce5ef;background:#f8fafc}.pr-result.ok{border-color:#bce8cf;background:#f0faf4}.pr-result.warn{border-color:#f2d499;background:#fff9ec}.pr-result-grid{display:grid;grid-template-columns:150px 1fr;gap:5px 10px;font-size:9px}.pr-result-grid span{color:#718198}.pr-result-grid b{color:#203650}
-.pr-table-wrap{overflow:auto}.pr-table{width:100%;border-collapse:collapse;font-size:9px}.pr-table th{background:#f4f7fb;color:#617088;text-transform:uppercase;font-size:7px;letter-spacing:.2px;text-align:left;padding:8px;border-bottom:1px solid #dde5ef}.pr-table td{padding:9px 8px;border-bottom:1px solid #edf1f6;vertical-align:top;color:#253950}.pr-table tr:last-child td{border-bottom:0}.pr-code{font-weight:900;color:#193b68}.pr-pill{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:900}.pr-pill.on{background:#e4f7ec;color:#087d45}.pr-pill.off{background:#eef1f5;color:#6f7d90}.pr-pill.exact{background:#e9f2ff;color:#1c63ac}.pr-pill.keyword{background:#fff2d8;color:#8a5b00}.pr-actions{display:flex;gap:5px;flex-wrap:wrap}
-.pr-modal{position:fixed;inset:0;background:rgba(8,18,34,.63);display:none;align-items:center;justify-content:center;z-index:5100;padding:16px}.pr-modal.open{display:flex}.pr-dialog{width:min(650px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:15px;box-shadow:0 25px 70px rgba(0,0,0,.3)}.pr-modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e4eaf1}.pr-modal-head h3{margin:0;font-size:15px;color:#172b48}.pr-close{border:0;background:none;font-size:20px;color:#8390a2;cursor:pointer}.pr-modal-body{padding:15px}.pr-modal-actions{padding:12px 15px;border-top:1px solid #e4eaf1;display:flex;justify-content:flex-end;gap:7px}
-.pr-diagnostics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.pr-diag{padding:9px;border:1px solid #dfe7f0;border-radius:9px;background:#fafbfd}.pr-diag strong{display:block;font-size:9px;color:#1e3554}.pr-diag span{font-size:8px;color:#718199}.pr-diag.bad{border-color:#f2cd86;background:#fff9ec}
-@media(max-width:1050px){.pr-kpis{grid-template-columns:repeat(2,1fr)}.pr-grid{grid-template-columns:1fr}.pr-diagnostics{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){.pr-kpis{grid-template-columns:1fr}.pr-form{grid-template-columns:1fr}.pr-form .full{grid-column:auto}.pr-diagnostics{grid-template-columns:1fr}}
+.prm-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
+.prm-title h1{margin:0;color:#132641;font-size:23px}
+.prm-title p{margin:3px 0 0;color:#6f8097;font-size:9px}
+.prm-badge{padding:7px 10px;border:1px solid #cee0f3;border-radius:999px;background:#f4f8fd;color:#315a87;font-size:7px;font-weight:900;white-space:nowrap}
+
+.prm-alert{padding:9px 11px;margin-bottom:9px;border-radius:9px;font-size:9px}
+.prm-alert.ok{border:1px solid #b9e9cb;background:#edf9f2;color:#087b43}
+.prm-alert.err{border:1px solid #ffc6ce;background:#fff0f2;color:#a91e31}
+
+.prm-toolbar{display:grid;grid-template-columns:250px 1fr auto;gap:9px;align-items:end;padding:11px;background:#fff;border:1px solid #dbe4ef;border-radius:12px;box-shadow:0 4px 14px rgba(15,35,65,.045);margin-bottom:9px}
+.prm-field label{display:block;margin-bottom:4px;color:#53677f;font-size:7px;font-weight:900;text-transform:uppercase}
+.prm-select,.prm-input{width:100%;height:36px;padding:0 10px;border:1px solid #cad7e6;border-radius:8px;background:#fff;color:#203750;outline:none}
+.prm-select:focus,.prm-input:focus{border-color:#65a7ff;box-shadow:0 0 0 3px rgba(22,119,255,.07)}
+.prm-info{align-self:center;color:#6e7e92;font-size:8px;line-height:1.45}
+.prm-btn{height:35px;border:0;border-radius:8px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:8px;font-weight:900;cursor:pointer;white-space:nowrap}
+.prm-btn.blue{background:#1677ff;color:#fff}.prm-btn.gray{background:#eef3f8;color:#334a64}.prm-btn.green{background:#0b9654;color:#fff}
+
+.prm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:9px}
+.prm-kpi{padding:10px 12px;border:1px solid #dbe4ef;border-radius:11px;background:#fff;box-shadow:0 3px 11px rgba(15,35,65,.04)}
+.prm-kpi span{display:block;color:#74849a;font-size:7px;font-weight:900;text-transform:uppercase}
+.prm-kpi strong{display:block;margin-top:2px;color:#152942;font-size:20px}
+.prm-kpi small{display:block;margin-top:1px;color:#99a4b3;font-size:7px}
+
+.prm-note{display:flex;gap:8px;align-items:flex-start;padding:9px 11px;border:1px solid #cfe0f4;border-radius:9px;background:#f6f9fd;color:#48627f;font-size:8px;line-height:1.5;margin-bottom:9px}
+.prm-note b{color:#173a66}
+
+.prm-panel{background:#fff;border:1px solid #dbe4ef;border-radius:12px;overflow:hidden;box-shadow:0 5px 15px rgba(15,35,65,.045)}
+.prm-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #e4eaf1;background:#fbfcfe}
+.prm-head h2{margin:0;color:#18304f;font-size:12px}.prm-head p{margin:2px 0 0;color:#8492a4;font-size:7px}
+.prm-count{padding:5px 8px;border-radius:999px;background:#f0f5fb;color:#45617f;font-size:7px;font-weight:900}
+
+.prm-table-wrap{max-height:470px;overflow:auto;scrollbar-gutter:stable}
+.prm-table{width:100%;min-width:1000px;border-collapse:collapse;font-size:8px}
+.prm-table th{position:sticky;top:0;z-index:3;padding:8px;background:#f4f7fb;border-bottom:1px solid #dce5ef;color:#64748a;font-size:7px;text-transform:uppercase;text-align:left}
+.prm-table td{padding:9px 8px;border-bottom:1px solid #edf1f6;vertical-align:middle;color:#2b4059}
+.prm-category{font-weight:900;color:#17395f;font-size:9px}
+.prm-sub{display:block;margin-top:3px;color:#8492a4;font-size:7px}
+.prm-chips{display:flex;flex-wrap:wrap;gap:4px;max-width:500px}
+.prm-chip{padding:4px 7px;border:1px solid #dce5ef;border-radius:999px;background:#f7f9fc;color:#3d5875;font-size:7px;font-weight:800}
+.prm-status{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:7px;font-weight:900}
+.prm-status.ok{background:#e4f7ec;color:#087d45}.prm-status.wait{background:#fff3d8;color:#8b5a00}
+.prm-pic{font-weight:900;color:#193957}
+
+.prm-unmapped{margin-top:9px;border:1px solid #f0cf8d;border-radius:11px;background:#fff9ec;overflow:hidden}
+.prm-unmapped .prm-head{background:#fff8e9}
+.prm-unmapped-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:9px}
+.prm-unmapped-item{padding:8px;border:1px solid #ecd7a9;border-radius:8px;background:#fff;font-size:8px;color:#624c20}
+.prm-unmapped-item strong{display:block;color:#4f3a11}
+
+.prm-modal{position:fixed;inset:0;z-index:5200;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(7,17,31,.64)}
+.prm-modal.open{display:flex}
+.prm-dialog{width:min(610px,100%);background:#fff;border-radius:14px;box-shadow:0 25px 70px rgba(0,0,0,.3);overflow:hidden}
+.prm-modal-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #e4eaf1}
+.prm-modal-head h3{margin:0;color:#172c49;font-size:14px}
+.prm-close{border:0;background:transparent;color:#8491a3;font-size:20px;cursor:pointer}
+.prm-body{padding:14px}
+.prm-summary{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px}
+.prm-summary div{padding:8px 9px;border:1px solid #e0e7ef;border-radius:8px;background:#f9fbfd}
+.prm-summary span{display:block;color:#8491a3;font-size:7px}.prm-summary b{display:block;margin-top:2px;color:#263e5a;font-size:9px}
+.prm-form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prm-form .full{grid-column:1/-1}
+.prm-help{margin-top:4px;color:#8492a4;font-size:7px;line-height:1.4}
+.prm-actions{display:flex;justify-content:flex-end;gap:7px;padding:11px 14px;border-top:1px solid #e4eaf1}
+
+
+.prm-diagnosis{margin-top:9px;background:#fff;border:1px solid #dbe4ef;border-radius:11px;overflow:hidden}
+.prm-diagnosis>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#fbfcfe;cursor:pointer}
+.prm-diagnosis>summary::-webkit-details-marker{display:none}
+.prm-diagnosis-title strong{display:block;color:#19304e;font-size:10px}
+.prm-diagnosis-title span{display:block;margin-top:2px;color:#8492a4;font-size:7px}
+.prm-diagnosis-toggle{color:#4b6685;font-size:7px;font-weight:900}
+.prm-diag-table-wrap{max-height:300px;overflow:auto}
+.prm-diag-table{width:100%;min-width:820px;border-collapse:collapse;font-size:8px}
+.prm-diag-table th{position:sticky;top:0;z-index:2;padding:7px 8px;background:#f4f7fb;border-bottom:1px solid #dce5ef;color:#64748a;font-size:7px;text-transform:uppercase;text-align:left}
+.prm-diag-table td{padding:8px;border-bottom:1px solid #edf1f6;color:#30465f}
+.prm-diag-ok{color:#087d45;font-weight:900}.prm-diag-bad{color:#a46a00;font-weight:900}
+
+@media(max-width:900px){
+    .prm-toolbar{grid-template-columns:1fr}
+    .prm-kpis{grid-template-columns:repeat(2,1fr)}
+    .prm-unmapped-list{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+    .prm-title{display:block}.prm-badge{display:inline-flex;margin-top:7px}
+    .prm-kpis{grid-template-columns:1fr}
+    .prm-form,.prm-summary{grid-template-columns:1fr}
+    .prm-form .full{grid-column:auto}
+}
 </style>
 
-<div class="pr-title">
+<div class="prm-title">
     <div>
         <h1>Pengaturan PIC Roster</h1>
-        <p>Master Auto PIC ATR. Posisi karyawan dibaca melalui rule EXACT / KEYWORD, sehingga model unit baru tidak perlu menambah source code.</p>
+        <p>PIC ditetapkan per bulan dan kategori posisi. Upload ulang bulan yang sama tidak mengubah PIC.</p>
     </div>
-    <div class="pr-badge">MASTER AUTO PIC · ATR PRODUKSI</div>
+    <div class="prm-badge">MASTER RELATIONSHIP · PIC BULANAN</div>
 </div>
 
 @if(session('success'))
-    <div class="pr-flash ok">{{ session('success') }}</div>
+    <div class="prm-alert ok">{{ session('success') }}</div>
 @endif
+
 @if($errors->any())
-    <div class="pr-flash err">
-        @foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach
+    <div class="prm-alert err">
+        @foreach($errors->all() as $error)
+            <div>{{ $error }}</div>
+        @endforeach
     </div>
 @endif
 
-<div class="pr-kpis">
-    <div class="pr-kpi"><small>TOTAL KELOMPOK</small><strong>{{ $picRosterStats['total_groups'] }}</strong><em>Master kelompok unit.</em></div>
-    <div class="pr-kpi"><small>KELOMPOK AKTIF</small><strong>{{ $picRosterStats['active_assignments'] }}</strong><em>Siap digunakan engine.</em></div>
-    <div class="pr-kpi"><small>PIC AKTIF</small><strong>{{ $picRosterStats['active_pics'] }}</strong><em>Nama PIC unik aktif.</em></div>
-    <div class="pr-kpi"><small>POSISI BELUM TERPETAKAN</small><strong>{{ $picRosterStats['unmapped_positions'] }}</strong><em>Perlu dibuat rule.</em></div>
+<form class="prm-toolbar" method="GET" action="{{ route('database.atr.pic-roster') }}">
+    <div class="prm-field">
+        <label>Periode Roster</label>
+        <select class="prm-select" name="period" onchange="this.form.submit()">
+            @forelse($periodOptions as $periodOption)
+                @php
+                    $optionDate = \Carbon\Carbon::parse($periodOption)->startOfMonth();
+                    $optionValue = $optionDate->format('Y-m');
+                @endphp
+                <option
+                    value="{{ $optionValue }}"
+                    @selected($selectedPeriod === $optionValue)
+                >
+                    {{ $optionDate->locale('id')->translatedFormat('F Y') }}
+                </option>
+            @empty
+                <option value="{{ $selectedPeriod }}">
+                    {{ $selectedPeriodLabel }}
+                </option>
+            @endforelse
+        </select>
+    </div>
+
+    <div class="prm-info">
+        Periode aktif: <b>{{ $selectedPeriodLabel }}</b> ·
+        {{ $monthCount }} periode ATR tersedia.
+        Untuk bulan baru, isi PIC secara manual. Untuk bulan yang sama, gunakan <b>EDIT</b>.
+    </div>
+
+    <a class="prm-btn gray" href="{{ route('database.atr.pic-roster') }}">
+        PERIODE TERBARU
+    </a>
+</form>
+
+<div class="prm-kpis">
+    <div class="prm-kpi">
+        <span>Kategori Aktif</span>
+        <strong>{{ number_format($picRosterStats['total_categories']) }}</strong>
+        <small>Kategori yang muncul di ATR {{ $selectedPeriodLabel }}.</small>
+    </div>
+    <div class="prm-kpi">
+        <span>Sudah Diisi</span>
+        <strong>{{ number_format($picRosterStats['filled_categories']) }}</strong>
+        <small>PIC Roster 1 sudah tersedia.</small>
+    </div>
+    <div class="prm-kpi">
+        <span>Belum Diisi</span>
+        <strong>{{ number_format($picRosterStats['unfilled_categories']) }}</strong>
+        <small>Harus diisi sebelum pemanggilan.</small>
+    </div>
+    <div class="prm-kpi">
+        <span>PIC Unik</span>
+        <strong>{{ number_format($picRosterStats['active_pics']) }}</strong>
+        <small>PIC 1 + PIC 2 periode ini.</small>
+    </div>
 </div>
 
-<section class="pr-panel">
-    <div class="pr-head">
-        <div><h2>Simulator Auto PIC</h2><p>Uji posisi apa pun sebelum rule digunakan pada Dokumentasi Pemanggilan.</p></div>
+<div class="prm-note">
+    <div>ℹ</div>
+    <div>
+        <b>Contoh master relationship:</b>
+        OPERATOR HD 785 dan OPERATOR CAT 777 dapat masuk ke kategori
+        <b>OPERATOR HD</b>. Yang berubah setiap bulan hanya nama PIC-nya,
+        bukan kategori posisi.
     </div>
-    <div class="pr-body">
-        <form class="pr-test" method="GET" action="{{ route('database.atr.pic-roster') }}">
-            <input class="pr-input" name="test_position" value="{{ $testPosition }}" placeholder="Contoh: OPERATOR PC 1250 / OPERATOR DZ D375 / OPERATOR WATER TRUCK HD">
-            <button class="pr-btn blue">TEST POSISI</button>
-        </form>
-
-        @if($testResult)
-            <div class="pr-result {{ $testResult['matched'] ? 'ok' : 'warn' }}">
-                <div class="pr-result-grid">
-                    <span>Posisi</span><b>{{ $testResult['position'] }}</b>
-                    <span>Hasil</span><b>{{ $testResult['matched'] ? 'PIC DITEMUKAN' : 'PIC BELUM TERDAFTAR' }}</b>
-                    <span>Kelompok</span><b>{{ $testResult['group_label'] ?? '-' }}</b>
-                    <span>PIC Utama</span><b>{{ $testResult['pic_primary'] }}</b>
-                    <span>PIC Backup</span><b>{{ $testResult['pic_backup'] ?? '-' }}</b>
-                    <span>Rule Terpakai</span><b>{{ $testResult['rule_type'] ?? '-' }} · {{ $testResult['rule_pattern'] ?? '-' }} · Priority {{ $testResult['priority'] ?? '-' }}</b>
-                </div>
-            </div>
-        @endif
-    </div>
-</section>
-
-<div class="pr-grid">
-    <section class="pr-panel">
-        <div class="pr-head">
-            <div><h2>Kelompok PIC</h2><p>PIC utama/backup dan masa berlaku roster.</p></div>
-            <button type="button" class="pr-btn blue" data-open="group-create">TAMBAH KELOMPOK</button>
-        </div>
-        <div class="pr-table-wrap">
-            <table class="pr-table">
-                <thead><tr><th>Kelompok</th><th>PIC</th><th>Efektif</th><th>Status</th><th>Aksi</th></tr></thead>
-                <tbody>
-                @foreach($rosterGroups as $group)
-                    <tr>
-                        <td><span class="pr-code">{{ $group->code }}</span><br>{{ $group->label }}</td>
-                        <td><strong>{{ $group->pic_primary }}</strong><br><span style="color:#8190a3">Backup: {{ $group->pic_backup ?: '-' }}</span></td>
-                        <td>{{ $group->effective_from?->format('d-m-Y') ?? '-' }}<br>s/d {{ $group->effective_to?->format('d-m-Y') ?? 'seterusnya' }}</td>
-                        <td><span class="pr-pill {{ $group->is_active ? 'on' : 'off' }}">{{ $group->is_active ? 'AKTIF' : 'NONAKTIF' }}</span></td>
-                        <td>
-                            <div class="pr-actions">
-                                <button type="button" class="pr-btn gray"
-                                    data-edit-group='@json([
-                                        "id"=>$group->id,"code"=>$group->code,"label"=>$group->label,
-                                        "pic_primary"=>$group->pic_primary,"pic_backup"=>$group->pic_backup,
-                                        "effective_from"=>$group->effective_from?->format("Y-m-d"),
-                                        "effective_to"=>$group->effective_to?->format("Y-m-d"),
-                                        "url"=>route("database.atr.pic-roster.groups.update",$group),
-                                    ])'>EDIT</button>
-                                <form method="POST" action="{{ route('database.atr.pic-roster.groups.toggle',$group) }}">
-                                    @csrf
-                                    <button class="pr-btn {{ $group->is_active ? 'red' : 'green' }}">{{ $group->is_active ? 'NONAKTIFKAN' : 'AKTIFKAN' }}</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="pr-panel">
-        <div class="pr-head">
-            <div><h2>Rule Auto PIC</h2><p>EXACT untuk override khusus; KEYWORD untuk keluarga unit seperti PC/DZ/DOZER.</p></div>
-            <button type="button" class="pr-btn blue" data-open="rule-create">TAMBAH RULE</button>
-        </div>
-        <div class="pr-table-wrap">
-            <table class="pr-table">
-                <thead><tr><th>Rule</th><th>Kelompok</th><th>Priority</th><th>Status</th><th>Aksi</th></tr></thead>
-                <tbody>
-                @foreach($rosterRules as $rule)
-                    <tr>
-                        <td><span class="pr-pill {{ strtolower($rule->match_type) }}">{{ $rule->match_type }}</span><br><strong>{{ $rule->pattern }}</strong></td>
-                        <td>{{ $rule->group?->label ?? '-' }}</td>
-                        <td>{{ $rule->priority }}</td>
-                        <td><span class="pr-pill {{ $rule->is_active ? 'on' : 'off' }}">{{ $rule->is_active ? 'AKTIF' : 'NONAKTIF' }}</span></td>
-                        <td>
-                            <div class="pr-actions">
-                                <button type="button" class="pr-btn gray"
-                                    data-edit-rule='@json([
-                                        "id"=>$rule->id,"group_id"=>$rule->atr_pic_roster_group_id,
-                                        "match_type"=>$rule->match_type,"pattern"=>$rule->pattern,
-                                        "priority"=>$rule->priority,
-                                        "url"=>route("database.atr.pic-roster.rules.update",$rule),
-                                    ])'>EDIT</button>
-                                <form method="POST" action="{{ route('database.atr.pic-roster.rules.toggle',$rule) }}">
-                                    @csrf
-                                    <button class="pr-btn {{ $rule->is_active ? 'red' : 'green' }}">{{ $rule->is_active ? 'NONAKTIFKAN' : 'AKTIFKAN' }}</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </section>
 </div>
 
-<section class="pr-panel">
-    <div class="pr-head">
-        <div><h2>Diagnosis Posisi ATR Aktif</h2><p>Posisi yang belum mendapat PIC harus diselesaikan sebelum dokumentasi pemanggilan.</p></div>
-        <span class="pr-pill {{ $unmappedPositions->isEmpty() ? 'on' : 'keyword' }}">{{ $unmappedPositions->count() }} BELUM TERPETAKAN</span>
+<section class="prm-panel">
+    <div class="prm-head">
+        <div>
+            <h2>PIC Roster — {{ $selectedPeriodLabel }}</h2>
+            <p>Klik ISI PIC / EDIT pada kategori yang ingin diatur.</p>
+        </div>
+        <span class="prm-count">{{ $categoryRows->count() }} KATEGORI</span>
     </div>
-    <div class="pr-body">
-        @if($rosterDiagnostics->isEmpty())
-            <div style="text-align:center;color:#7d8999;padding:20px">Belum ada posisi dari import ATR aktif.</div>
-        @else
-            <div class="pr-diagnostics">
-                @foreach($rosterDiagnostics as $diag)
-                    <div class="pr-diag {{ $diag['matched'] ? '' : 'bad' }}">
-                        <strong>{{ $diag['position'] }}</strong>
-                        @if($diag['matched'])
-                            <span>{{ $diag['group_label'] }} → {{ $diag['pic_primary'] }} · Rule {{ $diag['rule_pattern'] }}</span>
-                        @else
-                            <span>PIC BELUM TERDAFTAR · buat rule EXACT/KEYWORD.</span>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        @endif
-    </div>
-</section>
 
-<section class="pr-panel">
-    <div class="pr-head"><div><h2>Riwayat Perubahan PIC Roster</h2><p>30 aktivitas terakhir untuk audit pengaturan.</p></div></div>
-    <div class="pr-table-wrap">
-        <table class="pr-table">
-            <thead><tr><th>Waktu</th><th>Aksi</th><th>Kelompok / Rule</th><th>Oleh</th><th>Catatan</th></tr></thead>
-            <tbody>
-            @forelse($rosterHistories as $history)
+    <div class="prm-table-wrap">
+        <table class="prm-table">
+            <thead>
                 <tr>
-                    <td>{{ $history->created_at?->format('d-m-Y H:i') }}</td>
-                    <td><strong>{{ $history->action }}</strong></td>
-                    <td>{{ $history->group?->label ?? '-' }} @if($history->rule) · {{ $history->rule->pattern }} @endif</td>
-                    <td>{{ $history->actor?->name ?? $history->actor?->email ?? $history->actor_name ?? '-' }}</td>
-                    <td>{{ $history->notes ?: '-' }}</td>
+                    <th>Kategori Posisi</th>
+                    <th>Posisi ATR dalam Kategori</th>
+                    <th>Karyawan</th>
+                    <th>PIC Roster 1</th>
+                    <th>PIC Roster 2</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($categoryRows as $row)
+                @php
+                    $positionsEncoded = base64_encode(
+                        json_encode(
+                            $row['positions']->all(),
+                            JSON_UNESCAPED_UNICODE
+                        )
+                    );
+                @endphp
+                <tr>
+                    <td>
+                        <span class="prm-category">{{ $row['category'] }}</span>
+                        <span class="prm-sub">{{ $row['group_code'] }}</span>
+                    </td>
+                    <td>
+                        <div class="prm-chips">
+                            @foreach($row['positions']->take(4) as $position)
+                                <span class="prm-chip">{{ $position }}</span>
+                            @endforeach
+                            @if($row['positions']->count() > 4)
+                                <span class="prm-chip">
+                                    +{{ $row['positions']->count() - 4 }} lainnya
+                                </span>
+                            @endif
+                        </div>
+                    </td>
+                    <td>
+                        <b>{{ number_format($row['employee_count']) }}</b>
+                    </td>
+                    <td>
+                        <span class="prm-pic">{{ $row['pic_primary'] ?: '-' }}</span>
+                    </td>
+                    <td>{{ $row['pic_backup'] ?: '-' }}</td>
+                    <td>
+                        <span class="prm-status {{ $row['is_filled'] ? 'ok' : 'wait' }}">
+                            {{ $row['is_filled'] ? 'SIAP' : 'BELUM DIISI' }}
+                        </span>
+                    </td>
+                    <td>
+                        <button
+                            type="button"
+                            class="prm-btn {{ $row['is_filled'] ? 'gray' : 'blue' }}"
+                            data-edit-roster
+                            data-group-id="{{ $row['group_id'] }}"
+                            data-category="{{ $row['category'] }}"
+                            data-period="{{ $selectedPeriod }}"
+                            data-period-label="{{ $selectedPeriodLabel }}"
+                            data-pic-primary="{{ $row['pic_primary'] ?? '' }}"
+                            data-pic-backup="{{ $row['pic_backup'] ?? '' }}"
+                            data-positions="{{ $positionsEncoded }}"
+                        >
+                            {{ $row['is_filled'] ? 'EDIT' : 'ISI PIC' }}
+                        </button>
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="5" style="text-align:center;color:#7d8999">Belum ada riwayat perubahan.</td></tr>
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:28px;color:#7d8999">
+                        Belum ada kategori posisi pada periode ini.
+                    </td>
+                </tr>
             @endforelse
             </tbody>
         </table>
     </div>
 </section>
 
-{{-- CREATE/EDIT GROUP MODAL --}}
-<div class="pr-modal" id="groupModal">
-    <div class="pr-dialog">
-        <div class="pr-modal-head"><h3 id="groupModalTitle">Tambah Kelompok PIC</h3><button type="button" class="pr-close" data-close>×</button></div>
-        <form method="POST" id="groupForm" action="{{ route('database.atr.pic-roster.groups.store') }}">
-            @csrf
-            <div class="pr-modal-body">
-                <div class="pr-form">
-                    <div class="pr-field"><label>Kode Kelompok</label><input class="pr-input" name="code" id="groupCode" placeholder="EXCAVATOR" required></div>
-                    <div class="pr-field"><label>Nama Kelompok</label><input class="pr-input" name="label" id="groupLabel" placeholder="Excavator / PC" required></div>
-                    <div class="pr-field"><label>PIC Utama</label><input class="pr-input" name="pic_primary" id="groupPrimary" required></div>
-                    <div class="pr-field"><label>PIC Backup</label><input class="pr-input" name="pic_backup" id="groupBackup"></div>
-                    <div class="pr-field"><label>Efektif Dari</label><input class="pr-input" type="date" name="effective_from" id="groupFrom"></div>
-                    <div class="pr-field"><label>Efektif Sampai</label><input class="pr-input" type="date" name="effective_to" id="groupTo"></div>
-                </div>
+@if($unmappedPositions->isNotEmpty())
+    <section class="prm-unmapped">
+        <div class="prm-head">
+            <div>
+                <h2>Kategori Posisi Belum Terpetakan</h2>
+                <p>Ini bukan masalah PIC bulanan; master kategori posisinya yang perlu ditambahkan.</p>
             </div>
-            <div class="pr-modal-actions"><button type="button" class="pr-btn gray" data-close>BATAL</button><button class="pr-btn blue">SIMPAN</button></div>
-        </form>
-    </div>
-</div>
+            <span class="prm-status wait">
+                {{ $unmappedPositions->count() }} POSISI
+            </span>
+        </div>
 
-{{-- CREATE/EDIT RULE MODAL --}}
-<div class="pr-modal" id="ruleModal">
-    <div class="pr-dialog">
-        <div class="pr-modal-head"><h3 id="ruleModalTitle">Tambah Rule Auto PIC</h3><button type="button" class="pr-close" data-close>×</button></div>
-        <form method="POST" id="ruleForm" action="{{ route('database.atr.pic-roster.rules.store') }}">
+        <div class="prm-unmapped-list">
+            @foreach($unmappedPositions as $item)
+                <div class="prm-unmapped-item">
+                    <strong>{{ $item['position'] }}</strong>
+                    {{ number_format($item['total_records']) }} karyawan
+                </div>
+            @endforeach
+        </div>
+    </section>
+@endif
+
+
+
+<details class="prm-diagnosis">
+    <summary>
+        <div class="prm-diagnosis-title">
+            <strong>Diagnosis Mapping Posisi</strong>
+            <span>
+                Cek Posisi ATR → Kategori → Rule tanpa mengubah data.
+            </span>
+        </div>
+        <div class="prm-diagnosis-toggle">
+            {{ $positionDiagnostics->where('matched', false)->count() }} BELUM MATCH · LIHAT DETAIL
+        </div>
+    </summary>
+
+    <div class="prm-diag-table-wrap">
+        <table class="prm-diag-table">
+            <thead>
+                <tr>
+                    <th>Posisi ATR</th>
+                    <th>Karyawan</th>
+                    <th>Kategori</th>
+                    <th>Rule</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($positionDiagnostics as $diag)
+                <tr>
+                    <td><strong>{{ $diag['position'] }}</strong></td>
+                    <td>{{ number_format($diag['total_records']) }}</td>
+                    <td>{{ $diag['category'] ?: '-' }}</td>
+                    <td>
+                        @if($diag['matched'])
+                            {{ $diag['rule_type'] }} · {{ $diag['rule_pattern'] }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>
+                        @if($diag['matched'])
+                            <span class="prm-diag-ok">✓ MATCH</span>
+                        @else
+                            <span class="prm-diag-bad">
+                                ! BELUM MATCH
+                                @if(!empty($diag['reason']))
+                                    · {{ $diag['reason'] }}
+                                @endif
+                            </span>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="5" style="text-align:center;padding:20px;color:#7d8999">
+                        Belum ada posisi ATR untuk didiagnosis.
+                    </td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</details>
+
+<div class="prm-modal" id="monthlyRosterModal" aria-hidden="true">
+    <div class="prm-dialog">
+        <div class="prm-modal-head">
+            <h3 id="monthlyRosterTitle">Isi PIC Roster Bulanan</h3>
+            <button type="button" class="prm-close" data-close>×</button>
+        </div>
+
+        <form
+            method="POST"
+            action="{{ route('database.atr.pic-roster.monthly.save') }}"
+            id="monthlyRosterForm"
+        >
             @csrf
-            <div class="pr-modal-body">
-                <div class="pr-form">
-                    <div class="pr-field"><label>Kelompok</label><select class="pr-select" name="atr_pic_roster_group_id" id="ruleGroup" required>@foreach($rosterGroups as $group)<option value="{{ $group->id }}">{{ $group->label }}</option>@endforeach</select></div>
-                    <div class="pr-field"><label>Tipe Match</label><select class="pr-select" name="match_type" id="ruleType"><option value="KEYWORD">KEYWORD</option><option value="EXACT">EXACT</option></select></div>
-                    <div class="pr-field full"><label>Pattern</label><input class="pr-input" name="pattern" id="rulePattern" placeholder="PC / DZ / DOZER / OPERATOR PC 1250" required></div>
-                    <div class="pr-field"><label>Priority</label><input class="pr-input" type="number" min="1" max="9999" name="priority" id="rulePriority" value="100" required></div>
-                    <div class="pr-field"><label>Catatan</label><div style="font-size:8px;color:#738198;padding-top:10px">Angka lebih kecil = rule diperiksa lebih dahulu. EXACT selalu menang atas KEYWORD.</div></div>
+
+            <input type="hidden" name="period" id="prmPeriod">
+            <input
+                type="hidden"
+                name="atr_pic_roster_group_id"
+                id="prmGroupId"
+            >
+
+            <div class="prm-body">
+                <div class="prm-summary">
+                    <div>
+                        <span>Periode</span>
+                        <b id="prmPeriodLabel">-</b>
+                    </div>
+                    <div>
+                        <span>Kategori</span>
+                        <b id="prmCategory">-</b>
+                    </div>
+                    <div class="full" style="grid-column:1/-1">
+                        <span>Posisi ATR yang masuk</span>
+                        <b id="prmPositions">-</b>
+                    </div>
+                </div>
+
+                <div class="prm-form">
+                    <div class="prm-field">
+                        <label>PIC Roster 1 *</label>
+                        <select
+                            class="prm-select"
+                            name="pic_primary"
+                            id="prmPrimary"
+                            required
+                        >
+                            <option value="">Pilih PIC Roster 1</option>
+                            @foreach($picOptions as $pic)
+                                <option value="{{ $pic }}">{{ $pic }}</option>
+                            @endforeach
+                        </select>
+                        <div class="prm-help">
+                            Wajib dipilih dari daftar agar nama roster konsisten.
+                        </div>
+                    </div>
+
+                    <div class="prm-field">
+                        <label>PIC Roster 2 — Opsional</label>
+                        <select
+                            class="prm-select"
+                            name="pic_backup"
+                            id="prmBackup"
+                        >
+                            <option value="">Tidak ada PIC Roster 2</option>
+                            @foreach($picOptions as $pic)
+                                <option value="{{ $pic }}">{{ $pic }}</option>
+                            @endforeach
+                        </select>
+                        <div class="prm-help">
+                            Opsional. Jika dipilih harus berbeda dari PIC Roster 1.
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="pr-modal-actions"><button type="button" class="pr-btn gray" data-close>BATAL</button><button class="pr-btn blue">SIMPAN</button></div>
+
+            <div class="prm-actions">
+                <button type="button" class="prm-btn gray" data-close>
+                    BATAL
+                </button>
+                <button class="prm-btn blue" type="submit">
+                    SIMPAN PIC {{ mb_strtoupper($selectedPeriodLabel) }}
+                </button>
+            </div>
         </form>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-    const groupModal=document.getElementById('groupModal');
-    const ruleModal=document.getElementById('ruleModal');
-    const groupForm=document.getElementById('groupForm');
-    const ruleForm=document.getElementById('ruleForm');
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('monthlyRosterModal');
+    const title = document.getElementById('monthlyRosterTitle');
+    const period = document.getElementById('prmPeriod');
+    const groupId = document.getElementById('prmGroupId');
+    const periodLabel = document.getElementById('prmPeriodLabel');
+    const category = document.getElementById('prmCategory');
+    const positions = document.getElementById('prmPositions');
+    const primary = document.getElementById('prmPrimary');
+    const backup = document.getElementById('prmBackup');
 
-    function openModal(m){m?.classList.add('open')}
-    function closeAll(){document.querySelectorAll('.pr-modal.open').forEach(m=>m.classList.remove('open'))}
-    document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeAll));
-    document.querySelectorAll('.pr-modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeAll()}));
+    function decodePositions(value) {
+        if (!value) {
+            return [];
+        }
 
-    document.querySelector('[data-open="group-create"]')?.addEventListener('click',function(){
-        groupForm.action=@json(route('database.atr.pic-roster.groups.store'));
-        ['groupCode','groupLabel','groupPrimary','groupBackup','groupFrom','groupTo'].forEach(id=>document.getElementById(id).value='');
-        document.getElementById('groupModalTitle').textContent='Tambah Kelompok PIC';
-        openModal(groupModal);
-    });
+        try {
+            const binary = atob(value);
+            const bytes = Uint8Array.from(
+                binary,
+                char => char.charCodeAt(0)
+            );
 
-    document.querySelectorAll('[data-edit-group]').forEach(btn=>btn.addEventListener('click',function(){
-        const d=JSON.parse(btn.dataset.editGroup);
-        groupForm.action=d.url;
-        document.getElementById('groupCode').value=d.code||'';
-        document.getElementById('groupLabel').value=d.label||'';
-        document.getElementById('groupPrimary').value=d.pic_primary||'';
-        document.getElementById('groupBackup').value=d.pic_backup||'';
-        document.getElementById('groupFrom').value=d.effective_from||'';
-        document.getElementById('groupTo').value=d.effective_to||'';
-        document.getElementById('groupModalTitle').textContent='Edit Kelompok PIC';
-        openModal(groupModal);
-    }));
+            return JSON.parse(
+                new TextDecoder('utf-8').decode(bytes)
+            );
+        } catch (error) {
+            return [];
+        }
+    }
 
-    document.querySelector('[data-open="rule-create"]')?.addEventListener('click',function(){
-        ruleForm.action=@json(route('database.atr.pic-roster.rules.store'));
-        document.getElementById('ruleType').value='KEYWORD';
-        document.getElementById('rulePattern').value='';
-        document.getElementById('rulePriority').value='100';
-        document.getElementById('ruleModalTitle').textContent='Tambah Rule Auto PIC';
-        openModal(ruleModal);
-    });
+    function openModal(button) {
+        const positionList = decodePositions(
+            button.dataset.positions
+        );
 
-    document.querySelectorAll('[data-edit-rule]').forEach(btn=>btn.addEventListener('click',function(){
-        const d=JSON.parse(btn.dataset.editRule);
-        ruleForm.action=d.url;
-        document.getElementById('ruleGroup').value=d.group_id;
-        document.getElementById('ruleType').value=d.match_type;
-        document.getElementById('rulePattern').value=d.pattern||'';
-        document.getElementById('rulePriority').value=d.priority||100;
-        document.getElementById('ruleModalTitle').textContent='Edit Rule Auto PIC';
-        openModal(ruleModal);
-    }));
+        period.value = button.dataset.period || '';
+        groupId.value = button.dataset.groupId || '';
 
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
+        periodLabel.textContent =
+            button.dataset.periodLabel || '-';
+
+        category.textContent =
+            button.dataset.category || '-';
+
+        positions.textContent =
+            positionList.length
+                ? positionList.join(' · ')
+                : '-';
+
+        primary.value =
+            button.dataset.picPrimary || '';
+
+        backup.value =
+            button.dataset.picBackup || '';
+
+        title.textContent =
+            primary.value
+                ? 'Edit PIC Roster Bulanan'
+                : 'Isi PIC Roster Bulanan';
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+
+        window.setTimeout(
+            () => primary.focus(),
+            50
+        );
+    }
+
+    function closeModal() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document
+        .querySelectorAll('[data-edit-roster]')
+        .forEach(function (button) {
+            button.addEventListener(
+                'click',
+                function () {
+                    openModal(this);
+                }
+            );
+        });
+
+    document
+        .querySelectorAll('[data-close]')
+        .forEach(function (button) {
+            button.addEventListener(
+                'click',
+                closeModal
+            );
+        });
+
+    modal.addEventListener(
+        'click',
+        function (event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    );
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        }
+    );
 });
 </script>

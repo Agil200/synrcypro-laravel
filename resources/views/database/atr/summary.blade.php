@@ -18,8 +18,15 @@
 @endphp
 
 <style>
-.atrx-title{margin-bottom:12px}.atrx-title h1{font-size:24px;margin:0;color:#10213d}.atrx-title p{margin:3px 0 0;color:#60708a;font-size:12px}
-.atrx-panel{background:#fff;border:1px solid #d9e2ee;border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);margin-bottom:12px;overflow:hidden}
+.atrx-title{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}.atrx-title-copy{min-width:0}.atrx-title h1{font-size:24px;margin:0;color:#10213d}.atrx-title p{margin:3px 0 0;color:#60708a;font-size:12px}.atrx-title-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 11px;border:1px solid #d7e5f5;border-radius:999px;background:#f5f9ff;color:#315b8c;font-size:8px;font-weight:900;letter-spacing:.18px;white-space:nowrap}
+.atrx-page-shell{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.atrx-control-zone{flex:0 0 auto;position:relative;z-index:5}
+.atrx-data-zone{flex:1 1 auto;min-height:0;display:flex;overflow:hidden}
+.atrx-data-zone>.atrx-panel{flex:1 1 auto;min-height:0;margin-bottom:0;display:flex;flex-direction:column}
+.atrx-data-zone .atrx-table-wrap{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.atrx-data-zone .atrx-table thead th{position:sticky;top:0;z-index:3;background:#f6f8fb;box-shadow:0 1px 0 #dfe7f1}
+
+.atrx-panel{background:#fff;border:1px solid #d9e2ee;border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);margin-bottom:10px;overflow:hidden}
 .atrx-filter{display:grid;grid-template-columns:minmax(180px,1fr) minmax(210px,1fr) minmax(260px,1.4fr) auto;gap:10px;padding:14px}
 .atrx-field label{display:block;font-size:10px;font-weight:800;color:#263952;margin-bottom:5px;text-transform:uppercase;letter-spacing:.35px}
 .atrx-input,.atrx-select{width:100%;height:39px;border:1px solid #cbd7e6;border-radius:9px;padding:0 12px;background:#fff;color:#17233a;outline:none}.atrx-input:focus,.atrx-select:focus{border-color:#1677ff;box-shadow:0 0 0 3px rgba(22,119,255,.12)}
@@ -28,12 +35,20 @@
 .atrx-kpis{display:grid;grid-template-columns:repeat(7,minmax(125px,1fr));gap:8px;padding:12px}.atrx-kpi{position:relative;background:#fff;border:1px solid #dfe7f1;border-top:3px solid var(--accent);border-radius:11px;padding:14px 10px;text-align:center;min-height:91px}.atrx-kpi strong{display:block;font-size:25px;line-height:1;color:var(--accent)}.atrx-kpi b{display:block;font-size:9px;margin-top:8px;color:#60708a;letter-spacing:.35px}.atrx-kpi span{display:block;font-size:8px;margin-top:4px;color:#95a1b4}.atrx-kpi.green{--accent:#16a365}.atrx-kpi.yellow{--accent:#e9a400}.atrx-kpi.red{--accent:#e43549}.atrx-kpi.gray{--accent:#6f7f93}.atrx-kpi.orange{--accent:#f08a00}.atrx-kpi.blue{--accent:#2776eb}.atrx-kpi.rose{--accent:#df174d}
 .atrx-progress{padding:16px}.atrx-progress-grid{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-bottom:10px}.atrx-progress-grid strong{display:block;font-size:20px;color:#14213b}.atrx-progress-grid div:nth-child(1) strong{color:#e43549}.atrx-progress-grid div:nth-child(2) strong{color:#129a55}.atrx-progress-grid small{display:block;font-size:8px;color:#697a91;font-weight:800}.atrx-track{height:7px;background:#e7edf5;border-radius:999px;overflow:hidden}.atrx-bar{height:100%;background:linear-gradient(90deg,#1caf65,#0b8f4f);border-radius:999px}.atrx-progress-label{text-align:right;font-size:9px;color:#697a91;margin-top:5px}
 .atrx-table-wrap{overflow:auto}.atrx-table{width:100%;border-collapse:collapse;min-width:920px}.atrx-table th{background:#f6f8fb;color:#52627a;font-size:9px;text-transform:uppercase;letter-spacing:.45px;text-align:left;padding:10px;border-bottom:1px solid #dfe7f1}.atrx-table td{padding:10px;border-bottom:1px solid #e8edf4;font-size:10px;color:#29405f}.atrx-table tbody tr:hover{background:#f8fbff}.atrx-name{font-weight:800;color:#172640}.atrx-badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:8px;font-weight:900}.atrx-badge.AMAN{background:#dff7ea;color:#078446}.atrx-badge.MONITORING{background:#fff1c9;color:#9d6900}.atrx-badge.PEMANGGILAN{background:#ffe0e4;color:#c61f35}.atrx-badge.NO_DATA{background:#e8edf3;color:#5d6b7e}.atrx-empty{padding:42px;text-align:center;color:#7b899c}.atrx-flash{padding:11px 14px;border-radius:10px;margin-bottom:10px;font-size:11px}.atrx-flash.success{background:#e5f8ed;color:#087b42;border:1px solid #bcebd0}.atrx-flash.error{background:#ffe8eb;color:#b11d32;border:1px solid #ffc8d0}
-@media(max-width:1300px){.atrx-kpis{grid-template-columns:repeat(4,1fr)}}@media(max-width:900px){.atrx-filter{grid-template-columns:1fr 1fr}.atrx-actions{grid-column:1/-1}.atrx-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.atrx-filter{grid-template-columns:1fr}.atrx-actions{grid-column:auto}.atrx-kpis{grid-template-columns:1fr}.atrx-progress-grid{grid-template-columns:1fr;gap:10px}}
+@media(max-width:1300px){.atrx-kpis{grid-template-columns:repeat(4,1fr)}}@media(max-width:900px){.atrx-page-shell{height:auto;overflow:visible}.atrx-data-zone{display:block;overflow:visible}.atrx-data-zone>.atrx-panel{min-height:360px}.atrx-data-zone .atrx-table-wrap{max-height:420px}.atrx-filter{grid-template-columns:1fr 1fr}.atrx-actions{grid-column:1/-1}.atrx-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-height:760px) and (min-width:901px){.atrx-page-shell{height:auto;overflow:visible}.atrx-data-zone{display:block;overflow:visible}.atrx-data-zone>.atrx-panel{min-height:300px}.atrx-data-zone .atrx-table-wrap{max-height:360px}}@media(max-width:700px){.atrx-title{flex-wrap:wrap}.atrx-title-badge{font-size:7px;min-height:26px;padding:0 9px}}@media(max-width:560px){.atrx-filter{grid-template-columns:1fr}.atrx-actions{grid-column:auto}.atrx-kpis{grid-template-columns:1fr}.atrx-progress-grid{grid-template-columns:1fr;gap:10px}}
 </style>
 
+<div class="atrx-page-shell">
+<div class="atrx-control-zone">
 <div class="atrx-title">
-    <h1>Ringkasan ATR Karyawan</h1>
-    <p>Monitoring ATR Departemen Produksi, statistik absensi, dan progres Coaching &amp; Counseling.</p>
+    <div class="atrx-title-copy">
+        <h1>Ringkasan ATR Karyawan</h1>
+        <p>Monitoring ATR Departemen Produksi, statistik absensi, dan progres Coaching &amp; Counseling.</p>
+    </div>
+
+    <div class="atrx-title-badge">
+        ATR PRODUKSI · MONITORING
+    </div>
 </div>
 
 @if (session('success'))
@@ -115,6 +130,9 @@
     </div>
 </section>
 
+</div>
+
+<div class="atrx-data-zone">
 <section class="atrx-panel">
     <div class="atrx-section-head">
         <div>
@@ -148,3 +166,5 @@
         </div>
     @endif
 </section>
+</div>
+</div>

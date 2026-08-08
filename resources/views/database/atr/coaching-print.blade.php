@@ -206,7 +206,7 @@
 
     <style>
         @page {
-            size: A4 portrait;
+            size: 210mm 297mm;
             margin: 8mm;
         }
 
@@ -636,8 +636,11 @@
         @media print {
             html,
             body {
-                width: 210mm;
-                min-height: 297mm;
+                width: auto;
+                min-height: 0;
+                margin: 0;
+                padding: 0;
+                background: #fff;
             }
 
             .print-toolbar,
@@ -645,18 +648,50 @@
                 display: none !important;
             }
 
+            /*
+             * Area cetak A4 setelah margin @page 8mm:
+             * 210 - 16 = 194mm
+             * 297 - 16 = 281mm
+             */
+
+            /* PAGE 1 — Form resmi Coaching & Counseling */
             .sheet {
                 width: 194mm;
+                min-height: 281mm;
                 max-width: none;
                 margin: 0 auto;
+                break-after: page;
+                page-break-after: always;
+                break-inside: avoid-page;
+                page-break-inside: avoid;
             }
 
+            /* PAGE 2 — Informasi Sistem & Audit Trail */
             .system-audit {
                 width: 194mm;
+                min-height: 281mm;
                 max-width: none;
                 margin: 0 auto;
                 break-before: page;
                 page-break-before: always;
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+            }
+
+            .header,
+            .identity-row,
+            .section-head,
+            .material-signature,
+            .made-head,
+            .leader-signature-row,
+            .footer-name,
+            .document-number,
+            .system-audit-title,
+            .system-audit-grid,
+            .audit-history-title,
+            .audit-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
         }
 

@@ -134,6 +134,28 @@
             $syncMeta['synced_at'] ?? '-'
         );
     }
+
+    $atrSummary = is_array(
+        $atrDashboardSummary ?? null
+    )
+        ? $atrDashboardSummary
+        : [];
+
+    $atrAvailable = (bool) (
+        $atrSummary['available'] ?? false
+    );
+
+    $atrStats = is_array(
+        $atrSummary['stats'] ?? null
+    )
+        ? $atrSummary['stats']
+        : [];
+
+    $atrProgress = is_array(
+        $atrSummary['progress'] ?? null
+    )
+        ? $atrSummary['progress']
+        : [];
 @endphp
 
 <style>
@@ -647,6 +669,179 @@
         text-align: center;
     }
 
+
+    /* Dashboard -> Ringkasan & Pencarian */
+    .employee-dashboard-clickable {
+        color: inherit;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+            transform .16s ease,
+            border-color .16s ease,
+            box-shadow .16s ease;
+    }
+
+    .employee-dashboard-clickable:hover {
+        transform: translateY(-1px);
+        border-color: #b8cbe2;
+        box-shadow: 0 9px 22px rgba(15, 23, 42, .08);
+    }
+
+    .employee-dashboard-clickable:focus-visible {
+        outline: 3px solid rgba(22,119,242,.18);
+        outline-offset: 2px;
+    }
+
+    .employee-dashboard-legend-link {
+        color: inherit;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: background .15s ease;
+    }
+
+    .employee-dashboard-legend-link:hover {
+        background: #f7faff;
+    }
+
+    .employee-dashboard-position-link {
+        color: inherit;
+        text-decoration: none;
+        border-radius: 7px;
+        transition:
+            background .15s ease,
+            transform .15s ease;
+    }
+
+    .employee-dashboard-position-link:hover {
+        background: #f7faff;
+        transform: translateX(2px);
+    }
+
+    .employee-dashboard-position-row.is-static {
+        opacity: .82;
+    }
+
+    /* Widget ATR terbaru */
+    .employee-dashboard-atr-panel {
+        grid-column: 1 / -1;
+    }
+
+    .employee-dashboard-atr-body {
+        display: grid;
+        gap: 12px;
+        padding: 15px 18px 18px;
+    }
+
+    .employee-dashboard-atr-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 9px;
+    }
+
+    .employee-dashboard-atr-kpi {
+        display: grid;
+        gap: 3px;
+        padding: 10px 11px;
+        border: 1px solid #e0e8f2;
+        border-radius: 9px;
+        background: #fbfdff;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .employee-dashboard-atr-kpi span {
+        color: #718096;
+        font-size: 8px;
+        font-weight: 850;
+        text-transform: uppercase;
+    }
+
+    .employee-dashboard-atr-kpi strong {
+        color: #10233e;
+        font-size: 19px;
+        font-weight: 950;
+    }
+
+    .employee-dashboard-atr-kpi.is-safe {
+        border-top: 3px solid #16a36a;
+    }
+
+    .employee-dashboard-atr-kpi.is-monitoring {
+        border-top: 3px solid #f59e0b;
+    }
+
+    .employee-dashboard-atr-kpi.is-call {
+        border-top: 3px solid #e52e48;
+    }
+
+    .employee-dashboard-atr-kpi.is-no-data {
+        border-top: 3px solid #94a3b8;
+    }
+
+    .employee-dashboard-atr-progress {
+        display: grid;
+        grid-template-columns: auto minmax(180px,1fr) auto;
+        align-items: center;
+        gap: 11px;
+        padding: 10px 12px;
+        border: 1px solid #e1e8f1;
+        border-radius: 9px;
+        background: #fff;
+    }
+
+    .employee-dashboard-atr-progress-copy strong {
+        display: block;
+        color: #17304e;
+        font-size: 9px;
+    }
+
+    .employee-dashboard-atr-progress-copy span {
+        display: block;
+        margin-top: 2px;
+        color: #7c8b9f;
+        font-size: 7px;
+    }
+
+    .employee-dashboard-atr-track {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8edf4;
+    }
+
+    .employee-dashboard-atr-bar {
+        width: var(--atr-progress);
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+            90deg,
+            #16a36a,
+            #22a6f2
+        );
+    }
+
+    .employee-dashboard-atr-progress-value {
+        color: #10233e;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .employee-dashboard-atr-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 7px;
+    }
+
+    .employee-dashboard-atr-empty {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px;
+    }
+
     @media (max-width: 1050px) {
         .employee-dashboard-cards {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -654,6 +849,10 @@
 
         .employee-dashboard-donut-layout {
             grid-template-columns: 1fr;
+        }
+
+        .employee-dashboard-atr-kpis {
+            grid-template-columns: repeat(2, minmax(0,1fr));
         }
 
         .employee-dashboard-legend {
@@ -686,8 +885,17 @@
             grid-template-columns: 1fr;
         }
 
-        .employee-dashboard-position-panel {
+        .employee-dashboard-position-panel,
+        .employee-dashboard-atr-panel {
             grid-column: auto;
+        }
+
+        .employee-dashboard-atr-progress {
+            grid-template-columns: 1fr;
+        }
+
+        .employee-dashboard-atr-actions {
+            justify-content: flex-start;
         }
 
         .employee-dashboard-position-row {
@@ -697,7 +905,8 @@
     }
 
     @media (max-width: 520px) {
-        .employee-dashboard-cards {
+        .employee-dashboard-cards,
+        .employee-dashboard-atr-kpis {
             grid-template-columns: 1fr;
         }
 
@@ -780,63 +989,60 @@
     </div>
 
     <div class="employee-dashboard-cards">
-        <article class="employee-dashboard-card">
-            <div class="employee-dashboard-card-icon" aria-hidden="true">
-                👥
-            </div>
-
+        <a
+            href="{{ route('database.employees') }}"
+            class="employee-dashboard-card employee-dashboard-clickable"
+            title="Buka seluruh Database Karyawan"
+        >
+            <div class="employee-dashboard-card-icon" aria-hidden="true">👥</div>
             <div class="employee-dashboard-card-copy">
                 <span>Total Karyawan</span>
-                <strong>
-                    {{ number_format((int) ($totals['employees'] ?? 0)) }}
-                </strong>
-                <small>Seluruh NRP valid di database</small>
+                <strong>{{ number_format((int) ($totals['employees'] ?? 0)) }}</strong>
+                <small>Klik untuk lihat seluruh data</small>
             </div>
-        </article>
+        </a>
 
-        <article class="employee-dashboard-card is-active">
-            <div class="employee-dashboard-card-icon" aria-hidden="true">
-                ✓
-            </div>
-
+        <a
+            href="{{ route('database.employees', ['status' => 'AKTIF']) }}"
+            class="employee-dashboard-card is-active employee-dashboard-clickable"
+            title="Buka karyawan berstatus AKTIF"
+        >
+            <div class="employee-dashboard-card-icon" aria-hidden="true">✓</div>
             <div class="employee-dashboard-card-copy">
                 <span>Karyawan Aktif</span>
-                <strong>
-                    {{ number_format((int) ($totals['active'] ?? 0)) }}
-                </strong>
-                <small>Status terklasifikasi aktif</small>
+                <strong>{{ number_format((int) ($totals['active'] ?? 0)) }}</strong>
+                <small>Klik untuk filter status aktif</small>
             </div>
-        </article>
+        </a>
 
-        <article class="employee-dashboard-card is-mess">
-            <div class="employee-dashboard-card-icon" aria-hidden="true">
-                🏠
-            </div>
-
+        <a
+            href="{{ route('database.employees', ['residence' => 'mess']) }}"
+            class="employee-dashboard-card is-mess employee-dashboard-clickable"
+            title="Buka karyawan yang tinggal di Mess"
+        >
+            <div class="employee-dashboard-card-icon" aria-hidden="true">🏠</div>
             <div class="employee-dashboard-card-copy">
                 <span>Tinggal di Mess</span>
-                <strong>
-                    {{ number_format((int) ($totals['mess'] ?? 0)) }}
-                </strong>
-                <small>Karyawan dengan hunian mess</small>
+                <strong>{{ number_format((int) ($totals['mess'] ?? 0)) }}</strong>
+                <small>Klik untuk filter Mess</small>
             </div>
-        </article>
+        </a>
 
-        <article class="employee-dashboard-card is-non-mess">
-            <div class="employee-dashboard-card-icon" aria-hidden="true">
-                🚶
-            </div>
-
+        <a
+            href="{{ route('database.employees', ['residence' => 'non-mess']) }}"
+            class="employee-dashboard-card is-non-mess employee-dashboard-clickable"
+            title="Buka karyawan yang tinggal Non Mess"
+        >
+            <div class="employee-dashboard-card-icon" aria-hidden="true">🚶</div>
             <div class="employee-dashboard-card-copy">
                 <span>Tinggal Non Mess</span>
-                <strong>
-                    {{ number_format((int) ($totals['non_mess'] ?? 0)) }}
-                </strong>
+                <strong>{{ number_format((int) ($totals['non_mess'] ?? 0)) }}</strong>
                 <small>
-                    Belum data: {{ number_format((int) ($totals['residence_unknown'] ?? 0)) }}
+                    Klik untuk filter · Belum data:
+                    {{ number_format((int) ($totals['residence_unknown'] ?? 0)) }}
                 </small>
             </div>
-        </article>
+        </a>
     </div>
 
     <div class="employee-dashboard-grid">
@@ -874,7 +1080,11 @@
                                 $color = $statusColors[$label] ?? '#64748b';
                             @endphp
 
-                            <div class="employee-dashboard-legend-item">
+                            <a
+                                href="{{ route('database.employees', ['status' => $label]) }}"
+                                class="employee-dashboard-legend-item employee-dashboard-legend-link"
+                                title="Filter Status Karyawan: {{ $label }}"
+                            >
                                 <span
                                     class="employee-dashboard-legend-color"
                                     style="--legend-color: {{ $color }};"
@@ -891,7 +1101,7 @@
                                         {{ number_format((float) ($item['percentage'] ?? 0), 1) }}%
                                     </small>
                                 </strong>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </div>
@@ -936,7 +1146,19 @@
                                 $color = $residenceColors[$label] ?? '#64748b';
                             @endphp
 
-                            <div class="employee-dashboard-legend-item">
+                            @php
+                                $residenceQuery = match ($label) {
+                                    'MESS' => 'mess',
+                                    'NON MESS' => 'non-mess',
+                                    default => 'unknown',
+                                };
+                            @endphp
+
+                            <a
+                                href="{{ route('database.employees', ['residence' => $residenceQuery]) }}"
+                                class="employee-dashboard-legend-item employee-dashboard-legend-link"
+                                title="Filter Tempat Tinggal: {{ $label }}"
+                            >
                                 <span
                                     class="employee-dashboard-legend-color"
                                     style="--legend-color: {{ $color }};"
@@ -953,7 +1175,7 @@
                                         {{ number_format((float) ($item['percentage'] ?? 0), 1) }}%
                                     </small>
                                 </strong>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </div>
@@ -993,18 +1215,36 @@
                             );
                         @endphp
 
-                        <div class="employee-dashboard-position-row">
+                        @php
+                            $positionLabel = (string) ($item['label'] ?? '-');
+                            $positionClickable = ! in_array(
+                                $positionLabel,
+                                ['JABATAN LAINNYA', 'BELUM DATA JABATAN'],
+                                true
+                            );
+                        @endphp
+
+                        @if($positionClickable)
+                            <a
+                                href="{{ route('database.employees', ['search' => $positionLabel]) }}"
+                                class="employee-dashboard-position-row employee-dashboard-position-link"
+                                title="Filter jabatan: {{ $positionLabel }}"
+                            >
+                        @else
+                            <div class="employee-dashboard-position-row is-static">
+                        @endif
+
                             <div
                                 class="employee-dashboard-position-name"
-                                title="{{ $item['label'] ?? '-' }}"
+                                title="{{ $positionLabel }}"
                             >
-                                {{ $item['label'] ?? '-' }}
+                                {{ $positionLabel }}
                             </div>
 
                             <div
                                 class="employee-dashboard-position-track"
                                 role="img"
-                                aria-label="{{ $item['label'] ?? '-' }}: {{ $count }} karyawan"
+                                aria-label="{{ $positionLabel }}: {{ $count }} karyawan"
                             >
                                 <div
                                     class="employee-dashboard-position-bar"
@@ -1018,12 +1258,126 @@
                                     {{ number_format((float) ($item['percentage'] ?? 0), 1) }}%
                                 </small>
                             </div>
-                        </div>
+
+                        @if($positionClickable)
+                            </a>
+                        @else
+                            </div>
+                        @endif
                     @endforeach
                 </div>
             @else
                 <div class="employee-dashboard-empty">
                     Data jabatan belum tersedia.
+                </div>
+            @endif
+        </article>
+
+        <article class="employee-dashboard-panel employee-dashboard-atr-panel">
+            <header class="employee-dashboard-panel-header">
+                <div>
+                    <h2>Monitoring ATR Terbaru</h2>
+                    <p>
+                        Ringkasan monitoring ATR Produksi dari snapshot aktif terbaru.
+                    </p>
+                </div>
+
+                <span class="employee-dashboard-panel-badge">
+                    {{ $atrAvailable
+                        ? mb_strtoupper((string) ($atrSummary['period_label'] ?? '-'))
+                        : 'BELUM ADA DATA' }}
+                </span>
+            </header>
+
+            @if($atrAvailable)
+                <div class="employee-dashboard-atr-body">
+                    <div class="employee-dashboard-atr-kpis">
+                        <a
+                            href="{{ route('database.atr.summary', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-atr-kpi is-safe employee-dashboard-clickable"
+                        >
+                            <span>Aman</span>
+                            <strong>{{ number_format((int) ($atrStats['aman'] ?? 0)) }}</strong>
+                        </a>
+
+                        <a
+                            href="{{ route('database.atr.summary', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-atr-kpi is-monitoring employee-dashboard-clickable"
+                        >
+                            <span>Monitoring</span>
+                            <strong>{{ number_format((int) ($atrStats['monitoring'] ?? 0)) }}</strong>
+                        </a>
+
+                        <a
+                            href="{{ route('database.atr.calls', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-atr-kpi is-call employee-dashboard-clickable"
+                        >
+                            <span>Pemanggilan</span>
+                            <strong>{{ number_format((int) ($atrStats['pemanggilan'] ?? 0)) }}</strong>
+                        </a>
+
+                        <a
+                            href="{{ route('database.atr.summary', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-atr-kpi is-no-data employee-dashboard-clickable"
+                        >
+                            <span>No Data</span>
+                            <strong>{{ number_format((int) ($atrStats['no_data'] ?? 0)) }}</strong>
+                        </a>
+                    </div>
+
+                    <div class="employee-dashboard-atr-progress">
+                        <div class="employee-dashboard-atr-progress-copy">
+                            <strong>Progress Pemanggilan</strong>
+                            <span>
+                                Sudah {{ number_format((int) ($atrProgress['sudah'] ?? 0)) }}
+                                · Belum {{ number_format((int) ($atrProgress['belum'] ?? 0)) }}
+                                · Perlu Ulang {{ number_format((int) ($atrProgress['ulang'] ?? 0)) }}
+                            </span>
+                        </div>
+
+                        <div class="employee-dashboard-atr-track">
+                            <div
+                                class="employee-dashboard-atr-bar"
+                                style="--atr-progress: {{ min(100, max(0, (float) ($atrProgress['percentage'] ?? 0))) }}%;"
+                            ></div>
+                        </div>
+
+                        <div class="employee-dashboard-atr-progress-value">
+                            {{ number_format((float) ($atrProgress['percentage'] ?? 0), 1) }}%
+                        </div>
+                    </div>
+
+                    <div class="employee-dashboard-atr-actions">
+                        <a
+                            href="{{ route('database.atr.summary', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-button employee-dashboard-source-button"
+                        >
+                            RINGKASAN ATR
+                        </a>
+
+                        <a
+                            href="{{ route('database.atr.calls', ['period' => $atrSummary['period']]) }}"
+                            class="employee-dashboard-button"
+                        >
+                            DOKUMENTASI PEMANGGILAN
+                        </a>
+                    </div>
+                </div>
+            @else
+                <div class="employee-dashboard-atr-empty">
+                    <div>
+                        <strong>Belum ada snapshot ATR aktif.</strong>
+                        <div class="employee-dashboard-heading p">
+                            {{ $atrSummary['reason'] ?? 'Upload data ATR untuk mulai monitoring.' }}
+                        </div>
+                    </div>
+
+                    <a
+                        href="{{ route('database.atr.upload') }}"
+                        class="employee-dashboard-button"
+                    >
+                        BUKA MODUL ATR
+                    </a>
                 </div>
             @endif
         </article>
