@@ -11,6 +11,7 @@ class AtrCoachingCounseling extends Model
     protected $fillable = [
         'atr_record_id',
         'document_number',
+        'system_document_number',
         'coaching_date',
         'shift',
         'location',
@@ -20,9 +21,13 @@ class AtrCoachingCounseling extends Model
         'material_work',
         'notes',
         'created_by_name',
+        'leader_name',
         'created_by_user_id',
         'status',
         'completed_at',
+        'cancellation_reason',
+        'cancelled_at',
+        'cancelled_by',
     ];
 
     protected function casts(): array
@@ -33,6 +38,7 @@ class AtrCoachingCounseling extends Model
             'material_family' => 'boolean',
             'material_work' => 'boolean',
             'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -46,8 +52,21 @@ class AtrCoachingCounseling extends Model
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(AtrCoachingAttachment::class);
+    }
+
+    public function histories(): HasMany
+    {
+        return $this->hasMany(
+            AtrCoachingHistory::class,
+            'atr_coaching_counseling_id'
+        )->orderBy('created_at')->orderBy('id');
     }
 }

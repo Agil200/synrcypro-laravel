@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AtrCoachingCounseling;
 use App\Models\AtrImport;
 use App\Models\AtrRecord;
 use Carbon\Carbon;
@@ -19,9 +20,25 @@ use Throwable;
 
 class AtrImportService
 {
+    private const SOURCE_SHEET = '00.MASTER_UPLOAD';
+
     /**
-     * Menyimpan file sementara, membaca workbook, lalu menghasilkan preview.
+     * Header final template satu sheet.
      */
+    private const REQUIRED_HEADERS = [
+        'NRP',
+        'NAMA',
+        'DEPT',
+        'JABATAN',
+        'POSISI',
+        'SITE',
+        'ATR',
+        'S',
+        'I',
+        'A',
+        'PERIODE',
+    ];
+
     public function createPreview(UploadedFile $file): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
@@ -64,7 +81,6 @@ class AtrImportService
 
         if ($hash === false) {
             Storage::disk('local')->delete($storedPath);
-
             throw new RuntimeException('Hash file ATR gagal dibuat.');
         }
 
@@ -77,10 +93,206 @@ class AtrImportService
     }
 
     /**
-     * Memvalidasi ulang file preview lalu menyimpan import dan atr_records.
+     * Informasi konflik periode untuk ditampilkan pada halaman preview.
      */
-    public function commit(array $previewSession, ?int $userId): AtrImport
+    public function conflictForPreview(array $preview): ?array
     {
+        $periods = collect($preview['periods'] ?? [])
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($periods->count() !== 1) {
+            return null;
+        }
+
+        $period = (string) $periods->first();
+        $existing = $this->findActiveImportForPeriod($period);
+
+        if (! $existing) {
+            return null;
+        }
+
+        $existingRecords = $existing->records()
+            ->whereDate('period', $period)
+            ->get();
+
+        $existingByKey = $existingRecords->mapWithKeys(
+            fn (AtrRecord $row): array => [
+                $this->recordKey($row->period->format('Y-m-d'), (string) $row->nrp)
+                    => $this->comparableExistingRecord($row),
+            ]
+        );
+
+        $incomingRecords = collect($preview['records'] ?? []);
+        $incomingByKey = $incomingRecords->mapWithKeys(
+            fn (array $row): array => [
+                $this->recordKey((string) $row['period'], (string) $row['nrp'])
+                    => $this->comparableIncomingRecord($row),
+            ]
+        );
+
+        $newRows = 0;
+        $duplicateRows = 0;
+        $changedRows = 0;
+        $unchangedRows = 0;
+
+        foreach ($incomingByKey as $key => $incomingRow) {
+            if (! $existingByKey->has($key)) {
+                $newRows++;
+                continue;
+            }
+
+            $duplicateRows++;
+
+            if ($existingByKey->get($key) === $incomingRow) {
+                $unchangedRows++;
+            } else {
+                $changedRows++;
+            }
+        }
+
+        $removedRows = $existingByKey->keys()
+            ->reject(fn (string $key): bool => $incomingByKey->has($key))
+            ->count();
+
+        $isIdenticalData = $newRows === 0
+            && $changedRows === 0
+            && $removedRows === 0
+            && $existingByKey->count() === $incomingByKey->count();
+
+        $previewHash = trim((string) ($preview['file_hash'] ?? ''));
+        $existingHash = trim((string) ($existing->file_hash ?? ''));
+        $isIdenticalFile = $previewHash !== ''
+            && $existingHash !== ''
+            && hash_equals($existingHash, $previewHash);
+
+        return [
+            'id' => $existing->id,
+            'file_name' => $existing->file_name,
+            'period' => $period,
+            'record_count' => $existingRecords->count(),
+            'imported_at' => $existing->imported_at?->toDateTimeString(),
+            'active_coaching_count' => $this->activeCoachingCount($existing),
+            'append_new_rows' => $newRows,
+            'append_duplicate_rows' => $duplicateRows,
+            'changed_rows' => $changedRows,
+            'unchanged_rows' => $unchangedRows,
+            'removed_rows_on_replace' => $removedRows,
+            'is_identical_file' => $isIdenticalFile,
+            'is_identical_data' => $isIdenticalData,
+            'has_meaningful_change' => ! $isIdenticalData,
+        ];
+    }
+
+    private function recordKey(string $period, string $nrp): string
+    {
+        return trim($period) . '|' . trim($nrp);
+    }
+
+    /**
+     * Bentuk record yang dipakai khusus untuk membandingkan snapshot.
+     * source_row tidak dibandingkan karena nomor baris Excel bukan data bisnis.
+     */
+    private function comparableIncomingRecord(array $row): array
+    {
+        return [
+            'employee_name' => $this->comparisonText($row['employee_name'] ?? ''),
+            'dept' => $this->comparisonText($row['dept'] ?? ''),
+            'job_title' => $this->comparisonText($row['job_title'] ?? ''),
+            'position' => $this->comparisonText($row['position'] ?? ''),
+            'site' => $this->comparisonText($row['site'] ?? ''),
+            'atr' => $this->comparisonAtr($row['atr'] ?? null),
+            'sick' => (int) ($row['sick'] ?? 0),
+            'permission' => (int) ($row['permission'] ?? 0),
+            'alpha' => (int) ($row['alpha'] ?? 0),
+            'status' => $this->comparisonText($row['status'] ?? ''),
+        ];
+    }
+
+    private function comparableExistingRecord(AtrRecord $row): array
+    {
+        return [
+            'employee_name' => $this->comparisonText($row->employee_name),
+            'dept' => $this->comparisonText($row->dept ?? ''),
+            'job_title' => $this->comparisonText($row->job_title ?? ''),
+            'position' => $this->comparisonText($row->position ?? ''),
+            'site' => $this->comparisonText($row->site ?? ''),
+            'atr' => $this->comparisonAtr($row->atr),
+            'sick' => (int) $row->sick,
+            'permission' => (int) $row->permission,
+            'alpha' => (int) $row->alpha,
+            'status' => $this->comparisonText($row->status),
+        ];
+    }
+
+    private function comparisonText(mixed $value): string
+    {
+        return mb_strtoupper(trim((string) $value));
+    }
+
+    private function comparisonAtr(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return number_format((float) $value, 2, '.', '');
+    }
+
+    /**
+     * Snapshot aktif untuk sebuah periode.
+     */
+    public function findActiveImportForPeriod(string $period): ?AtrImport
+    {
+        return AtrImport::query()
+            ->where('status', 'COMPLETED')
+            ->whereHas(
+                'records',
+                fn ($query) => $query->whereDate('period', $period)
+            )
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Coaching COMPLETED membuat snapshot tidak boleh direvisi langsung.
+     */
+    public function activeCoachingCount(AtrImport $import): int
+    {
+        $recordIds = $import->records()->pluck('id');
+
+        if ($recordIds->isEmpty()) {
+            return 0;
+        }
+
+        return AtrCoachingCounseling::query()
+            ->whereIn('atr_record_id', $recordIds)
+            ->where('status', 'COMPLETED')
+            ->count();
+    }
+
+    /**
+     * Commit final mendukung:
+     * NEW     = periode baru;
+     * REPLACE = ganti seluruh snapshot periode;
+     * APPEND  = pertahankan data lama dan tambahkan NRP yang belum ada.
+     *
+     * Snapshot lama tidak dihapus. Statusnya menjadi REPLACED sehingga
+     * audit tetap utuh, sedangkan dashboard hanya membaca COMPLETED terbaru.
+     */
+    public function commit(
+        array $previewSession,
+        ?int $userId,
+        string $action = 'NEW',
+        ?int $expectedExistingImportId = null
+    ): AtrImport {
+        $action = strtoupper(trim($action));
+
+        if (! in_array($action, ['NEW', 'REPLACE', 'APPEND'], true)) {
+            throw new RuntimeException('Tindakan import ATR tidak valid.');
+        }
+
         $storedPath = trim((string) ($previewSession['stored_path'] ?? ''));
 
         if (
@@ -99,9 +311,7 @@ class AtrImportService
             throw new RuntimeException('Hash file preview ATR gagal dibuat.');
         }
 
-        $previewHash = trim(
-            (string) ($previewSession['file_hash'] ?? '')
-        );
+        $previewHash = trim((string) ($previewSession['file_hash'] ?? ''));
 
         if ($previewHash !== '' && ! hash_equals($previewHash, $hash)) {
             throw new RuntimeException(
@@ -126,8 +336,64 @@ class AtrImportService
         }
 
         if ((int) ($parsed['valid_rows'] ?? 0) === 0) {
+            throw new RuntimeException('Tidak ada data ATR valid untuk diimpor.');
+        }
+
+        $periods = collect($parsed['records'])
+            ->pluck('period')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($periods->count() !== 1) {
             throw new RuntimeException(
-                'Tidak ada data ATR valid untuk diimpor.'
+                'Satu file ATR hanya boleh berisi satu periode. '
+                . 'Pisahkan file per bulan lalu preview ulang.'
+            );
+        }
+
+        $period = (string) $periods->first();
+        $existing = $this->findActiveImportForPeriod($period);
+
+        if ($action === 'NEW' && $existing) {
+            throw new RuntimeException(
+                'Periode ini sudah memiliki data aktif. Pilih GANTI DATA '
+                . 'PERIODE INI atau TAMBAHKAN DATA.'
+            );
+        }
+
+        if (in_array($action, ['REPLACE', 'APPEND'], true)) {
+            if (! $existing) {
+                throw new RuntimeException(
+                    'Snapshot periode lama tidak ditemukan. Silakan preview ulang.'
+                );
+            }
+
+            if (
+                $expectedExistingImportId === null
+                || $existing->id !== $expectedExistingImportId
+            ) {
+                throw new RuntimeException(
+                    'Snapshot periode berubah setelah preview. Silakan preview ulang.'
+                );
+            }
+
+            $activeCoachingCount = $this->activeCoachingCount($existing);
+
+            if ($activeCoachingCount > 0) {
+                throw new RuntimeException(
+                    'Periode ini memiliki ' . $activeCoachingCount
+                    . ' dokumentasi pemanggilan aktif. Batalkan dokumentasi '
+                    . 'tersebut terlebih dahulu sebelum merevisi data ATR.'
+                );
+            }
+        }
+
+        if ($existing && hash_equals((string) $existing->file_hash, $hash)) {
+            throw new RuntimeException(
+                'File ini identik dengan snapshot aktif periode tersebut. '
+                . 'Tidak ada perubahan yang perlu diimpor.'
             );
         }
 
@@ -142,6 +408,52 @@ class AtrImportService
             );
         }
 
+        $snapshotRows = collect($parsed['records']);
+
+        if ($action === 'APPEND' && $existing) {
+            $oldRows = $existing->records()
+                ->whereDate('period', $period)
+                ->get()
+                ->map(fn (AtrRecord $row): array => [
+                    'period' => $row->period->format('Y-m-d'),
+                    'nrp' => (string) $row->nrp,
+                    'employee_name' => (string) $row->employee_name,
+                    'dept' => (string) ($row->dept ?? 'PRODUKSI'),
+                    'job_title' => (string) ($row->job_title ?? '-'),
+                    'position' => (string) ($row->position ?? '-'),
+                    'site' => (string) ($row->site ?? '-'),
+                    'atr' => $row->atr === null ? null : (float) $row->atr,
+                    'sick' => (int) $row->sick,
+                    'permission' => (int) $row->permission,
+                    'alpha' => (int) $row->alpha,
+                    'status' => (string) $row->status,
+                    'source_row' => $row->source_row,
+                ]);
+
+            $existingKeys = $oldRows
+                ->mapWithKeys(
+                    fn (array $row): array => [
+                        $row['period'] . '|' . $row['nrp'] => true,
+                    ]
+                );
+
+            $newRows = $snapshotRows->reject(
+                fn (array $row): bool => $existingKeys->has(
+                    $row['period'] . '|' . $row['nrp']
+                )
+            )->values();
+
+            if ($newRows->isEmpty()) {
+                throw new RuntimeException(
+                    'Tidak ada NRP baru untuk ditambahkan. Jika ingin '
+                    . 'memperbarui data NRP yang sudah ada, pilih GANTI DATA '
+                    . 'PERIODE INI.'
+                );
+            }
+
+            $snapshotRows = $oldRows->concat($newRows)->values();
+        }
+
         $finalName = $this->finalArchiveName(
             (string) ($previewSession['original_name'] ?? 'atr-import.xlsx')
         );
@@ -150,9 +462,7 @@ class AtrImportService
         Storage::disk('local')->makeDirectory('atr/imports');
 
         if (! Storage::disk('local')->copy($storedPath, $finalPath)) {
-            throw new RuntimeException(
-                'File ATR gagal disalin ke arsip import.'
-            );
+            throw new RuntimeException('File ATR gagal disalin ke arsip import.');
         }
 
         try {
@@ -162,15 +472,12 @@ class AtrImportService
                 $hash,
                 $userId,
                 $finalName,
-                $finalPath
+                $finalPath,
+                $periods,
+                $snapshotRows,
+                $action,
+                $existing
             ): AtrImport {
-                $periods = collect($parsed['records'])
-                    ->pluck('period')
-                    ->filter()
-                    ->unique()
-                    ->sort()
-                    ->values();
-
                 $import = AtrImport::query()->create([
                     'file_name' => (string) (
                         $previewSession['original_name'] ?? $finalName
@@ -178,6 +485,8 @@ class AtrImportService
                     'stored_path' => $finalPath,
                     'file_hash' => $hash,
                     'status' => 'PROCESSING',
+                    'import_mode' => $action,
+                    'replaces_import_id' => $existing?->id,
                     'total_rows' => (int) $parsed['total_rows'],
                     'valid_rows' => (int) $parsed['valid_rows'],
                     'invalid_rows' => 0,
@@ -190,14 +499,16 @@ class AtrImportService
                 ]);
 
                 $now = now();
-                $rows = collect($parsed['records'])
+                $rows = $snapshotRows
                     ->map(function (array $row) use ($import, $now): array {
                         return [
                             'atr_import_id' => $import->id,
                             'period' => $row['period'],
                             'nrp' => $row['nrp'],
                             'employee_name' => $row['employee_name'],
+                            'dept' => $row['dept'],
                             'job_title' => $row['job_title'],
+                            'position' => $row['position'],
                             'site' => $row['site'],
                             'atr' => $row['atr'],
                             'sick' => $row['sick'],
@@ -214,6 +525,12 @@ class AtrImportService
                     AtrRecord::query()->insert($chunk->all());
                 });
 
+                if ($existing) {
+                    $existing->forceFill([
+                        'status' => 'REPLACED',
+                    ])->save();
+                }
+
                 $import->forceFill([
                     'status' => 'COMPLETED',
                     'imported_rows' => $rows->count(),
@@ -224,7 +541,6 @@ class AtrImportService
             });
         } catch (Throwable $exception) {
             Storage::disk('local')->delete($finalPath);
-
             throw $exception;
         }
 
@@ -234,7 +550,8 @@ class AtrImportService
     }
 
     /**
-     * Membaca DATABASE_KARYAWAN dan ATR_SOURCE dari workbook.
+     * Membaca satu sheet 00.MASTER_UPLOAD.
+     * Header boleh berada di baris 1 s.d. 10 agar template tetap fleksibel.
      */
     public function parseWorkbook(string $absolutePath): array
     {
@@ -245,154 +562,66 @@ class AtrImportService
         $spreadsheet = IOFactory::load($absolutePath);
 
         try {
-            $databaseSheetName = (string) config(
-                'atr.workbook.database_sheet',
-                'DATABASE_KARYAWAN'
-            );
-            $sourceSheetName = (string) config(
-                'atr.workbook.source_sheet',
-                'ATR_SOURCE'
-            );
+            $sheet = $spreadsheet->getSheetByName(self::SOURCE_SHEET);
 
-            $databaseSheet = $spreadsheet->getSheetByName(
-                $databaseSheetName
-            );
-            $sourceSheet = $spreadsheet->getSheetByName(
-                $sourceSheetName
-            );
-
-            $errors = [];
-
-            if (! $databaseSheet instanceof Worksheet) {
-                $errors[] = "Sheet {$databaseSheetName} tidak ditemukan.";
+            if (! $sheet instanceof Worksheet) {
+                return $this->emptyResult([
+                    'Sheet 00.MASTER_UPLOAD tidak ditemukan.',
+                ]);
             }
 
-            if (! $sourceSheet instanceof Worksheet) {
-                $errors[] = "Sheet {$sourceSheetName} tidak ditemukan.";
+            $headerResult = $this->detectHeaderMap($sheet);
+
+            if ($headerResult === null) {
+                return $this->emptyResult([
+                    'Header 00.MASTER_UPLOAD tidak ditemukan. '
+                    . 'Header wajib: ' . implode(', ', self::REQUIRED_HEADERS) . '.',
+                ]);
             }
 
-            if ($errors !== []) {
-                return $this->emptyResult($errors);
-            }
+            $headerRow = $headerResult['row'];
+            $map = $headerResult['map'];
 
-            $databaseMap = $this->headerMap($databaseSheet);
-            $sourceMap = $this->headerMap($sourceSheet);
+            $missing = array_values(array_filter(
+                self::REQUIRED_HEADERS,
+                fn (string $header): bool => ! array_key_exists($header, $map)
+            ));
 
-            $requiredDatabaseHeaders = (array) config(
-                'atr.workbook.database_headers',
-                ['NRP', 'NAMA', 'JABATAN', 'SITE']
-            );
-            $requiredSourceHeaders = (array) config(
-                'atr.workbook.source_headers',
-                ['PERIODE', 'NRP', 'ATR', 'S', 'I', 'A']
-            );
-
-            $errors = array_merge(
-                $errors,
-                $this->missingHeaders(
-                    $databaseMap,
-                    $requiredDatabaseHeaders,
-                    $databaseSheetName
-                ),
-                $this->missingHeaders(
-                    $sourceMap,
-                    $requiredSourceHeaders,
-                    $sourceSheetName
-                )
-            );
-
-            if ($errors !== []) {
-                return $this->emptyResult($errors);
-            }
-
-            $databaseResult = $this->readEmployeeDatabase(
-                $databaseSheet,
-                $databaseMap
-            );
-            $employees = $databaseResult['employees'];
-            $errors = array_merge(
-                $errors,
-                $databaseResult['errors']
-            );
-
-            if ($employees === []) {
-                $errors[] =
-                    'Sheet DATABASE_KARYAWAN tidak memiliki data karyawan valid.';
-            }
-
-            if ($errors !== []) {
-                return $this->emptyResult(
-                    $errors,
-                    count($employees)
-                );
+            if ($missing !== []) {
+                return $this->emptyResult([
+                    'Header berikut belum ada pada 00.MASTER_UPLOAD: '
+                    . implode(', ', $missing) . '.',
+                ]);
             }
 
             $rows = [];
             $rowErrors = [];
             $seen = [];
-            $highestRow = $sourceSheet->getHighestDataRow();
+            $uniqueNrps = [];
+            $highestRow = $sheet->getHighestDataRow();
             $blankStreak = 0;
             $blankStop = max(
                 20,
                 (int) config('atr.upload.blank_row_stop', 100)
             );
 
-            for (
-                $rowNumber = 2;
-                $rowNumber <= $highestRow;
-                $rowNumber++
-            ) {
-                $rawNrp = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['NRP'],
-                    $rowNumber
-                );
-                $rawPeriod = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['PERIODE'],
-                    $rowNumber
-                );
-                $rawAtr = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['ATR'],
-                    $rowNumber
-                );
-                $rawSick = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['S'],
-                    $rowNumber
-                );
-                $rawPermission = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['I'],
-                    $rowNumber
-                );
-                $rawAlpha = $this->cellValue(
-                    $sourceSheet,
-                    $sourceMap['A'],
-                    $rowNumber
-                );
-
-                /*
-                 * Template lama memiliki satu baris formula yang memantulkan
-                 * header 00.MASTER_UPLOAD. Baris tersebut bukan data ATR.
-                 */
-                if ($this->isHeaderEcho(
-                    $rawNrp,
-                    $rawAtr,
-                    $rawSick,
-                    $rawPermission,
-                    $rawAlpha
-                )) {
-                    continue;
-                }
+            for ($rowNumber = $headerRow + 1; $rowNumber <= $highestRow; $rowNumber++) {
+                $rawNrp = $this->cellValue($sheet, $map['NRP'], $rowNumber);
+                $rawName = $this->cellValue($sheet, $map['NAMA'], $rowNumber);
+                $rawDept = $this->cellValue($sheet, $map['DEPT'], $rowNumber);
+                $rawJobTitle = $this->cellValue($sheet, $map['JABATAN'], $rowNumber);
+                $rawPosition = $this->cellValue($sheet, $map['POSISI'], $rowNumber);
+                $rawSite = $this->cellValue($sheet, $map['SITE'], $rowNumber);
+                $rawAtr = $this->cellValue($sheet, $map['ATR'], $rowNumber);
+                $rawSick = $this->cellValue($sheet, $map['S'], $rowNumber);
+                $rawPermission = $this->cellValue($sheet, $map['I'], $rowNumber);
+                $rawAlpha = $this->cellValue($sheet, $map['A'], $rowNumber);
+                $rawPeriod = $this->cellValue($sheet, $map['PERIODE'], $rowNumber);
 
                 $isBlank = $this->isBlank($rawNrp)
-                    && $this->isBlank($rawPeriod)
+                    && $this->isBlank($rawName)
                     && $this->isBlank($rawAtr)
-                    && $this->isBlank($rawSick)
-                    && $this->isBlank($rawPermission)
-                    && $this->isBlank($rawAlpha);
+                    && $this->isBlank($rawPeriod);
 
                 if ($isBlank) {
                     $blankStreak++;
@@ -407,6 +636,11 @@ class AtrImportService
                 $blankStreak = 0;
 
                 $nrp = $this->normalizeNrp($rawNrp);
+                $name = $this->cleanText($rawName);
+                $dept = $this->cleanText($rawDept);
+                $jobTitle = $this->cleanText($rawJobTitle);
+                $position = $this->cleanText($rawPosition);
+                $site = $this->cleanText($rawSite);
                 $period = $this->normalizePeriod($rawPeriod);
                 $atr = $this->normalizeAtr($rawAtr);
                 $sick = $this->normalizeCount($rawSick);
@@ -416,14 +650,18 @@ class AtrImportService
 
                 if ($nrp === '') {
                     $messages[] = 'NRP kosong.';
-                } elseif (! isset($employees[$nrp])) {
-                    $messages[] =
-                        'NRP tidak ditemukan pada sheet DATABASE_KARYAWAN.';
+                }
+
+                if ($name === '') {
+                    $messages[] = 'NAMA kosong.';
+                }
+
+                if ($position === '') {
+                    $messages[] = 'POSISI kosong.';
                 }
 
                 if ($period === null) {
-                    $messages[] =
-                        'PERIODE tidak valid. Gunakan format YYYY-MM.';
+                    $messages[] = 'PERIODE tidak valid. Gunakan format YYYY-MM.';
                 }
 
                 if ($atr === false) {
@@ -432,11 +670,7 @@ class AtrImportService
                         . 'atau tanda - untuk NO DATA.';
                 }
 
-                if (
-                    $sick === null
-                    || $permission === null
-                    || $alpha === null
-                ) {
+                if ($sick === null || $permission === null || $alpha === null) {
                     $messages[] =
                         'Kolom S, I, dan A wajib berupa bilangan bulat >= 0.';
                 }
@@ -445,12 +679,8 @@ class AtrImportService
                     ? $period . '|' . $nrp
                     : null;
 
-                if (
-                    $duplicateKey !== null
-                    && isset($seen[$duplicateKey])
-                ) {
-                    $messages[] =
-                        'Duplikat NRP dan PERIODE di dalam file.';
+                if ($duplicateKey !== null && isset($seen[$duplicateKey])) {
+                    $messages[] = 'Duplikat NRP dan PERIODE di dalam file.';
                 }
 
                 if ($messages !== []) {
@@ -459,27 +689,27 @@ class AtrImportService
                         'nrp' => $nrp,
                         'messages' => $messages,
                     ];
-
                     continue;
                 }
 
                 $seen[$duplicateKey] = true;
-                $employee = $employees[$nrp];
-                $status = $this->statusForAtr(
-                    $atr === null ? null : (float) $atr
-                );
+                $uniqueNrps[$nrp] = true;
 
                 $rows[] = [
                     'period' => $period,
                     'nrp' => $nrp,
-                    'employee_name' => $employee['name'],
-                    'job_title' => $employee['job_title'],
-                    'site' => $employee['site'],
+                    'employee_name' => $name,
+                    'dept' => $dept !== '' ? $dept : 'PRODUKSI',
+                    'job_title' => $jobTitle !== '' ? $jobTitle : '-',
+                    'position' => $position,
+                    'site' => $site !== '' ? $site : '-',
                     'atr' => $atr,
                     'sick' => $sick,
                     'permission' => $permission,
                     'alpha' => $alpha,
-                    'status' => $status,
+                    'status' => $this->statusForAtr(
+                        $atr === null ? null : (float) $atr
+                    ),
                     'source_row' => $rowNumber,
                 ];
             }
@@ -488,41 +718,31 @@ class AtrImportService
                 1,
                 (int) config('atr.upload.preview_rows', 20)
             );
+
             $periods = collect($rows)
                 ->pluck('period')
                 ->unique()
                 ->sort()
                 ->values()
                 ->all();
-            $statusCounts = collect($rows)
-                ->countBy('status')
-                ->all();
+
+            $statusCounts = collect($rows)->countBy('status')->all();
 
             return [
                 'total_rows' => count($rows) + count($rowErrors),
                 'valid_rows' => count($rows),
                 'invalid_rows' => count($rowErrors),
                 'records' => $rows,
-                'preview_rows' => array_slice(
-                    $rows,
-                    0,
-                    $previewLimit
-                ),
+                'preview_rows' => array_slice($rows, 0, $previewLimit),
                 'errors' => [],
                 'row_errors' => $rowErrors,
                 'periods' => $periods,
-                'employee_count' => count($employees),
+                'employee_count' => count($uniqueNrps),
                 'status_counts' => [
                     'AMAN' => (int) ($statusCounts['AMAN'] ?? 0),
-                    'MONITORING' => (int) (
-                        $statusCounts['MONITORING'] ?? 0
-                    ),
-                    'PEMANGGILAN' => (int) (
-                        $statusCounts['PEMANGGILAN'] ?? 0
-                    ),
-                    'NO_DATA' => (int) (
-                        $statusCounts['NO_DATA'] ?? 0
-                    ),
+                    'MONITORING' => (int) ($statusCounts['MONITORING'] ?? 0),
+                    'PEMANGGILAN' => (int) ($statusCounts['PEMANGGILAN'] ?? 0),
+                    'NO_DATA' => (int) ($statusCounts['NO_DATA'] ?? 0),
                 ],
             ];
         } finally {
@@ -532,142 +752,71 @@ class AtrImportService
     }
 
     /**
-     * Membaca master karyawan dan mendeteksi NRP duplikat/kosong.
-     *
-     * @return array{employees: array<string,array<string,string>>, errors: array<int,string>}
+     * Cari baris header 1-10.
+     * Mendukung NAMA maupun NAME.
      */
-    private function readEmployeeDatabase(
-        Worksheet $sheet,
-        array $map
-    ): array {
-        $employees = [];
-        $errors = [];
-        $duplicates = [];
-        $highestRow = $sheet->getHighestDataRow();
-
-        for ($rowNumber = 2; $rowNumber <= $highestRow; $rowNumber++) {
-            $nrp = $this->normalizeNrp(
-                $this->cellValue($sheet, $map['NRP'], $rowNumber)
-            );
-
-            if ($nrp === '') {
-                continue;
-            }
-
-            $name = trim((string) $this->cellValue(
-                $sheet,
-                $map['NAMA'],
-                $rowNumber
-            ));
-            $jobTitle = trim((string) $this->cellValue(
-                $sheet,
-                $map['JABATAN'],
-                $rowNumber
-            ));
-            $site = trim((string) $this->cellValue(
-                $sheet,
-                $map['SITE'],
-                $rowNumber
-            ));
-
-            if ($name === '') {
-                $errors[] =
-                    "DATABASE_KARYAWAN baris {$rowNumber}: NAMA kosong.";
-                continue;
-            }
-
-            if (isset($employees[$nrp])) {
-                $duplicates[$nrp] = true;
-                continue;
-            }
-
-            $employees[$nrp] = [
-                'name' => $name,
-                'job_title' => $jobTitle !== '' ? $jobTitle : '-',
-                'site' => $site !== '' ? $site : '-',
-            ];
-        }
-
-        if ($duplicates !== []) {
-            $example = implode(
-                ', ',
-                array_slice(array_keys($duplicates), 0, 10)
-            );
-            $errors[] =
-                'NRP duplikat pada DATABASE_KARYAWAN: ' . $example . '.';
-        }
-
-        return [
-            'employees' => $employees,
-            'errors' => $errors,
-        ];
-    }
-
-    private function headerMap(Worksheet $sheet): array
+    private function detectHeaderMap(Worksheet $sheet): ?array
     {
+        $scanRows = min(10, $sheet->getHighestDataRow());
         $highestColumn = Coordinate::columnIndexFromString(
             $sheet->getHighestDataColumn()
         );
-        $map = [];
 
-        for ($column = 1; $column <= $highestColumn; $column++) {
-            $header = $this->normalizeHeader(
-                $this->cellValue($sheet, $column, 1)
-            );
+        for ($row = 1; $row <= $scanRows; $row++) {
+            $map = [];
 
-            if ($header !== '') {
-                $map[$header] = $column;
+            for ($column = 1; $column <= $highestColumn; $column++) {
+                $header = $this->canonicalHeader(
+                    $this->cellValue($sheet, $column, $row)
+                );
+
+                if ($header !== null) {
+                    $map[$header] = $column;
+                }
+            }
+
+            if (isset($map['NRP'], $map['ATR'])) {
+                return [
+                    'row' => $row,
+                    'map' => $map,
+                ];
             }
         }
 
-        return $map;
+        return null;
     }
 
-    private function missingHeaders(
-        array $map,
-        array $required,
-        string $sheetName
-    ): array {
-        $errors = [];
+    private function canonicalHeader(mixed $value): ?string
+    {
+        $header = $this->normalizeHeader($value);
 
-        foreach ($required as $header) {
-            $normalized = $this->normalizeHeader($header);
+        return match ($header) {
+            'NRP', 'NIK', 'NIK_KARYAWAN' => 'NRP',
+            'NAMA', 'NAME', 'NAMA_KARYAWAN' => 'NAMA',
+            'DEPT', 'DEPARTEMEN', 'DEPARTMENT' => 'DEPT',
+            'JABATAN', 'JOB_TITLE', 'JOBTITLE' => 'JABATAN',
+            'POSISI', 'POSITION' => 'POSISI',
+            'SITE', 'LOKASI' => 'SITE',
+            'ATR' => 'ATR',
+            'S', 'SAKIT' => 'S',
+            'I', 'IZIN' => 'I',
+            'A', 'ALPA' => 'A',
+            'PERIODE', 'PERIOD' => 'PERIODE',
+            default => null,
+        };
+    }
 
-            if (! array_key_exists($normalized, $map)) {
-                $errors[] =
-                    "Header {$header} tidak ditemukan pada sheet {$sheetName}.";
-            }
-        }
-
-        return $errors;
+    private function cellValue(Worksheet $sheet, int $column, int $row): mixed
+    {
+        return $sheet->getCell([$column, $row])->getCalculatedValue();
     }
 
     private function normalizeHeader(mixed $value): string
     {
-        $header = strtoupper(trim((string) $value));
-        $header = preg_replace('/[^A-Z0-9]+/', '_', $header) ?? $header;
+        $value = strtoupper(trim((string) $value));
+        $value = preg_replace('/[^A-Z0-9]+/', '_', $value) ?? $value;
 
-        return trim($header, '_');
-    }
-
-    private function cellValue(
-        Worksheet $sheet,
-        int $column,
-        int $row
-    ): mixed {
-        $cell = $sheet->getCell([$column, $row]);
-
-        try {
-            return $cell->getCalculatedValue();
-        } catch (Throwable) {
-            $oldCalculated = $cell->getOldCalculatedValue();
-
-            if ($oldCalculated !== null) {
-                return $oldCalculated;
-            }
-
-            return $cell->getValue();
-        }
+        return trim($value, '_');
     }
 
     private function normalizeNrp(mixed $value): string
@@ -676,27 +825,35 @@ class AtrImportService
             return (string) $value;
         }
 
-        if (
-            is_float($value)
-            && is_finite($value)
-            && floor($value) === $value
-        ) {
-            return number_format($value, 0, '', '');
+        if (is_float($value)) {
+            if (floor($value) === $value) {
+                return number_format($value, 0, '', '');
+            }
+
+            return rtrim(rtrim(sprintf('%.10F', $value), '0'), '.');
         }
 
-        $raw = str_replace("\u{00A0}", ' ', trim((string) $value));
-        $raw = ltrim($raw, "'\"");
-        $raw = preg_replace('/\.0$/', '', $raw) ?? $raw;
-        $raw = preg_replace('/\s+/', '', $raw) ?? $raw;
+        $raw = trim((string) $value);
 
-        if (
-            preg_match('/^[+-]?\d+(?:\.\d+)?[Ee][+-]?\d+$/', $raw)
-            && is_numeric($raw)
-        ) {
+        if ($raw === '') {
+            return '';
+        }
+
+        if (preg_match('/^[0-9]+(?:\.0+)?$/', $raw)) {
+            return preg_replace('/\.0+$/', '', $raw) ?? $raw;
+        }
+
+        if (is_numeric($raw) && str_contains(strtolower($raw), 'e')) {
             return number_format((float) $raw, 0, '', '');
         }
 
-        return $raw;
+        return preg_replace('/\s+/', '', $raw) ?? $raw;
+    }
+
+    private function cleanText(mixed $value): string
+    {
+        $text = trim((string) $value);
+        return preg_replace('/\s+/', ' ', $text) ?? $text;
     }
 
     private function normalizePeriod(mixed $value): ?string
@@ -719,7 +876,7 @@ class AtrImportService
 
         $raw = trim((string) $value);
 
-        if ($raw === '' || str_starts_with($raw, '#')) {
+        if ($raw === '') {
             return null;
         }
 
@@ -727,18 +884,12 @@ class AtrImportService
             $month = (int) $match[2];
 
             if ($month >= 1 && $month <= 12) {
-                return sprintf(
-                    '%04d-%02d-01',
-                    (int) $match[1],
-                    $month
-                );
+                return sprintf('%04d-%02d-01', (int) $match[1], $month);
             }
         }
 
         try {
-            return Carbon::parse($raw)
-                ->startOfMonth()
-                ->format('Y-m-d');
+            return Carbon::parse($raw)->startOfMonth()->format('Y-m-d');
         } catch (Throwable) {
             return null;
         }
@@ -754,10 +905,6 @@ class AtrImportService
 
         if ($raw === '' || $raw === '-') {
             return null;
-        }
-
-        if (str_starts_with($raw, '#')) {
-            return false;
         }
 
         if (is_numeric($value)) {
@@ -786,23 +933,21 @@ class AtrImportService
 
     private function normalizeCount(mixed $value): ?int
     {
-        if ($value === null || trim((string) $value) === '') {
+        $raw = trim((string) $value);
+
+        if ($raw === '') {
             return 0;
         }
 
-        $raw = trim((string) $value);
+        $raw = str_replace(',', '.', $raw);
 
-        if (str_starts_with($raw, '#') || ! is_numeric($raw)) {
+        if (! is_numeric($raw)) {
             return null;
         }
 
         $number = (float) $raw;
 
-        if (
-            $number < 0
-            || floor($number) !== $number
-            || $number > 4294967295
-        ) {
+        if ($number < 0 || floor($number) !== $number) {
             return null;
         }
 
@@ -816,10 +961,7 @@ class AtrImportService
         }
 
         $aman = (float) config('atr.aman_minimum', 98.5);
-        $monitoring = (float) config(
-            'atr.monitoring_minimum',
-            95.0
-        );
+        $monitoring = (float) config('atr.monitoring_minimum', 95.0);
 
         if ($atr >= $aman) {
             return 'AMAN';
@@ -832,20 +974,6 @@ class AtrImportService
         return 'PEMANGGILAN';
     }
 
-    private function isHeaderEcho(
-        mixed $nrp,
-        mixed $atr,
-        mixed $sick,
-        mixed $permission,
-        mixed $alpha
-    ): bool {
-        return $this->normalizeHeader($nrp) === 'NRP'
-            && $this->normalizeHeader($atr) === 'ATR'
-            && $this->normalizeHeader($sick) === 'S'
-            && $this->normalizeHeader($permission) === 'I'
-            && $this->normalizeHeader($alpha) === 'A';
-    }
-
     private function isBlank(mixed $value): bool
     {
         return $value === null || trim((string) $value) === '';
@@ -853,9 +981,7 @@ class AtrImportService
 
     private function finalArchiveName(string $originalName): string
     {
-        $baseName = Str::slug(
-            pathinfo($originalName, PATHINFO_FILENAME)
-        );
+        $baseName = Str::slug(pathinfo($originalName, PATHINFO_FILENAME));
 
         if ($baseName === '') {
             $baseName = 'atr-import';
@@ -869,10 +995,8 @@ class AtrImportService
             . '.xlsx';
     }
 
-    private function emptyResult(
-        array $errors,
-        int $employeeCount = 0
-    ): array {
+    private function emptyResult(array $errors): array
+    {
         return [
             'total_rows' => 0,
             'valid_rows' => 0,
@@ -882,7 +1006,7 @@ class AtrImportService
             'errors' => $errors,
             'row_errors' => [],
             'periods' => [],
-            'employee_count' => $employeeCount,
+            'employee_count' => 0,
             'status_counts' => [
                 'AMAN' => 0,
                 'MONITORING' => 0,

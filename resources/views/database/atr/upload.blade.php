@@ -8,11 +8,13 @@
 .atru-preview{margin-top:12px;background:#fff;border:1px solid #d9e2ee;border-radius:14px;box-shadow:0 6px 18px rgba(15,35,65,.06);overflow:hidden}.atru-preview-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}.atru-stat{border:1px solid #dfe7f1;border-radius:10px;padding:12px;text-align:center}.atru-stat strong{display:block;font-size:22px;color:#172640}.atru-stat small{font-size:8px;color:#74839a;font-weight:800}.atru-stat.bad strong{color:#d7263d}.atru-stat.good strong{color:#129653}
 .atru-table-wrap{overflow:auto}.atru-table{width:100%;border-collapse:collapse;min-width:850px}.atru-table th{background:#f6f8fb;padding:9px;font-size:8px;color:#596a80;text-transform:uppercase;text-align:left}.atru-table td{padding:9px;border-top:1px solid #e7edf4;font-size:9px;color:#314761}.atru-errors{padding:12px}.atru-error-item{background:#fff1f3;border:1px solid #ffd0d7;border-radius:9px;padding:9px 11px;margin-bottom:7px;font-size:10px;color:#a7192e}.atru-error-item strong{display:block;margin-bottom:3px}.atru-commit{padding:14px 16px;border-top:1px solid #e1e8f1;display:flex;align-items:center;justify-content:space-between;gap:12px}.atru-commit p{margin:0;font-size:10px;color:#687992}
 @media(max-width:950px){.atru-grid{grid-template-columns:1fr}.atru-preview-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:540px){.atru-preview-stats{grid-template-columns:1fr}.atru-commit{align-items:stretch;flex-direction:column}}
+
+.atru-period-warning{margin:0 12px 12px;padding:14px;border:1px solid #ffd38a;border-radius:12px;background:#fff8e8;color:#805616}.atru-period-warning h3{margin:0 0 6px;font-size:14px;color:#8b5a00}.atru-period-warning p{margin:0 0 10px;font-size:10px;line-height:1.55}.atru-conflict-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.atru-conflict-box{padding:11px;border:1px solid #eadfca;border-radius:10px;background:#fff}.atru-conflict-box span{display:block;color:#8b795f;font-size:8px;font-weight:800;text-transform:uppercase;margin-bottom:5px}.atru-conflict-box strong{display:block;color:#2a3445;font-size:11px;line-height:1.45}.atru-conflict-meta{margin-top:10px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.atru-conflict-meta div{padding:9px;border-radius:9px;background:#fff;border:1px solid #eadfca;text-align:center}.atru-conflict-meta b{display:block;font-size:16px;color:#26364e}.atru-conflict-meta small{font-size:7px;color:#8a7960;font-weight:800}.atru-identical{margin-top:10px;padding:11px;border-radius:9px;background:#fff1f3;border:1px solid #ffc8d0;color:#9f1d31;font-size:10px;font-weight:800;line-height:1.5}.atru-change-note{margin-top:10px;padding:10px;border-radius:9px;background:#eef6ff;border:1px solid #cfe2ff;color:#24518e;font-size:9px;font-weight:700;line-height:1.5}.atru-lock{margin-top:10px;padding:10px;border-radius:9px;background:#ffe8eb;border:1px solid #ffc8d0;color:#a7192e;font-size:9px;font-weight:700;line-height:1.5}.atru-decision{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.atru-btn.cancel{background:#eef3f8;color:#40536d}.atru-btn.replace{background:#e88916;color:#fff}.atru-btn.append{background:#1677ff;color:#fff}.atru-btn[disabled]{opacity:.45;cursor:not-allowed}.atru-helper{display:block;margin-top:6px;color:#7b8796;font-size:8px;line-height:1.45}@media(max-width:900px){.atru-conflict-meta{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.atru-conflict-grid{grid-template-columns:1fr}.atru-conflict-meta{grid-template-columns:1fr}}
 </style>
 
 <div class="atru-title">
     <h1>Upload Data ATR</h1>
-    <p>Upload Excel dua sheet: DATABASE_KARYAWAN dan ATR_SOURCE. Data disimpan ke database Laravel.</p>
+    <p>Upload Excel satu sheet 00.MASTER_UPLOAD. Data mentah ATR dibaca langsung dan disimpan ke database Laravel.</p>
 </div>
 
 @if (session('success'))
@@ -56,15 +58,14 @@
         </div>
         <div class="atru-body">
             <div class="atru-info">
-                <div class="atru-info-row"><span>Sheet 1</span><strong>DATABASE_KARYAWAN</strong></div>
-                <div class="atru-info-row"><span>Header Sheet 1</span><strong>NRP, NAMA, JABATAN, SITE</strong></div>
-                <div class="atru-info-row"><span>Sheet 2</span><strong>ATR_SOURCE</strong></div>
-                <div class="atru-info-row"><span>Header Sheet 2</span><strong>PERIODE, NRP, ATR, S, I, A</strong></div>
+                <div class="atru-info-row"><span>Sheet Wajib</span><strong>00.MASTER_UPLOAD</strong></div>
+                <div class="atru-info-row"><span>Header Wajib</span><strong>NRP, NAMA, DEPT, JABATAN, POSISI, SITE, ATR, S, I, A, PERIODE</strong></div>
                 <div class="atru-info-row"><span>Format Periode</span><strong>YYYY-MM</strong></div>
                 <div class="atru-info-row"><span>Format ATR</span><strong>0–100 atau tanda -</strong></div>
+                <div class="atru-info-row"><span>Filter Dashboard</span><strong>PERIODE + POSISI</strong></div>
             </div>
             <div class="atru-note">
-                Laravel akan mencocokkan NRP dari ATR_SOURCE ke DATABASE_KARYAWAN, menambahkan nama, jabatan, dan site, lalu menentukan status AMAN, MONITORING, PEMANGGILAN, atau NO DATA secara otomatis.
+                Copy-paste data mentah dari website perusahaan ke sheet 00.MASTER_UPLOAD. Tidak perlu DATABASE_KARYAWAN, ATR_SOURCE, XLOOKUP, atau rumus Excel. Laravel membaca NRP, nama, departemen, jabatan, posisi, site, ATR, S/I/A, dan periode langsung dari sheet ini lalu menentukan status AMAN, MONITORING, PEMANGGILAN, atau NO DATA.
             </div>
         </div>
     </section>
@@ -78,7 +79,7 @@
         </div>
 
         <div class="atru-preview-stats">
-            <div class="atru-stat"><strong>{{ number_format($preview['employee_count'] ?? 0) }}</strong><small>DATABASE KARYAWAN</small></div>
+            <div class="atru-stat"><strong>{{ number_format($preview['employee_count'] ?? 0) }}</strong><small>KARYAWAN UNIK</small></div>
             <div class="atru-stat"><strong>{{ number_format($preview['total_rows'] ?? 0) }}</strong><small>TOTAL BARIS ATR</small></div>
             <div class="atru-stat good"><strong>{{ number_format($preview['valid_rows'] ?? 0) }}</strong><small>VALID</small></div>
             <div class="atru-stat bad"><strong>{{ number_format($preview['invalid_rows'] ?? 0) }}</strong><small>INVALID</small></div>
@@ -109,14 +110,16 @@
         @if (!empty($preview['preview_rows']))
             <div class="atru-table-wrap">
                 <table class="atru-table">
-                    <thead><tr><th>Periode</th><th>NRP</th><th>Nama</th><th>Jabatan</th><th>Site</th><th>ATR</th><th>S</th><th>I</th><th>A</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Periode</th><th>NRP</th><th>Nama</th><th>Dept</th><th>Jabatan</th><th>Posisi</th><th>Site</th><th>ATR</th><th>S</th><th>I</th><th>A</th><th>Status</th></tr></thead>
                     <tbody>
                     @foreach ($preview['preview_rows'] as $row)
                         <tr>
                             <td>{{ \Carbon\Carbon::parse($row['period'])->format('Y-m') }}</td>
                             <td>{{ $row['nrp'] }}</td>
                             <td>{{ $row['employee_name'] }}</td>
+                            <td>{{ $row['dept'] }}</td>
                             <td>{{ $row['job_title'] }}</td>
+                            <td>{{ $row['position'] }}</td>
                             <td>{{ $row['site'] }}</td>
                             <td>{{ $row['atr'] === null ? '-' : number_format($row['atr'], 1) . '%' }}</td>
                             <td>{{ $row['sick'] }}</td><td>{{ $row['permission'] }}</td><td>{{ $row['alpha'] }}</td>
@@ -128,21 +131,151 @@
             </div>
         @endif
 
+        @php
+            $conflict = $preview['period_conflict'] ?? null;
+            $previewToken = $preview['preview_token'] ?? '';
+            $invalid = (int) ($preview['invalid_rows'] ?? 0);
+            $valid = (int) ($preview['valid_rows'] ?? 0);
+            $periodLabel = null;
+
+            if (!empty($preview['periods'][0])) {
+                $periodLabel = \Carbon\Carbon::parse($preview['periods'][0])
+                    ->locale('id')
+                    ->translatedFormat('F Y');
+            }
+        @endphp
+
+        @if (is_array($conflict))
+            <div class="atru-period-warning">
+                <h3>⚠ PERIODE SUDAH ADA</h3>
+                <p>
+                    Data periode <strong>{{ $periodLabel ?? '-' }}</strong> sudah tersedia.
+                    Pilih tindakan setelah memastikan file revisi sudah benar.
+                </p>
+
+                <div class="atru-conflict-grid">
+                    <div class="atru-conflict-box">
+                        <span>Import sebelumnya</span>
+                        <strong>File : {{ $conflict['file_name'] ?? '-' }}</strong>
+                        <strong>Jumlah : {{ number_format($conflict['record_count'] ?? 0) }} karyawan</strong>
+                    </div>
+                    <div class="atru-conflict-box">
+                        <span>File baru</span>
+                        <strong>File : {{ $preview['original_name'] ?? '-' }}</strong>
+                        <strong>Jumlah : {{ number_format($valid) }} karyawan</strong>
+                    </div>
+                </div>
+
+                <div class="atru-conflict-meta">
+                    <div><b>{{ number_format($conflict['append_new_rows'] ?? 0) }}</b><small>NRP BARU</small></div>
+                    <div><b>{{ number_format($conflict['changed_rows'] ?? 0) }}</b><small>NRP BERUBAH</small></div>
+                    <div><b>{{ number_format($conflict['unchanged_rows'] ?? 0) }}</b><small>NRP TETAP</small></div>
+                    <div><b>{{ number_format($conflict['removed_rows_on_replace'] ?? 0) }}</b><small>NRP HILANG JIKA REPLACE</small></div>
+                    <div><b>{{ number_format($conflict['active_coaching_count'] ?? 0) }}</b><small>COACHING AKTIF</small></div>
+                </div>
+
+                @if (($conflict['is_identical_data'] ?? false) || ($conflict['is_identical_file'] ?? false))
+                    <div class="atru-identical">
+                        ⚠ FILE / DATA IDENTIK — snapshot aktif periode ini sudah sama dengan file yang dipreview.
+                        Tidak perlu melakukan REPLACE atau APPEND. Pilih BATAL lalu gunakan file revisi yang benar.
+                    </div>
+                @elseif (($conflict['changed_rows'] ?? 0) > 0 && ($conflict['append_new_rows'] ?? 0) > 0)
+                    <div class="atru-change-note">
+                        File baru berisi {{ number_format($conflict['append_new_rows']) }} NRP baru dan
+                        {{ number_format($conflict['changed_rows']) }} NRP lama yang berubah.
+                        Mode APPEND hanya menambahkan NRP baru; perubahan pada NRP lama hanya diterapkan jika memilih REPLACE SNAPSHOT PERIODE.
+                    </div>
+                @elseif (($conflict['changed_rows'] ?? 0) > 0)
+                    <div class="atru-change-note">
+                        Ada {{ number_format($conflict['changed_rows']) }} NRP lama yang datanya berubah.
+                        Gunakan REPLACE SNAPSHOT PERIODE untuk menerapkan perubahan tersebut.
+                    </div>
+                @endif
+
+                @if (($conflict['active_coaching_count'] ?? 0) > 0)
+                    <div class="atru-lock">
+                        Revisi periode dikunci karena masih ada {{ number_format($conflict['active_coaching_count']) }}
+                        dokumentasi pemanggilan aktif. Batalkan dokumentasi tersebut terlebih dahulu agar
+                        histori tanda tangan dan coaching tidak terputus.
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="atru-commit">
             <p>
-                @if (($preview['invalid_rows'] ?? 0) > 0)
+                @if ($invalid > 0)
                     Import dikunci sampai seluruh baris invalid diperbaiki.
+                @elseif (is_array($conflict))
+                    <strong>REPLACE SNAPSHOT PERIODE</strong> = file baru menjadi snapshot penuh pengganti.<br>
+                    <strong>APPEND NRP BARU</strong> = mempertahankan snapshot lama dan hanya menambahkan NRP yang belum ada.
+                    <span class="atru-helper">NRP yang sudah ada tidak diubah pada mode TAMBAHKAN DATA. Untuk memperbarui ATR/posisi/data NRP lama, gunakan REPLACE SNAPSHOT PERIODE.</span>
                 @else
-                    File siap diimpor ke database Laravel sebagai snapshot baru.
+                    File siap diimpor sebagai snapshot baru periode {{ $periodLabel ?? '-' }}.
                 @endif
             </p>
-            <form method="POST" action="{{ route('database.atr.upload.commit') }}">
-                @csrf
-                <input type="hidden" name="preview_token" value="{{ $preview['preview_token'] ?? '' }}">
-                <button class="atru-btn green" type="submit" @disabled(($preview['invalid_rows'] ?? 0) > 0 || ($preview['valid_rows'] ?? 0) === 0)>
-                    IMPORT SEKARANG
-                </button>
-            </form>
+
+            <div class="atru-decision">
+                <form method="POST" action="{{ route('database.atr.upload.preview.cancel') }}">
+                    @csrf
+                    <input type="hidden" name="preview_token" value="{{ $previewToken }}">
+                    <button class="atru-btn cancel" type="submit">BATAL</button>
+                </form>
+
+                @if ($invalid === 0 && $valid > 0)
+                    @if (is_array($conflict))
+                        <form method="POST" action="{{ route('database.atr.upload.commit') }}">
+                            @csrf
+                            <input type="hidden" name="preview_token" value="{{ $previewToken }}">
+                            <input type="hidden" name="import_action" value="REPLACE">
+                            <input type="hidden" name="existing_import_id" value="{{ $conflict['id'] }}">
+                            <button
+                                class="atru-btn replace"
+                                type="submit"
+                                @disabled(
+                                    ($conflict['active_coaching_count'] ?? 0) > 0
+                                    || ($conflict['is_identical_data'] ?? false)
+                                    || ($conflict['is_identical_file'] ?? false)
+                                )
+                            >REPLACE SNAPSHOT PERIODE</button>
+                        </form>
+
+                        <form method="POST" action="{{ route('database.atr.upload.commit') }}">
+                            @csrf
+                            <input type="hidden" name="preview_token" value="{{ $previewToken }}">
+                            <input type="hidden" name="import_action" value="APPEND">
+                            <input type="hidden" name="existing_import_id" value="{{ $conflict['id'] }}">
+                            <button
+                                class="atru-btn append"
+                                type="submit"
+                                @disabled(
+                                    ($conflict['active_coaching_count'] ?? 0) > 0
+                                    || ($conflict['append_new_rows'] ?? 0) === 0
+                                    || ($conflict['is_identical_data'] ?? false)
+                                    || ($conflict['is_identical_file'] ?? false)
+                                )
+                            >APPEND NRP BARU</button>
+                        </form>
+
+                        @if (($conflict['append_new_rows'] ?? 0) === 0 && !($conflict['is_identical_data'] ?? false))
+                            <span class="atru-helper" style="width:100%;text-align:right">
+                                APPEND dinonaktifkan karena tidak ada NRP baru. Jika data NRP lama berubah, gunakan REPLACE.
+                            </span>
+                        @elseif (($conflict['is_identical_data'] ?? false) || ($conflict['is_identical_file'] ?? false))
+                            <span class="atru-helper" style="width:100%;text-align:right;color:#a7192e;font-weight:800">
+                                Tidak ada aksi import yang diperlukan karena file/data identik dengan snapshot aktif.
+                            </span>
+                        @endif
+                    @else
+                        <form method="POST" action="{{ route('database.atr.upload.commit') }}">
+                            @csrf
+                            <input type="hidden" name="preview_token" value="{{ $previewToken }}">
+                            <input type="hidden" name="import_action" value="NEW">
+                            <button class="atru-btn green" type="submit">IMPORT SEKARANG</button>
+                        </form>
+                    @endif
+                @endif
+            </div>
         </div>
     </section>
 @endif

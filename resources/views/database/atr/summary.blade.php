@@ -58,11 +58,11 @@
             </select>
         </div>
         <div class="atrx-field">
-            <label>Posisi / Jabatan</label>
-            <select name="job_title" class="atrx-select">
-                <option value="">Semua Jabatan</option>
-                @foreach ($jobOptions as $job)
-                    <option value="{{ $job }}" @selected(request('job_title') === $job)>{{ $job }}</option>
+            <label>Posisi</label>
+            <select name="position" class="atrx-select">
+                <option value="">Semua Posisi</option>
+                @foreach ($positionOptions as $position)
+                    <option value="{{ $position }}" @selected(request('position') === $position)>{{ $position }}</option>
                 @endforeach
             </select>
         </div>
@@ -81,7 +81,7 @@
     <div class="atrx-section-head">
         <div>
             <h2>Statistik ATR — {{ $monthLabel }}</h2>
-            <small>Statistik otomatis mengikuti filter periode, jabatan, dan pencarian.</small>
+            <small>Statistik otomatis mengikuti filter periode, posisi, dan pencarian.</small>
         </div>
         <span class="atrx-chip">{{ number_format($stats['total']) }} DATA</span>
     </div>
@@ -106,12 +106,12 @@
     </div>
     <div class="atrx-progress">
         <div class="atrx-progress-grid">
-            <div><strong>{{ number_format($progress['belum']) }}</strong><small>BELUM</small></div>
-            <div><strong>{{ number_format($progress['sudah']) }}</strong><small>SUDAH</small></div>
+            <div><strong>{{ number_format($progress['belum']) }}</strong><small>BELUM DIPANGGIL</small></div>
+            <div><strong>{{ number_format($progress['sudah']) }}</strong><small>SUDAH DIPANGGIL</small></div>
             <div><strong>{{ number_format($progress['total']) }}</strong><small>TOTAL PERLU</small></div>
         </div>
         <div class="atrx-track"><div class="atrx-bar" style="width: {{ $progress['percentage'] }}%"></div></div>
-        <div class="atrx-progress-label">{{ $progress['percentage'] }}% selesai</div>
+        <div class="atrx-progress-label">{{ $progress['percentage'] }}% sudah dipanggil</div>
     </div>
 </section>
 

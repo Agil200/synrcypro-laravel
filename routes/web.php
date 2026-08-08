@@ -323,6 +323,12 @@ Route::prefix('manpower/bnn')
                 ->name('upload.preview');
 
             Route::post(
+                '/upload/preview/cancel',
+                'discardPreview'
+            )->middleware('throttle:20,1')
+                ->name('upload.preview.cancel');
+
+            Route::post(
                 '/upload/commit',
                 'commit'
             )->middleware('throttle:5,1')
@@ -338,6 +344,12 @@ Route::prefix('manpower/bnn')
                 'history'
             )->name('history');
 
+            Route::post(
+                '/imports/{import}/cancel',
+                'cancelImport'
+            )->middleware('throttle:10,1')
+                ->name('imports.cancel');
+
             Route::get(
                 '/call-documentation',
                 'calls'
@@ -348,6 +360,12 @@ Route::prefix('manpower/bnn')
                 'storeCoaching'
             )->middleware('throttle:20,1')
                 ->name('calls.store');
+
+            Route::post(
+                '/coaching/{coaching}/cancel',
+                'cancelCoaching'
+            )->middleware('throttle:10,1')
+                ->name('coaching.cancel');
 
             Route::get(
                 '/coaching/{coaching}/print',
