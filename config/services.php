@@ -296,17 +296,14 @@ return [
         |
         */
 
-        'test_bnn_spreadsheet_id' => trim(
-            (string) env(
-                'GOOGLE_SHEETS_TEST_BNN_SPREADSHEET_ID'
-            )
+        'test_bnn_spreadsheet_id' => env(
+            'GOOGLE_SHEETS_TEST_BNN_SPREADSHEET_ID',
+            '1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU'
         ),
 
-        'test_bnn_range' => trim(
-            (string) env(
-                'GOOGLE_SHEETS_TEST_BNN_RANGE',
-                "'DAFTAR TEST BNN'!A:AZ"
-            )
+        'test_bnn_range' => env(
+            'GOOGLE_SHEETS_TEST_BNN_RANGE',
+            "'DAFTAR TEST BNN'!A:AZ"
         ),
 
         'test_bnn_sheet_gid' => (int) env(

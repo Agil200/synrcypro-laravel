@@ -369,11 +369,16 @@ class GoogleSheetsService
         string $spreadsheetId,
         string $range
     ): Response {
+       $range = trim($range);
+
+// hapus quote pembungkus jika ada
+        $range = trim($range, "'");
+
         $url =
-            'https://sheets.googleapis.com/v4/spreadsheets/' .
-            rawurlencode($spreadsheetId) .
-            '/values/' .
-            rawurlencode($range);
+       'https://sheets.googleapis.com/v4/spreadsheets/' .
+         rawurlencode($spreadsheetId) .
+        '/values/' .
+         rawurlencode($range);
 
         return Http::withToken($accessToken)
             ->acceptJson()
