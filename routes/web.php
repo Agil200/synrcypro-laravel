@@ -15,6 +15,45 @@ use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BNNController;
+use Illuminate\Support\Facades\Schedule;
+use App\Http\Controllers\NotificationController;
+
+
+
+Schedule::call(function(){
+
+app(
+\App\Http\Controllers\BNNController::class
+)
+->generateNotification();
+
+
+})
+->dailyAt('00:05');
+
+
+Route::middleware('auth')->group(function(){
+
+
+    Route::get(
+        '/notifications',
+        [NotificationController::class,'index']
+    );
+
+
+    Route::post(
+        '/notifications/read/{id}',
+        [NotificationController::class,'read']
+    );
+
+
+    Route::get(
+        '/notifications/unread-count',
+        [NotificationController::class,'unreadCount']
+    );
+
+
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +103,7 @@ Route::get(
     '/google/oauth/callback',
     [GoogleOAuthController::class, 'callback']
 )->name('google.oauth.callback');
+
 
 
 /*
@@ -684,6 +724,26 @@ Route::prefix('database/employees')
         Route::get('/data', 'data')->name('data');
         Route::post('/refresh', 'refresh')->name('refresh');
     });
+
+
+
+   /*
+    |--------------------------------------------------------------------------
+    | NOTIFIKASI — Menandai Notifikasi sebagai Dibaca
+    |--------------------------------------------------------------------------
+    */
+        Route::get(
+        '/notifications',
+        [NotificationController::class,'index']
+        )
+        ->name('notifications');
+
+
+        Route::post(
+        '/notifications/read/{id}',
+        [NotificationController::class,'read']
+        )
+        ->name('notifications.read');
 
 
     /*
