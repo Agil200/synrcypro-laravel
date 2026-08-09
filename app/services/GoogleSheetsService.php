@@ -371,9 +371,6 @@ class GoogleSheetsService
     ): Response {
        $range = trim($range);
 
-// hapus quote pembungkus jika ada
-        $range = trim($range, "'");
-
         $url =
        'https://sheets.googleapis.com/v4/spreadsheets/' .
          rawurlencode($spreadsheetId) .

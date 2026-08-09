@@ -487,6 +487,99 @@
         font-weight: 900;
     }
 
+    .mp-stage-summary {
+        display: grid;
+        min-height: 245px;
+        gap: 7px;
+    }
+
+    .mp-stage-total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border: 1px solid #e5e9ef;
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+
+    .mp-stage-total span {
+        color: #64748b;
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .mp-stage-total strong {
+        color: #172033;
+        font-size: 16px;
+        font-weight: 950;
+    }
+
+    .mp-stage-list {
+        display: grid;
+        gap: 5px;
+    }
+
+    .mp-stage-row {
+        display: grid;
+        grid-template-columns: minmax(145px, 1.35fr)
+            minmax(90px, 1fr)
+            36px;
+        gap: 8px;
+        align-items: center;
+        min-height: 19px;
+    }
+
+    .mp-stage-label {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 7px;
+        color: #334155;
+        font-size: 7.5px;
+        font-weight: 850;
+        line-height: 1.2;
+    }
+
+    .mp-stage-dot {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 8px;
+        border-radius: 3px;
+        background: var(--stage-color);
+    }
+
+    .mp-stage-label-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mp-stage-track {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #edf1f5;
+        box-shadow: inset 0 0 0 1px #e1e6ec;
+    }
+
+    .mp-stage-bar {
+        width: var(--stage-width);
+        min-width: var(--stage-min-width, 0);
+        height: 100%;
+        border-radius: inherit;
+        background: var(--stage-color);
+    }
+
+    .mp-stage-value {
+        color: #172033;
+        font-size: 9px;
+        font-weight: 950;
+        text-align: right;
+    }
+
     .mp-table-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -678,19 +771,11 @@
 <div class="mp-dashboard">
     @php
         $dashboardStats = $dashboardStats ?? [];
-        $permitStats = $permitStats ?? [];
-        $permitDegrees = $permitDegrees ?? [];
-
-        $activeEnd = (float) (
-            $permitDegrees['aktif'] ?? 0
-        );
-
-        $warningEnd = $activeEnd + (float) (
-            $permitDegrees['akan_expired'] ?? 0
-        );
-
-        $expiredEnd = $warningEnd + (float) (
-            $permitDegrees['expired'] ?? 0
+        $stageStats = collect($stageStats ?? []);
+        $stageTotal = (int) ($stageTotal ?? 0);
+        $stageMax = max(
+            1,
+            (int) ($stageMax ?? 1)
         );
 
         $selectedPeriod = (
@@ -1101,78 +1186,69 @@
                 <div class="mp-card-head">
                     <div>
                         <h3 class="mp-card-title">
-                            Status Permit Karyawan
+                            Status Tahapan Permit
                         </h3>
 
                         <span class="mp-card-subtitle">
-                            Data terbaru per NRP
+                            Distribusi berdasarkan Status SHE · Gagal sampai 8. Selesai
                         </span>
                     </div>
                 </div>
 
-                <div class="mp-permit-summary">
-                    <div
-                        class="mp-donut"
-                        data-total="{{ $permitTotal ?? 0 }}"
-                        style="
-                            background:
-                                conic-gradient(
-                                    #16a05d 0deg {{ $activeEnd }}deg,
-                                    #f2b705 {{ $activeEnd }}deg {{ $warningEnd }}deg,
-                                    #ed1c2e {{ $warningEnd }}deg {{ $expiredEnd }}deg,
-                                    #cbd5e1 {{ $expiredEnd }}deg 360deg
+                <div class="mp-stage-summary">
+                    <div class="mp-stage-total">
+                        <span>Total status pada periode dashboard</span>
+                        <strong>{{ number_format($stageTotal) }}</strong>
+                    </div>
+
+                    <div class="mp-stage-list">
+                        @foreach ($stageStats as $stage)
+                            @php
+                                $stageCount = (int) (
+                                    $stage['count'] ?? 0
                                 );
-                        "
-                    ></div>
 
-                    <div class="mp-permit-list">
-                        <div class="mp-permit-row">
-                            <span class="mp-legend-item">
-                                <i class="mp-dot active"></i>
-                                Aktif
-                            </span>
+                                $stageWidth = round(
+                                    (
+                                        $stageCount
+                                        / $stageMax
+                                    ) * 100,
+                                    2
+                                );
+                            @endphp
 
-                            <strong class="mp-permit-number">
-                                {{ $permitStats['aktif'] ?? 0 }}
-                            </strong>
-                        </div>
+                            <div
+                                class="mp-stage-row"
+                                title="{{ $stage['label'] ?? '-' }}: {{ number_format($stageCount) }}"
+                            >
+                                <div class="mp-stage-label">
+                                    <i
+                                        class="mp-stage-dot"
+                                        style="--stage-color: {{ $stage['color'] ?? '#cbd5e1' }};"
+                                        aria-hidden="true"
+                                    ></i>
 
-                        <div class="mp-permit-row">
-                            <span class="mp-legend-item">
-                                <i class="mp-dot warning"></i>
-                                Akan Expired
-                            </span>
+                                    <span class="mp-stage-label-text">
+                                        {{ $stage['short_label'] ?? $stage['label'] ?? '-' }}
+                                    </span>
+                                </div>
 
-                            <strong class="mp-permit-number">
-                                {{ $permitStats[
-                                    'akan_expired'
-                                ] ?? 0 }}
-                            </strong>
-                        </div>
+                                <div class="mp-stage-track">
+                                    <div
+                                        class="mp-stage-bar"
+                                        style="
+                                            --stage-width: {{ $stageWidth }}%;
+                                            --stage-color: {{ $stage['color'] ?? '#cbd5e1' }};
+                                            --stage-min-width: {{ $stageCount > 0 ? '3px' : '0' }};
+                                        "
+                                    ></div>
+                                </div>
 
-                        <div class="mp-permit-row">
-                            <span class="mp-legend-item">
-                                <i class="mp-dot expired"></i>
-                                Expired
-                            </span>
-
-                            <strong class="mp-permit-number">
-                                {{ $permitStats['expired'] ?? 0 }}
-                            </strong>
-                        </div>
-
-                        <div class="mp-permit-row">
-                            <span class="mp-legend-item">
-                                <i class="mp-dot unknown"></i>
-                                Tidak Diketahui
-                            </span>
-
-                            <strong class="mp-permit-number">
-                                {{ $permitStats[
-                                    'tidak_diketahui'
-                                ] ?? 0 }}
-                            </strong>
-                        </div>
+                                <strong class="mp-stage-value">
+                                    {{ number_format($stageCount) }}
+                                </strong>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </article>
@@ -1219,11 +1295,13 @@
                             )
                                 @php
                                     $statusClass = match (
-                                        $row['status'] ?? 'PROSES'
+                                        $row['status']
+                                            ?? 'TIDAK DIKLASIFIKASIKAN'
                                     ) {
                                         'SELESAI' => 'success',
                                         'GAGAL' => 'failed',
-                                        default => 'process',
+                                        'PROSES' => 'process',
+                                        default => 'warning',
                                     };
                                 @endphp
 
@@ -1249,7 +1327,7 @@
                                             title="{{ $row['status_raw'] }}"
                                         >
                                             {{ $row['status_raw']
-                                                ?: 'PROSES' }}
+                                                ?: 'BELUM ADA STATUS' }}
                                         </span>
                                     </td>
                                 </tr>

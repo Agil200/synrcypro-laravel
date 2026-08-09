@@ -146,17 +146,39 @@ class MinePermitController extends Controller
                         $sheColumns['status_she']
                     );
 
-                    $statusUpper = strtoupper($statusRaw);
+                    $statusUpper = mb_strtoupper(
+                        trim(
+                            preg_replace(
+                                '/\s+/u',
+                                ' ',
+                                $statusRaw
+                            ) ?? ''
+                        )
+                    );
 
                     $status = match (true) {
-                        str_contains($statusUpper, 'GAGAL') =>
+                        $statusUpper === 'GAGAL' ||
+                        str_starts_with(
+                            $statusUpper,
+                            'GAGAL '
+                        ) =>
                             'GAGAL',
 
-                        str_contains($statusUpper, 'SELESAI') =>
+                        $statusUpper === 'SELESAI' ||
+                        preg_match(
+                            '/^8\s*[.\-]?\s*SELESAI\b/u',
+                            $statusUpper
+                        ) === 1 =>
                             'SELESAI',
 
-                        default =>
+                        preg_match(
+                            '/^[1-7]\s*[.\-]?\s*\S+/u',
+                            $statusUpper
+                        ) === 1 =>
                             'PROSES',
+
+                        default =>
+                            'TIDAK DIKLASIFIKASIKAN',
                     };
 
                     return [
@@ -212,7 +234,7 @@ class MinePermitController extends Controller
                         'status_raw' =>
                             $statusRaw !== ''
                                 ? $statusRaw
-                                : 'PROSES',
+                                : 'BELUM ADA STATUS',
 
                         'status' =>
                             $status,
@@ -654,6 +676,148 @@ class MinePermitController extends Controller
                     ->count(),
         ];
 
+        /*
+         * ==============================================================
+         * DISTRIBUSI TAHAPAN PROSES PERMIT — MONITORING SHE
+         * ==============================================================
+         *
+         * Chart dashboard menggunakan nilai Status SHE:
+         * Gagal, tahap 1 s.d. 8, dan Belum Ada Status.
+         * Statistik masa berlaku permit tetap dipertahankan terpisah
+         * untuk "Permit Perlu Perhatian".
+         */
+        $stageDefinitions = [
+            'gagal' => [
+                'label' => 'Gagal',
+                'short_label' => 'Gagal',
+                'color' => '#dc2626',
+            ],
+            '1' => [
+                'label' => '1. PENGAJUAN BERKAS',
+                'short_label' => '1. Pengajuan Berkas',
+                'color' => '#e9c46a',
+            ],
+            '2' => [
+                'label' => '2. EVALUASI BERKAS',
+                'short_label' => '2. Evaluasi Berkas',
+                'color' => '#64b5d9',
+            ],
+            '3' => [
+                'label' => '3. PERSETUJUAN BERKAS',
+                'short_label' => '3. Persetujuan Berkas',
+                'color' => '#68b8b0',
+            ],
+            '4' => [
+                'label' => '4. EVALUASI HASIL MEDCHECK',
+                'short_label' => '4. Evaluasi Hasil Medcheck',
+                'color' => '#b79ad8',
+            ],
+            '5' => [
+                'label' => '5. PELAKSANAAN INDUKSI',
+                'short_label' => '5. Pelaksanaan Induksi',
+                'color' => '#9a6237',
+            ],
+            '6' => [
+                'label' => '6. REKAP KELULUSAN',
+                'short_label' => '6. Rekap Kelulusan',
+                'color' => '#60408f',
+            ],
+            '7' => [
+                'label' => '7. PENERBITAN SIB/SIM',
+                'short_label' => '7. Penerbitan SIB/SIM',
+                'color' => '#2f6fae',
+            ],
+            '8' => [
+                'label' => '8. SELESAI',
+                'short_label' => '8. Selesai',
+                'color' => '#27866a',
+            ],
+            'unknown' => [
+                'label' => 'BELUM ADA STATUS',
+                'short_label' => 'Belum Ada Status',
+                'color' => '#cbd5e1',
+            ],
+        ];
+
+        $stageStats = collect($stageDefinitions)
+            ->map(function (
+                array $definition,
+                string $stageKey
+            ) use ($filteredDashboardShe): array {
+                $count = $filteredDashboardShe
+                    ->filter(function (
+                        array $row
+                    ) use ($stageKey): bool {
+                        $statusRaw = mb_strtoupper(
+                            trim(
+                                preg_replace(
+                                    '/\s+/u',
+                                    ' ',
+                                    (string) (
+                                        $row['status_raw'] ?? ''
+                                    )
+                                ) ?? ''
+                            )
+                        );
+
+                        return match ($stageKey) {
+                            'gagal' =>
+                                $statusRaw === 'GAGAL'
+                                || str_starts_with(
+                                    $statusRaw,
+                                    'GAGAL '
+                                ),
+
+                            '1', '2', '3', '4',
+                            '5', '6', '7', '8' =>
+                                preg_match(
+                                    '/^'
+                                    . preg_quote(
+                                        $stageKey,
+                                        '/'
+                                    )
+                                    . '\s*[.\-]?\s*\S+/u',
+                                    $statusRaw
+                                ) === 1,
+
+                            'unknown' =>
+                                $statusRaw === ''
+                                || $statusRaw
+                                    === 'BELUM ADA STATUS'
+                                || ! (
+                                    $statusRaw === 'GAGAL'
+                                    || str_starts_with(
+                                        $statusRaw,
+                                        'GAGAL '
+                                    )
+                                    || preg_match(
+                                        '/^[1-8]\s*[.\-]?\s*\S+/u',
+                                        $statusRaw
+                                    ) === 1
+                                    || $statusRaw === 'SELESAI'
+                                ),
+
+                            default =>
+                                false,
+                        };
+                    })
+                    ->count();
+
+                return [
+                    ...$definition,
+                    'key' => $stageKey,
+                    'count' => $count,
+                ];
+            })
+            ->values();
+
+        $stageTotal = $stageStats->sum('count');
+
+        $stageMax = max(
+            1,
+            (int) $stageStats->max('count')
+        );
+
         $permitStats = [
             'aktif' =>
                 $filteredDashboardPermits
@@ -826,6 +990,15 @@ class MinePermitController extends Controller
 
             'permitTotal' =>
                 $permitTotal,
+
+            'stageStats' =>
+                $stageStats,
+
+            'stageTotal' =>
+                $stageTotal,
+
+            'stageMax' =>
+                $stageMax,
 
             'monthlyTrend' =>
                 $monthlyTrend,
@@ -1029,22 +1202,49 @@ class MinePermitController extends Controller
                         $columns['status_she']
                     );
 
-                    $statusUpper = strtoupper($statusSheRaw);
+                    $statusUpper = mb_strtoupper(
+                        trim(
+                            preg_replace(
+                                '/\s+/u',
+                                ' ',
+                                $statusSheRaw
+                            ) ?? ''
+                        )
+                    );
 
                     /*
                      * Nilai asli tetap ditampilkan pada badge.
                      * Normalisasi hanya digunakan untuk warna,
                      * statistik, dan filter.
+                     *
+                     * GAGAL       = status Gagal.
+                     * PROSES      = tahap 1 sampai 7.
+                     * SELESAI     = tahap 8 / Selesai.
+                     * Selain itu  = tidak diklasifikasikan.
                      */
                     $status = match (true) {
-                        str_contains($statusUpper, 'GAGAL') =>
+                        $statusUpper === 'GAGAL' ||
+                        str_starts_with(
+                            $statusUpper,
+                            'GAGAL '
+                        ) =>
                             'GAGAL',
 
-                        str_contains($statusUpper, 'SELESAI') =>
+                        $statusUpper === 'SELESAI' ||
+                        preg_match(
+                            '/^8\s*[.\-]?\s*SELESAI\b/u',
+                            $statusUpper
+                        ) === 1 =>
                             'SELESAI',
 
-                        default =>
+                        preg_match(
+                            '/^[1-7]\s*[.\-]?\s*\S+/u',
+                            $statusUpper
+                        ) === 1 =>
                             'PROSES',
+
+                        default =>
+                            'TIDAK DIKLASIFIKASIKAN',
                     };
 
                     return [
@@ -1104,7 +1304,7 @@ class MinePermitController extends Controller
                         'status_she' =>
                             $statusSheRaw !== ''
                                 ? $statusSheRaw
-                                : 'PROSES',
+                                : 'BELUM ADA STATUS',
 
                         'keterangan' => $this->cell(
                             $row,
