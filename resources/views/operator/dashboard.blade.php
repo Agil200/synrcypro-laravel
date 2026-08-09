@@ -25,7 +25,17 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <meta
+        name="csrf-token"
+        content="{{ csrf_token() }}"
+    >
+
     <title>Dashboard Operator — SYNRGYPRO</title>
     <style>
         * { box-sizing: border-box; }
@@ -215,6 +225,198 @@
             .info-grid, .stats { grid-template-columns: 1fr; }
             .info.wide { grid-column: auto; }
         }
+
+
+        /* =========================================================
+           SYNRGY ASSISTANT
+           ========================================================= */
+        #synrgyChatButton {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 9998;
+            display: grid;
+            width: 60px;
+            height: 60px;
+            place-items: center;
+            border: 0;
+            border-radius: 50%;
+            color: #fff;
+            background: linear-gradient(135deg, #172033, #b64d29);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, .28);
+            font-size: 25px;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        #synrgyChatButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, .34);
+        }
+        #synrgyChatButton:focus-visible,
+        #synrgyChatSend:focus-visible,
+        .synrgy-chat-actions button:focus-visible {
+            outline: 3px solid rgba(182, 77, 41, .28);
+            outline-offset: 2px;
+        }
+        #synrgyChatPanel {
+            position: fixed;
+            right: 24px;
+            bottom: 96px;
+            z-index: 9999;
+            display: none;
+            width: 390px;
+            height: 560px;
+            max-width: calc(100vw - 30px);
+            max-height: calc(100vh - 118px);
+            overflow: hidden;
+            border: 1px solid #d8dee7;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 18px 55px rgba(15, 23, 42, .28);
+            flex-direction: column;
+        }
+        #synrgyChatPanel.show { display: flex; }
+        .synrgy-chat-header {
+            display: flex;
+            min-height: 72px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 13px 15px;
+            color: #fff;
+            background: linear-gradient(100deg, #172033, #b64d29);
+        }
+        .synrgy-chat-title {
+            display: flex;
+            min-width: 0;
+            align-items: center;
+            gap: 10px;
+        }
+        .synrgy-chat-icon {
+            display: grid;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .15);
+            font-size: 20px;
+        }
+        .synrgy-chat-title strong {
+            display: block;
+            font-size: 14px;
+        }
+        .synrgy-chat-title small {
+            display: block;
+            margin-top: 3px;
+            color: rgba(255,255,255,.76);
+            font-size: 10px;
+        }
+        .synrgy-chat-actions {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .synrgy-chat-actions button {
+            display: grid;
+            width: 34px;
+            height: 34px;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            color: #fff;
+            background: transparent;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .synrgy-chat-actions button:hover { background: rgba(255,255,255,.12); }
+        #synrgyChatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 17px;
+            background: #f4f6f8;
+            scroll-behavior: smooth;
+        }
+        .synrgy-chat-message {
+            display: flex;
+            margin-bottom: 13px;
+        }
+        .synrgy-chat-message.user { justify-content: flex-end; }
+        .synrgy-chat-bubble {
+            max-width: 84%;
+            padding: 11px 13px;
+            border-radius: 14px;
+            font-size: 12px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+        .synrgy-chat-message.bot .synrgy-chat-bubble {
+            color: #172033;
+            background: #fff;
+            border: 1px solid #e1e5eb;
+            border-bottom-left-radius: 4px;
+        }
+        .synrgy-chat-message.user .synrgy-chat-bubble {
+            color: #fff;
+            background: #b64d29;
+            border-bottom-right-radius: 4px;
+        }
+        .synrgy-chat-input-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            padding: 11px;
+            border-top: 1px solid #e2e7ed;
+            background: #fff;
+        }
+        #synrgyChatInput {
+            flex: 1;
+            min-height: 42px;
+            max-height: 100px;
+            padding: 10px 12px;
+            border: 1px solid #d0d5dd;
+            border-radius: 11px;
+            outline: none;
+            resize: none;
+            color: #172033;
+            background: #fff;
+            font: inherit;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        #synrgyChatInput:focus {
+            border-color: #b64d29;
+            box-shadow: 0 0 0 3px rgba(182,77,41,.10);
+        }
+        #synrgyChatSend {
+            width: 43px;
+            height: 43px;
+            flex: 0 0 43px;
+            border: 0;
+            border-radius: 10px;
+            color: #fff;
+            background: #b64d29;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        #synrgyChatSend:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+        @media (max-width: 600px) {
+            #synrgyChatButton {
+                right: 15px;
+                bottom: 15px;
+            }
+            #synrgyChatPanel {
+                right: 10px;
+                bottom: 82px;
+                width: calc(100vw - 20px);
+                height: calc(100vh - 102px);
+                max-height: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -392,5 +594,202 @@
             </section>
         @endforeach
     </main>
+
+
+    <!-- =====================================================
+         SYNRGY ASSISTANT
+         ===================================================== -->
+    <button
+        id="synrgyChatButton"
+        type="button"
+        title="Buka SYNRGY Assistant"
+        aria-label="Buka SYNRGY Assistant"
+        aria-controls="synrgyChatPanel"
+        aria-expanded="false"
+    >💬</button>
+
+    <section
+        id="synrgyChatPanel"
+        role="dialog"
+        aria-label="SYNRGY Assistant"
+        aria-hidden="true"
+    >
+        <header class="synrgy-chat-header">
+            <div class="synrgy-chat-title">
+                <div class="synrgy-chat-icon" aria-hidden="true">✦</div>
+                <div>
+                    <strong>SYNRGY Assistant</strong>
+                    <small>Powered by Gemini AI</small>
+                </div>
+            </div>
+
+            <div class="synrgy-chat-actions">
+                <button id="synrgyChatReset" type="button" title="Percakapan baru" aria-label="Percakapan baru">↻</button>
+                <button id="synrgyChatClose" type="button" title="Tutup" aria-label="Tutup chatbot">×</button>
+            </div>
+        </header>
+
+        <div id="synrgyChatMessages" aria-live="polite">
+            <div class="synrgy-chat-message bot">
+                <div class="synrgy-chat-bubble">Halo 👋
+
+Saya SYNRGY Assistant. Saya dapat membantu menjelaskan penggunaan SYNRGYPRO, APD, Coaching &amp; Counselling, Surat Teguran, dan Surat Peringatan.
+
+Ada yang bisa saya bantu?</div>
+            </div>
+        </div>
+
+        <div class="synrgy-chat-input-area">
+            <textarea
+                id="synrgyChatInput"
+                rows="1"
+                maxlength="2000"
+                placeholder="Tulis pertanyaan..."
+                aria-label="Pesan untuk SYNRGY Assistant"
+            ></textarea>
+            <button id="synrgyChatSend" type="button" title="Kirim" aria-label="Kirim pesan">➤</button>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const openButton = document.getElementById('synrgyChatButton');
+            const panel = document.getElementById('synrgyChatPanel');
+            const closeButton = document.getElementById('synrgyChatClose');
+            const resetButton = document.getElementById('synrgyChatReset');
+            const sendButton = document.getElementById('synrgyChatSend');
+            const input = document.getElementById('synrgyChatInput');
+            const messages = document.getElementById('synrgyChatMessages');
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+
+            const chatUrl = @json(route('operator.chatbot'));
+            const resetUrl = @json(route('operator.chatbot.reset'));
+
+            if (!csrfMeta) {
+                console.error('CSRF token tidak ditemukan pada dashboard operator.');
+                return;
+            }
+
+            const csrfToken = csrfMeta.getAttribute('content');
+
+            function setPanel(open) {
+                panel.classList.toggle('show', open);
+                panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+                openButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) {
+                    window.setTimeout(function () { input.focus(); }, 80);
+                }
+            }
+
+            openButton.addEventListener('click', function () {
+                setPanel(!panel.classList.contains('show'));
+            });
+
+            closeButton.addEventListener('click', function () {
+                setPanel(false);
+            });
+
+            function addMessage(text, type) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'synrgy-chat-message ' + type;
+
+                const bubble = document.createElement('div');
+                bubble.className = 'synrgy-chat-bubble';
+
+                // textContent sengaja dipakai agar output AI tidak dieksekusi sebagai HTML/JS.
+                bubble.textContent = text;
+
+                wrapper.appendChild(bubble);
+                messages.appendChild(wrapper);
+                messages.scrollTop = messages.scrollHeight;
+                return wrapper;
+            }
+
+            async function parseJsonResponse(response) {
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('Server tidak mengembalikan JSON. HTTP ' + response.status);
+                }
+                return response.json();
+            }
+
+            async function sendMessage() {
+                const message = input.value.trim();
+                if (!message || sendButton.disabled) {
+                    return;
+                }
+
+                addMessage(message, 'user');
+                input.value = '';
+                sendButton.disabled = true;
+                const loading = addMessage('Sedang berpikir...', 'bot');
+
+                try {
+                    const response = await fetch(chatUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await parseJsonResponse(response);
+                    loading.remove();
+
+                    if (response.ok && data.success) {
+                        addMessage(data.reply, 'bot');
+                    } else {
+                        addMessage(data.message || 'SYNRGY Assistant sedang tidak dapat diakses.', 'bot');
+                    }
+                } catch (error) {
+                    loading.remove();
+                    console.error('SYNRGY Assistant:', error);
+                    addMessage('Tidak dapat terhubung ke SYNRGY Assistant. Silakan coba lagi.', 'bot');
+                } finally {
+                    sendButton.disabled = false;
+                    input.focus();
+                }
+            }
+
+            sendButton.addEventListener('click', sendMessage);
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            resetButton.addEventListener('click', async function () {
+                resetButton.disabled = true;
+                try {
+                    const response = await fetch(resetUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    await parseJsonResponse(response);
+
+                    messages.innerHTML = '';
+                    addMessage('Percakapan baru dimulai. Ada yang bisa saya bantu?', 'bot');
+                    input.focus();
+                } catch (error) {
+                    console.error('Reset SYNRGY Assistant:', error);
+                    addMessage('Percakapan tidak dapat direset saat ini.', 'bot');
+                } finally {
+                    resetButton.disabled = false;
+                }
+            });
+        });
+    </script>
+
 </body>
 </html>

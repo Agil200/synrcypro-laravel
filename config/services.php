@@ -55,6 +55,7 @@ return [
             'channel' => env(
                 'SLACK_BOT_USER_DEFAULT_CHANNEL'
             ),
+
         ],
     ],
 
@@ -83,6 +84,44 @@ return [
                 'GOOGLE_REDIRECT_URI'
             )
         ),
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gemini AI - SYNRGY Assistant
+    |--------------------------------------------------------------------------
+    |
+    | Digunakan untuk chatbot AI pada Dashboard Operator SYNRGYPRO.
+    | API Key disimpan di .env dan jangan ditaruh di Blade/JavaScript.
+    |
+    */
+
+    'gemini' => [
+
+        'key' => trim(
+            (string) env(
+                'GEMINI_API_KEY'
+            )
+        ),
+
+        'model' => trim(
+            (string) env(
+                'GEMINI_MODEL',
+                'gemini-3.6-flash'
+            )
+        ),
+
+        'url' => rtrim(
+            trim(
+                (string) env(
+                    'GEMINI_API_URL',
+                    'https://generativelanguage.googleapis.com/v1beta/interactions'
+                )
+            ),
+            '/'
+        ),
+
     ],
 
     /*
@@ -287,8 +326,7 @@ return [
         | Spreadsheet Monitoring Test BNN
         |--------------------------------------------------------------------------
         |
-        | Spreadsheet:
-        | https://docs.google.com/spreadsheets/d/
+        | Spreadsheet ID:
         | 1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU
         |
         | Sheet GID:
@@ -296,14 +334,18 @@ return [
         |
         */
 
-        'test_bnn_spreadsheet_id' => env(
-            'GOOGLE_SHEETS_TEST_BNN_SPREADSHEET_ID',
-            '1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU'
+        'test_bnn_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_TEST_BNN_SPREADSHEET_ID',
+                '1enc9LxoaGo-ZNjxJ53UY24N3y-TTHn-W8P4UzmtXADU'
+            )
         ),
 
-        'test_bnn_range' => env(
-            'GOOGLE_SHEETS_TEST_BNN_RANGE',
-            "'DAFTAR TEST BNN'!A:AZ"
+        'test_bnn_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_TEST_BNN_RANGE',
+                "'DAFTAR TEST BNN'!A:AZ"
+            )
         ),
 
         'test_bnn_sheet_gid' => (int) env(

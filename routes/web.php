@@ -5,19 +5,20 @@ use App\Http\Controllers\ApdController;
 use App\Http\Controllers\AtrController;
 use App\Http\Controllers\AtrPicRosterController;
 use App\Http\Controllers\BastAssetController;
+use App\Http\Controllers\BNNController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CoachingCounsellingController;
-use App\Http\Controllers\StSpController;
+use App\Http\Controllers\DatabaseUiController;
 use App\Http\Controllers\GoogleOAuthController;
-use App\Http\Controllers\MinePermitController;
 use App\Http\Controllers\ManpowerDashboardController;
 use App\Http\Controllers\McuFuController;
+use App\Http\Controllers\MinePermitController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OperatorPortalController;
-use App\Http\Controllers\DatabaseUiController;
+use App\Http\Controllers\StSpController;
 use App\Http\Controllers\SuratKeluarController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\BNNController;
 use Illuminate\Support\Facades\Schedule;
-use App\Http\Controllers\NotificationController;
 
 
 
@@ -156,6 +157,26 @@ Route::post(
     '/operator/logout',
     [OperatorPortalController::class, 'logout']
 )->name('operator.logout');
+
+/*
+|--------------------------------------------------------------------------
+| SYNRGY Assistant - Gemini AI
+|--------------------------------------------------------------------------
+| Portal operator menggunakan session guest sendiri dan tidak memakai
+| Auth::login(), sehingga route chatbot harus berada di luar middleware auth.
+*/
+
+Route::post(
+    '/operator/chatbot',
+    [ChatbotController::class, 'chat']
+)->middleware('throttle:20,1')
+  ->name('operator.chatbot');
+
+Route::post(
+    '/operator/chatbot/reset',
+    [ChatbotController::class, 'reset']
+)->middleware('throttle:20,1')
+  ->name('operator.chatbot.reset');
 
 /*
 |--------------------------------------------------------------------------
@@ -830,6 +851,7 @@ Route::prefix('database/employees')
         [NotificationController::class,'read']
         )
         ->name('notifications.read');
+
 
 
     /*
