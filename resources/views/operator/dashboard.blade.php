@@ -619,7 +619,7 @@
                 <div class="synrgy-chat-icon" aria-hidden="true">✦</div>
                 <div>
                     <strong>SYNRGY Assistant</strong>
-                    <small>Powered by Gemini AI</small>
+                    <small>Powered by PRO PPA SITE BA</small>
                 </div>
             </div>
 
