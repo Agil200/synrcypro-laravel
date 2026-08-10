@@ -488,6 +488,24 @@
             border-radius: 50%;
         }
 
+
+.mina-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:8px;
+    padding:8px 12px;
+    border-radius:8px;
+    background:#eef6ff;
+    color:#0066ff!important;
+    border:1px solid #cfe2ff;
+    font-weight:700;
+    text-decoration:none;
+}
+.mina-link:hover{
+    opacity:.85;
+}
+
 </style>
 </head>
 <body>
@@ -776,21 +794,88 @@ Silakan tanyakan kebutuhan Anda.</div>
                 setPanel(false);
             });
 
-            function addMessage(text, type) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'synrgy-chat-message ' + type;
+           
+function addMessage(text, type) {
 
-                const bubble = document.createElement('div');
-                bubble.className = 'synrgy-chat-bubble';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'synrgy-chat-message ' + type;
 
-                // textContent sengaja dipakai agar output AI tidak dieksekusi sebagai HTML/JS.
-                bubble.textContent = text;
+    const bubble = document.createElement('div');
+    bubble.className = 'synrgy-chat-bubble';
 
-                wrapper.appendChild(bubble);
-                messages.appendChild(wrapper);
-                messages.scrollTop = messages.scrollHeight;
-                return wrapper;
+
+    let safeText = String(text ?? '');
+
+
+    // Escape HTML untuk keamanan
+    safeText = safeText
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+
+    // Deteksi URL dan ubah menjadi link aktif
+    safeText = safeText.replace(
+        /(https?:\/\/[^\s<]+)/g,
+        function(url) {
+
+            const cleanUrl = url.replace(/&amp;/g, "&");
+
+            let label = cleanUrl;
+
+            if (cleanUrl.includes('whatsapp.com')) {
+                label = 'Buka WhatsApp';
+            } else if (cleanUrl.includes('play.google.com')) {
+                label = 'Download Google Play';
+            } else if (cleanUrl.includes('testflight.apple.com')) {
+                label = 'Buka TestFlight iOS';
+            } else if (cleanUrl.includes('docs.google.com/forms')) {
+                label = 'Buka Form Online';
+            } else if (cleanUrl.includes('drive.google.com')) {
+                label = 'Buka Google Drive';
             }
+
+            return `
+                <div style="margin-top:8px;">
+                    <a href="${cleanUrl}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="
+                         display:inline-flex;
+                         align-items:center;
+                         gap:6px;
+                         padding:7px 12px;
+                         border-radius:8px;
+                         background:#eef6ff;
+                         color:#0066ff;
+                         font-weight:700;
+                         text-decoration:none;
+                         border:1px solid #cfe2ff;
+                         word-break:break-word;
+                       ">
+                       🔗 ${label}
+                    </a>
+                </div>
+            `;
+        }
+    );
+
+
+    // Pertahankan enter
+    safeText = safeText.replace(/\n/g, "<br>");
+
+
+    bubble.innerHTML = safeText;
+
+    wrapper.appendChild(bubble);
+    messages.appendChild(wrapper);
+
+    messages.scrollTop = messages.scrollHeight;
+
+    return wrapper;
+}
+
+
 
             async function parseJsonResponse(response) {
                 const contentType = response.headers.get('content-type') || '';

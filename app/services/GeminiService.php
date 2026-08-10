@@ -7,18 +7,11 @@ use RuntimeException;
 
 class GeminiService
 {
-    public function ask(
-        string $message,
-        array $knowledge = []
-    ): string {
-
+    public function ask(string $message, array $knowledge = []): string
+    {
         $apiKey = trim((string) config('services.gemini.key'));
         $model = trim((string) config('services.gemini.model', 'gemini-3.6-flash'));
-
-        $url = rtrim(
-            trim((string) config('services.gemini.url')),
-            '/'
-        );
+        $url = rtrim((string) config('services.gemini.url'), '/');
 
         if ($apiKey === '') {
             throw new RuntimeException('GEMINI_API_KEY belum dikonfigurasi.');
@@ -27,24 +20,34 @@ class GeminiService
         $knowledgeText = '';
 
         foreach ($knowledge as $item) {
-            $knowledgeText .= "\nPertanyaan: ".$item['question'];
-            $knowledgeText .= "\nJawaban resmi: ".$item['answer']."\n";
+            $knowledgeText .= "\nPertanyaan: " . ($item['question'] ?? '');
+            $knowledgeText .= "\nJawaban resmi: " . ($item['answer'] ?? '');
+
+            if (!empty($item['link'])) {
+                $knowledgeText .= "\nLink resmi: " . $item['link'];
+            }
+
+            if (!empty($item['source'])) {
+                $knowledgeText .= "\nSumber: " . $item['source'];
+            }
+
+            $knowledgeText .= "\n";
         }
 
         $systemInstruction = <<<PROMPT
 Anda adalah MINA (Mining Intelligence Assistant), asisten AI internal SYNRGYPRO.
 
-Gunakan Bahasa Indonesia yang profesional.
+Gunakan Knowledge Base perusahaan sebagai sumber utama.
 
-Gunakan Knowledge Base perusahaan berikut sebagai sumber utama:
-
+Knowledge Base:
 $knowledgeText
 
 Aturan:
-1. Jika jawaban tersedia di Knowledge Base, gunakan jawaban tersebut.
-2. Jangan mengarang aturan perusahaan.
-3. Jangan membuat data karyawan palsu.
-4. Jika informasi tidak tersedia, katakan dengan jelas.
+1. Gunakan informasi dari Knowledge Base.
+2. Jangan mengarang informasi.
+3. Jika tersedia link resmi, WAJIB tampilkan.
+4. Jangan menghapus URL.
+5. Tampilkan link aplikasi/form/website/WhatsApp pada baris terpisah.
 PROMPT;
 
         $response = Http::asJson()
@@ -61,9 +64,7 @@ PROMPT;
             ]);
 
         if ($response->failed()) {
-            throw new RuntimeException(
-                'Gemini API gagal: '.$response->body()
-            );
+            throw new RuntimeException('Gemini API gagal: '.$response->body());
         }
 
         $data = $response->json();

@@ -40,12 +40,11 @@ class ChatbotController extends Controller
 
             report($e);
 
-
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'MINA sedang tidak dapat diakses. Silakan coba lagi.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
-
         }
     }
 

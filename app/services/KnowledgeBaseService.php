@@ -14,11 +14,15 @@ class KnowledgeBaseService
         $apiKey = config('services.knowledge_base.api_key');
 
         if (!$spreadsheetId) {
-            throw new RuntimeException('GOOGLE_KNOWLEDGE_SHEET_ID belum dikonfigurasi.');
+            throw new RuntimeException(
+                'GOOGLE_KNOWLEDGE_SHEET_ID belum dikonfigurasi.'
+            );
         }
 
         if (!$apiKey) {
-            throw new RuntimeException('GOOGLE_API_KEY belum dikonfigurasi.');
+            throw new RuntimeException(
+                'GOOGLE_API_KEY belum dikonfigurasi.'
+            );
         }
 
         $response = Http::get(
@@ -40,43 +44,83 @@ class KnowledgeBaseService
             return [];
         }
 
+
+        // Header spreadsheet
         $headers = array_map(
             fn($value) => strtolower(trim($value)),
             $rows[0]
         );
 
+
         $keywordIndex = array_search('keywords', $headers);
         $questionIndex = array_search('pertanyaan', $headers);
         $answerIndex = array_search('jawaban', $headers);
+        $linkIndex = array_search('link', $headers);
+        $sourceIndex = array_search('sumber', $headers);
+        $statusIndex = array_search('status', $headers);
 
-        if ($keywordIndex === false || $answerIndex === false) {
-            throw new RuntimeException('Kolom Knowledge Base tidak sesuai.');
+
+        if (
+            $keywordIndex === false ||
+            $answerIndex === false
+        ) {
+            throw new RuntimeException(
+                'Kolom Knowledge Base tidak sesuai.'
+            );
         }
 
+
         $messageLower = strtolower($message);
+
         $results = [];
+
 
         foreach (array_slice($rows, 1) as $row) {
 
-            $keywords = strtolower($row[$keywordIndex] ?? '');
+            $keywords = strtolower(
+                $row[$keywordIndex] ?? ''
+            );
+
             $answer = $row[$answerIndex] ?? '';
+
             $question = $row[$questionIndex] ?? '';
+
+            $link = $row[$linkIndex] ?? '';
+
+            $source = $row[$sourceIndex] ?? '';
+
+            $status = $row[$statusIndex] ?? '';
+
 
             foreach (explode(',', $keywords) as $keyword) {
 
                 $keyword = trim($keyword);
 
-                if ($keyword !== '' && str_contains($messageLower, $keyword)) {
+
+                if (
+                    $keyword !== '' &&
+                    str_contains($messageLower, $keyword)
+                ) {
 
                     $results[] = [
+
                         'question' => $question,
+
                         'answer' => $answer,
+
+                        'link' => $link,
+
+                        'source' => $source,
+
+                        'status' => $status,
+
                     ];
 
                     break;
                 }
             }
         }
+
 
         return $results;
     }
