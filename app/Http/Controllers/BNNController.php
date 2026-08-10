@@ -36,6 +36,49 @@ class BNNController extends Controller
         return view('manpower.bnn.form');
     }
 
+
+        /** Notifikasi BNN
+         *  */
+
+                        public function generateNotification()
+                {
+
+                $data = Bnn::whereDate(
+                'tanggal_pemeriksaan',
+                today()
+                )
+                ->get();
+
+
+                foreach($data as $row){
+
+
+                Notification::firstOrCreate([
+
+                'title'=>'🧪 Jadwal Pemeriksaan BNN',
+
+                'reference_id'=>$row->id,
+
+                'type'=>'bnn'
+
+                ],[
+
+                'message'=>
+                $row->nama.
+                ' jadwal pemeriksaan BNN hari ini',
+
+                'target_role'=>'all',
+
+                'notification_date'=>today()
+
+                ]);
+
+
+                }
+
+                }
+
+
     /**
      * Menyimpan data dari form lokal yang sudah ada.
      * Monitoring pada file ini tetap membaca sumber Google Spreadsheet.

@@ -24,6 +24,41 @@ class McuFuController extends Controller
     ) {
     }
 
+
+            public function generateMcuNotification()
+                {
+
+
+                $snapshot=$this->snapshot();
+
+
+                foreach($snapshot['rows'] as $row){
+
+
+                Notification::create([
+
+                'title'=>'🏥 Jadwal MCU',
+
+                'message'=>
+                ($row['nama'] ?? '').
+                ' memiliki jadwal MCU',
+
+                'type'=>'mcu',
+
+                'target_role'=>'all',
+
+                'notification_date'=>today()
+
+                ]);
+
+
+                }
+
+
+                }
+
+
+
     public function index(Request $request): View
     {
         $snapshot = $this->snapshot();

@@ -36,7 +36,7 @@
         content="{{ csrf_token() }}"
     >
 
-    <title>Dashboard Operator — SYNRGYPRO</title>
+    <title>Dashboard Operator — SYNRGYPRO | MINA AI</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -230,24 +230,36 @@
         /* =========================================================
            SYNRGY ASSISTANT
            ========================================================= */
-        #synrgyChatButton {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            z-index: 9998;
-            display: grid;
-            width: 60px;
-            height: 60px;
-            place-items: center;
-            border: 0;
-            border-radius: 50%;
-            color: #fff;
-            background: linear-gradient(135deg, #172033, #b64d29);
-            box-shadow: 0 10px 28px rgba(15, 23, 42, .28);
-            font-size: 25px;
-            cursor: pointer;
-            transition: transform .18s ease, box-shadow .18s ease;
-        }
+        
+      #synrgyChatButton {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9998;
+
+    display: grid;
+    width: 60px;
+    height: 60px;
+    place-items: center;
+
+    border: 0;
+    border-radius: 50%;
+    overflow: hidden;
+
+    background: linear-gradient(135deg, #172033, #b64d29);
+    box-shadow: 0 10px 28px rgba(15,23,42,.28);
+
+    cursor: pointer;
+}
+
+
+#synrgyChatButton img {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
         #synrgyChatButton:hover {
             transform: translateY(-2px);
             box-shadow: 0 14px 34px rgba(15, 23, 42, .34);
@@ -265,7 +277,7 @@
             z-index: 9999;
             display: none;
             width: 390px;
-            height: 560px;
+            height: 520px;
             max-width: calc(100vw - 30px);
             max-height: calc(100vh - 118px);
             overflow: hidden;
@@ -290,28 +302,44 @@
             display: flex;
             min-width: 0;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
+        
         .synrgy-chat-icon {
-            display: grid;
-            width: 40px;
-            height: 40px;
-            flex: 0 0 40px;
-            place-items: center;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, .15);
-            font-size: 20px;
+    display:flex;
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border-radius:50%;
+    background:transparent;
+}
+
+.synrgy-chat-icon img {
+    width:42px;
+    height:42px;
+    object-fit:contain;
+}
+
+
+
+        
+                .synrgy-chat-title strong {
+            display:block;
+            font-size:15px;
+            line-height:1.1;
         }
-        .synrgy-chat-title strong {
-            display: block;
-            font-size: 14px;
-        }
+
+       
         .synrgy-chat-title small {
-            display: block;
-            margin-top: 3px;
-            color: rgba(255,255,255,.76);
-            font-size: 10px;
-        }
+    display:block;
+    margin-top:3px;
+    font-size:9px;
+    line-height:1.1;
+}
+
         .synrgy-chat-actions {
             display: flex;
             align-items: center;
@@ -417,7 +445,50 @@
                 max-height: none;
             }
         }
-    </style>
+    
+        /* ===== MINA UI FIX ===== */
+        html, body {
+            width: 100%;
+            min-height: 100%;
+            overflow-x: hidden;
+            zoom: 1;
+        }
+
+        .page {
+            width: min(1460px, calc(100% - 28px));
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #synrgyChatPanel {
+            transform: none !important;
+            zoom: 1 !important;
+        }
+
+        #synrgyChatButton {
+            transform: none;
+        }
+
+        .synrgy-chat-header {
+            min-height: 78px;
+        }
+
+        .synrgy-chat-title {
+            flex: 1;
+        }
+
+        .synrgy-chat-title small {
+            max-width: 180px;
+            white-space: normal;
+        }
+
+        .synrgy-chat-icon img,
+        #synrgyChatButton img {
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+</style>
 </head>
 <body>
     <header class="topbar">
@@ -600,26 +671,34 @@
          SYNRGY ASSISTANT
          ===================================================== -->
     <button
-        id="synrgyChatButton"
-        type="button"
-        title="Buka SYNRGY Assistant"
-        aria-label="Buka SYNRGY Assistant"
-        aria-controls="synrgyChatPanel"
-        aria-expanded="false"
-    >💬</button>
+    id="synrgyChatButton"
+    type="button"
+    title="Buka MINA Assistant"
+    aria-label="Buka MINA Assistant"
+    aria-controls="synrgyChatPanel"
+    aria-expanded="false"
+>
+    <img 
+        src="{{ asset('assets/images/chatminers-logo.png') }}" 
+        alt="MINA Logo"
+    >
+</button>
 
     <section
         id="synrgyChatPanel"
         role="dialog"
-        aria-label="SYNRGY Assistant"
+        aria-label="MINA Mining Intelligence Assistant"
         aria-hidden="true"
     >
         <header class="synrgy-chat-header">
             <div class="synrgy-chat-title">
-                <div class="synrgy-chat-icon" aria-hidden="true">✦</div>
-                <div>
-                    <strong>SYNRGY Assistant</strong>
-                    <small>Powered by PRO PPA SITE BA</small>
+                <div class="synrgy-chat-icon">
+        <img src="{{ asset('assets/images/chatminers-logo.png') }}" 
+         alt="MINA Logo">
+            </div>    
+
+                    <strong>MINA</strong>
+                    <small>Mining Intelligence Assistant<br>Powered by SYNRGYPRO PPA SITE BA</small>
                 </div>
             </div>
 
@@ -633,9 +712,17 @@
             <div class="synrgy-chat-message bot">
                 <div class="synrgy-chat-bubble">Halo 👋
 
-Saya SYNRGY Assistant. Saya dapat membantu menjelaskan penggunaan SYNRGYPRO, APD, Coaching &amp; Counselling, Surat Teguran, dan Surat Peringatan.
+Saya MINA,
+Mining Intelligence Assistant.
 
-Ada yang bisa saya bantu?</div>
+Saya siap membantu Anda terkait:
+⛑ APD
+📋 Coaching &amp; Counselling
+⚠ Surat Teguran
+📄 Surat Peringatan
+👤 Data Karyawan
+
+Silakan tanyakan kebutuhan Anda.</div>
             </div>
         </div>
 
@@ -644,7 +731,7 @@ Ada yang bisa saya bantu?</div>
                 id="synrgyChatInput"
                 rows="1"
                 maxlength="2000"
-                placeholder="Tulis pertanyaan..."
+                placeholder="Tanya MINA tentang APD, coaching, atau data Anda..."
                 aria-label="Pesan untuk SYNRGY Assistant"
             ></textarea>
             <button id="synrgyChatSend" type="button" title="Kirim" aria-label="Kirim pesan">➤</button>
@@ -743,7 +830,7 @@ Ada yang bisa saya bantu?</div>
                     if (response.ok && data.success) {
                         addMessage(data.reply, 'bot');
                     } else {
-                        addMessage(data.message || 'SYNRGY Assistant sedang tidak dapat diakses.', 'bot');
+                        addMessage(data.message || 'MINA sedang tidak dapat diakses.', 'bot');
                     }
                 } catch (error) {
                     loading.remove();

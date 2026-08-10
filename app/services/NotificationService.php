@@ -7,17 +7,18 @@ use App\Models\Bnn;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-
 class NotificationService
 {
 
-    protected GoogleSheetsService $googleSheets;
+    protected EmployeeMasterService $employeeMaster;
 
 
     public function __construct(
-        GoogleSheetsService $googleSheets
+        EmployeeMasterService $employeeMaster
     ){
-        $this->googleSheets = $googleSheets;
+
+        $this->employeeMaster = $employeeMaster;
+
     }
 
 
@@ -35,9 +36,10 @@ class NotificationService
 
 
 
+
     /*
     |--------------------------------------------------------------------------
-    | BIRTHDAY FROM GOOGLE SHEET DATABASE
+    | BIRTHDAY
     |--------------------------------------------------------------------------
     */
 
@@ -47,88 +49,57 @@ class NotificationService
         try {
 
 
-            $rows =
-            $this->googleSheets
-            ->getMasterDatabaseValues();
+            $snapshot =
+            $this->employeeMaster->snapshot();
 
 
 
-            if(empty($rows)){
-                return;
-            }
+            $employees =
+            $snapshot['employees'] ?? [];
 
 
 
-            $birthdayList = [];
+            $birthday = [];
 
 
 
-            foreach($rows as $index=>$row){
+            foreach($employees as $employee){
 
 
-                // skip header
-                if($index == 0){
+
+                if(
+                    empty($employee['tanggal_lahir'])
+                ){
+
                     continue;
+
                 }
 
 
 
-                /*
-                GOOGLE SHEET DATABASE
-
-                A = NO
-                B = NRP
-                C = NAMA
-                D = JABATAN
-                E = KODE JABATAN
-                F = KONTAK
-                G = TANGGAL LAHIR
-
-                ARRAY:
-                0 = NO
-                1 = NRP
-                2 = NAMA
-                3 = JABATAN
-                4 = KODE
-                5 = KONTAK
-                6 = TANGGAL LAHIR
-                */
+                try {
 
 
-
-                if(empty($row[6])){
-                    continue;
-                }
-
-
-
-                try{
-
-
-                    $tanggal =
+                    $date =
                     Carbon::parse(
-                        $row[6]
+                        $employee['tanggal_lahir']
                     );
 
 
 
                     if(
-                        $tanggal->format('m-d')
+                        $date->format('m-d')
                         ==
                         now()->format('m-d')
                     ){
 
 
-                        $birthdayList[] = [
-
-                            'nrp'=>$row[1] ?? '-',
-
-                            'nama'=>$row[2] ?? 'Karyawan'
-
-                        ];
+                        $birthday[] =
+                        $employee['nama'] ?? 'Karyawan';
 
 
                     }
+
 
 
                 }
@@ -139,24 +110,18 @@ class NotificationService
                 }
 
 
-
             }
 
 
 
-            if(count($birthdayList)==0){
+
+            if(empty($birthday)){
 
                 return;
 
             }
 
 
-
-            $nama =
-            collect($birthdayList)
-            ->pluck('nama')
-            ->unique()
-            ->implode(', ');
 
 
 
@@ -178,24 +143,29 @@ class NotificationService
 
                     'message'=>
 
-                    count($birthdayList)
+                    count($birthday)
                     .
                     ' karyawan ulang tahun hari ini: '
                     .
-                    $nama,
+                    implode(
+                        ', ',
+                        array_unique($birthday)
+                    ),
+
 
 
                     'target_role'=>'all',
 
-
                     'reference_id'=>null,
 
-
                     'is_read'=>false
+
 
                 ]
 
             );
+
+
 
 
         }
@@ -204,8 +174,7 @@ class NotificationService
 
             logger(
                 'Birthday Error : '
-                .
-                $e->getMessage()
+                .$e->getMessage()
             );
 
 
@@ -213,6 +182,7 @@ class NotificationService
 
 
     }
+
 
 
 
@@ -239,6 +209,7 @@ class NotificationService
 
 
         foreach($data as $row){
+
 
 
             Notification::updateOrCreate(
@@ -270,8 +241,8 @@ class NotificationService
                     ') jadwal BNN hari ini',
 
 
-                    'target_role'=>'all',
 
+                    'target_role'=>'all',
 
                     'is_read'=>false
 
@@ -291,14 +262,17 @@ class NotificationService
 
 
 
+
     /*
     |--------------------------------------------------------------------------
     | MCU
     |--------------------------------------------------------------------------
     */
 
+
     private function mcu()
     {
+
 
 
         $rows =
@@ -309,19 +283,12 @@ class NotificationService
 
 
 
-        if(empty($rows)){
-
-            return;
-
-        }
-
-
-
         foreach($rows as $row){
 
 
-
-            if(empty($row['tanggal_mcu'])){
+            if(
+                empty($row['tanggal_mcu'])
+            ){
 
                 continue;
 
@@ -329,21 +296,25 @@ class NotificationService
 
 
 
+
             try{
 
 
-                $tanggal =
+                $date =
                 Carbon::parse(
                     $row['tanggal_mcu']
                 );
 
 
 
-                if(!$tanggal->isToday()){
+                if(
+                    !$date->isToday()
+                ){
 
                     continue;
 
                 }
+
 
 
 
@@ -358,6 +329,7 @@ class NotificationService
                         'notification_date'=>today()
 
                     ],
+
 
 
                     [
@@ -376,14 +348,16 @@ class NotificationService
                         ') jadwal MCU hari ini',
 
 
+
                         'target_role'=>'all',
 
-
                         'is_read'=>false
+
 
                     ]
 
                 );
+
 
 
             }
@@ -394,7 +368,9 @@ class NotificationService
             }
 
 
+
         }
+
 
 
     }
