@@ -130,6 +130,48 @@ return [
     |--------------------------------------------------------------------------
     */
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | MINA AI Knowledge Base - Google Spreadsheet
+    |--------------------------------------------------------------------------
+    |
+    | Sumber pengetahuan MINA Assistant.
+    |
+    */
+
+    'knowledge_base' => [
+
+        'spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_KNOWLEDGE_SHEET_ID',
+                '1IH-TcO3IVTtruDAhRqSDJ5km3xETwGBoLAQ7FT5WFJk'
+            )
+        ),
+
+        'range' => trim(
+            (string) env(
+                'GOOGLE_KNOWLEDGE_RANGE',
+                "'SYNRGY_AI_KNOWLEDGE'!A:E"
+            )
+        ),
+
+        'api_key' => trim(
+            (string) env(
+                'GOOGLE_API_KEY'
+            )
+        ),
+
+        'cache_ttl_seconds' => max(
+            60,
+            (int) env(
+                'GOOGLE_KNOWLEDGE_CACHE_TTL_SECONDS',
+                300
+            )
+        ),
+
+    ],
+
     'google_sheets' => [
 
         /*
