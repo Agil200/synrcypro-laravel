@@ -124,53 +124,40 @@ return [
 
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Google Sheets OAuth
-    |--------------------------------------------------------------------------
-    */
-
 
     /*
     |--------------------------------------------------------------------------
-    | MINA AI Knowledge Base - Google Spreadsheet
+    | MINA Knowledge Base - Google Spreadsheet
     |--------------------------------------------------------------------------
     |
-    | Sumber pengetahuan MINA Assistant.
+    | Struktur Sheet:
+    | A=ID, B=KATEGORI, C=KEYWORDS, D=PERTANYAAN,
+    | E=JAWABAN, F=LINK, G=SUMBER, H=STATUS
     |
     */
 
     'knowledge_base' => [
-
         'spreadsheet_id' => trim(
-            (string) env(
-                'GOOGLE_KNOWLEDGE_SHEET_ID',
-                '1IH-TcO3IVTtruDAhRqSDJ5km3xETwGBoLAQ7FT5WFJk'
-            )
+            (string) env('GOOGLE_KNOWLEDGE_SHEET_ID', '')
         ),
 
         'range' => trim(
             (string) env(
                 'GOOGLE_KNOWLEDGE_RANGE',
-                "'SYNRGY_AI_KNOWLEDGE'!A:E"
+                'SYNRGY_AI_KNOWLEDGE!A:H'
             )
         ),
 
         'api_key' => trim(
-            (string) env(
-                'GOOGLE_API_KEY'
-            )
+            (string) env('GOOGLE_API_KEY', '')
         ),
-
-        'cache_ttl_seconds' => max(
-            60,
-            (int) env(
-                'GOOGLE_KNOWLEDGE_CACHE_TTL_SECONDS',
-                300
-            )
-        ),
-
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google Sheets OAuth
+    |--------------------------------------------------------------------------
+    */
 
     'google_sheets' => [
 

@@ -59,8 +59,58 @@
             background: linear-gradient(100deg, #161b24, #d25a2c);
             box-shadow: 0 8px 24px rgba(15,23,42,.16);
         }
-        .brand strong { display: block; font-size: 18px; }
-        .brand small { color: rgba(255,255,255,.75); }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .brand-logo {
+            display: block;
+            width: 125px;
+            max-height: 45px;
+            flex: 0 0 auto;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 7px rgba(0,0,0,.35));
+        }
+
+        .brand-copy {
+            min-width: 0;
+        }
+
+        .brand-copy strong {
+            display: block;
+            font-size: 18px;
+            line-height: 1.15;
+        }
+
+        .brand-copy small {
+            display: block;
+            margin-top: 3px;
+            color: rgba(255,255,255,.75);
+            font-size: 11px;
+            line-height: 1.25;
+        }
+
+        @media (max-width: 700px) {
+            .brand {
+                gap: 9px;
+            }
+
+            .brand-logo {
+                width: 92px;
+                max-height: 36px;
+            }
+
+            .brand-copy strong {
+                font-size: 13px;
+            }
+
+            .brand-copy small {
+                font-size: 9px;
+            }
+        }
         .logout {
             min-height: 38px;
             padding: 0 15px;
@@ -511,9 +561,18 @@
 <body>
     <header class="topbar">
         <div class="brand">
-            <strong>SYNRGYPRO — Dashboard Karyawan</strong>
-            <small>Portal pribadi karyawan · akses hanya-baca</small>
+            <img
+                class="brand-logo"
+                src="{{ asset('assets/images/synrgypro-logo.png') }}"
+                alt="SYNRGYPRO"
+            >
+
+            <div class="brand-copy">
+                <strong>Dashboard Karyawan</strong>
+                <small>Portal pribadi karyawan · akses hanya-baca</small>
+            </div>
         </div>
+
         <form method="POST" action="{{ route('operator.logout') }}">
             @csrf
             <button class="logout" type="submit">Keluar</button>
