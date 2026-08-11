@@ -34,6 +34,14 @@ class NotificationService
 
     }
 
+    /**
+     * Membuat atau memperbarui notifikasi ulang tahun hari ini saja.
+     */
+    public function generateBirthday(): void
+    {
+        $this->birthday();
+    }
+
 
 
 
@@ -43,144 +51,100 @@ class NotificationService
     |--------------------------------------------------------------------------
     */
 
-    private function birthday()
+    private function birthday(): void
     {
-
         try {
+            $snapshot = $this->employeeMaster->snapshot();
+            $employees = $snapshot['employees'] ?? [];
+            $today = Carbon::now('Asia/Jakarta');
+            $birthdayEmployees = [];
 
+            foreach ($employees as $employee) {
+                $birthDateValue = trim((string) (
+                    $employee['tanggal_lahir'] ?? ''
+                ));
 
-            $snapshot =
-            $this->employeeMaster->snapshot();
-
-
-
-            $employees =
-            $snapshot['employees'] ?? [];
-
-
-
-            $birthday = [];
-
-
-
-            foreach($employees as $employee){
-
-
-
-                if(
-                    empty($employee['tanggal_lahir'])
-                ){
-
+                if ($birthDateValue === '' || $birthDateValue === '-') {
                     continue;
-
                 }
-
-
 
                 try {
-
-
-                    $date =
-                    Carbon::parse(
-                        $employee['tanggal_lahir']
-                    );
-
-
-
-                    if(
-                        $date->format('m-d')
-                        ==
-                        now()->format('m-d')
-                    ){
-
-
-                        $birthday[] =
-                        $employee['nama'] ?? 'Karyawan';
-
-
-                    }
-
-
-
-                }
-                catch(\Exception $e){
-
+                    $birthDate = Carbon::parse($birthDateValue);
+                } catch (\Throwable) {
                     continue;
-
                 }
 
+                if ($birthDate->format('m-d') !== $today->format('m-d')) {
+                    continue;
+                }
 
+                $name = trim((string) ($employee['nama'] ?? 'Karyawan'));
+                $nrp = trim((string) ($employee['nrp'] ?? ''));
+                $department = trim((string) (
+                    $employee['departemen'] ?? ''
+                ));
+                $age = max(0, $today->year - $birthDate->year);
+
+                $identity = array_filter([
+                    $nrp !== '' ? 'NRP '.$nrp : null,
+                    $department !== '' ? $department : null,
+                    $age > 0 ? $age.' tahun' : null,
+                ]);
+
+                $birthdayEmployees[] = $name
+                    .($identity !== []
+                        ? ' ('.implode(' · ', $identity).')'
+                        : '');
             }
 
+            $birthdayEmployees = array_values(array_unique(
+                $birthdayEmployees
+            ));
 
-
-
-            if(empty($birthday)){
-
+            if ($birthdayEmployees === []) {
                 return;
-
             }
 
+            $startOfDayUtc = $today->copy()->startOfDay()->utc();
+            $endOfDayUtc = $today->copy()->endOfDay()->utc();
 
+            $notification = Notification::query()
+                ->where('type', 'birthday')
+                ->whereNull('reference_id')
+                ->whereBetween(
+                    'notification_date',
+                    [$startOfDayUtc, $endOfDayUtc]
+                )
+                ->oldest()
+                ->first();
 
+            $isNewNotification = $notification === null;
 
+            if ($isNewNotification) {
+                $notification = new Notification();
+                $notification->type = 'birthday';
+                $notification->notification_date = $today
+                    ->copy()
+                    ->startOfDay();
+            }
 
-            Notification::updateOrCreate(
+            $notification->title = '🎂 Ulang Tahun Hari Ini';
+            $notification->message = count($birthdayEmployees)
+                .' operator/karyawan ulang tahun hari ini: '
+                .implode('; ', $birthdayEmployees);
+            $notification->target_role = 'all';
+            $notification->reference_id = null;
 
-                [
+            // Notifikasi yang sudah dibaca tidak dibuat unread kembali
+            // apabila generator dijalankan ulang pada hari yang sama.
+            if ($isNewNotification) {
+                $notification->is_read = false;
+            }
 
-                    'type'=>'birthday',
-
-                    'notification_date'=>today()
-
-                ],
-
-
-                [
-
-                    'title'=>'🎂 Ulang Tahun Hari Ini',
-
-
-                    'message'=>
-
-                    count($birthday)
-                    .
-                    ' karyawan ulang tahun hari ini: '
-                    .
-                    implode(
-                        ', ',
-                        array_unique($birthday)
-                    ),
-
-
-
-                    'target_role'=>'all',
-
-                    'reference_id'=>null,
-
-                    'is_read'=>false
-
-
-                ]
-
-            );
-
-
-
-
+            $notification->save();
+        } catch (\Throwable $e) {
+            logger('Birthday Error: '.$e->getMessage());
         }
-        catch(\Exception $e){
-
-
-            logger(
-                'Birthday Error : '
-                .$e->getMessage()
-            );
-
-
-        }
-
-
     }
 
 

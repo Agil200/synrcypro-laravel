@@ -204,120 +204,172 @@
 
 <script>
 
-document
-.getElementById('notificationTrigger')
-?.addEventListener(
-'click',
-function(){
+const notificationUrl = @json(url('/notifications'));
+const notificationCountUrl = @json(url('/notifications/count'));
+const notificationReadBaseUrl = @json(url('/notifications/read'));
 
+const notificationTrigger =
+    document.getElementById('notificationTrigger');
 
-const box =
-document.getElementById(
-'notificationDropdown'
-);
+const notificationDropdown =
+    document.getElementById('notificationDropdown');
 
+const notificationList =
+    document.getElementById('notificationList');
 
-box.hidden =
-!box.hidden;
+const notificationCount =
+    document.getElementById('notificationCount');
 
+const csrfToken =
+    document.querySelector('meta[name="csrf-token"]')
+        ?.getAttribute('content') ?? '';
 
+notificationTrigger?.addEventListener('click', function () {
+    if (!notificationDropdown) {
+        return;
+    }
+
+    notificationDropdown.hidden = !notificationDropdown.hidden;
+
+    if (!notificationDropdown.hidden) {
+        loadNotifications();
+    }
 });
 
+async function fetchJson(url, options = {}) {
+    const headers = {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(options.headers || {})
+    };
 
+    const response = await fetch(url, {
+        credentials: 'same-origin',
+        ...options,
+        headers
+    });
 
-async function loadNotifications(){
+    const contentType = response.headers.get('content-type') || '';
 
+    if (!contentType.includes('application/json')) {
+        throw new Error('Respons notifikasi bukan JSON.');
+    }
 
-try {
+    const payload = await response.json();
 
+    if (!response.ok || payload.success === false) {
+        throw new Error(
+            payload.message || 'Notifikasi tidak dapat dimuat.'
+        );
+    }
 
-const response =
-await fetch('/notifications');
-
-
-const data =
-await response.json();
-
-
-
-document
-.getElementById(
-'notificationCount'
-)
-.innerHTML =
-data.length;
-
-
-
-let html='';
-
-
-
-if(data.length===0){
-
-
-html=`
-<div style="padding:15px">
-Tidak ada notifikasi
-</div>
-`;
-
-
-}else{
-
-
-data.forEach(item=>{
-
-
-html += `
-
-<div class="notification-item">
-
-<strong>
-${item.title}
-</strong>
-
-<br>
-
-${item.message}
-
-</div>
-
-`;
-
-
-});
-
-
+    return payload;
 }
 
+function updateNotificationBadge(count) {
+    if (!notificationCount) {
+        return;
+    }
 
-
-document
-.getElementById(
-'notificationList'
-)
-.innerHTML = html;
-
-
-
-}catch(error){
-
-console.log(error);
-
+    const normalizedCount = Math.max(0, Number(count) || 0);
+    notificationCount.textContent = String(normalizedCount);
 }
 
+function renderNotifications(items) {
+    if (!notificationList) {
+        return;
+    }
 
+    notificationList.replaceChildren();
+
+    if (!Array.isArray(items) || items.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.style.padding = '15px';
+        emptyState.textContent = 'Tidak ada notifikasi';
+        notificationList.appendChild(emptyState);
+        return;
+    }
+
+    items.forEach(function (item) {
+        const notificationItem = document.createElement('div');
+        notificationItem.className = 'notification-item';
+        notificationItem.dataset.notificationId = String(item.id || '');
+
+        const title = document.createElement('strong');
+        title.textContent = String(item.title || 'Notifikasi');
+
+        const message = document.createTextNode(
+            String(item.message || '')
+        );
+
+        notificationItem.appendChild(title);
+        notificationItem.appendChild(document.createElement('br'));
+        notificationItem.appendChild(message);
+
+        if (!item.is_read && item.id) {
+            notificationItem.addEventListener('click', function () {
+                markNotificationAsRead(item.id, notificationItem);
+            }, { once: true });
+        }
+
+        notificationList.appendChild(notificationItem);
+    });
 }
 
+async function loadNotificationCount() {
+    try {
+        const payload = await fetchJson(notificationCountUrl);
+        updateNotificationBadge(payload.count);
+    } catch (error) {
+        console.error('Notification count:', error);
+    }
+}
+
+async function loadNotifications() {
+    try {
+        const payload = await fetchJson(notificationUrl);
+        const items = Array.isArray(payload.data) ? payload.data : [];
+
+        renderNotifications(items);
+        updateNotificationBadge(payload.unread_count ?? payload.count);
+    } catch (error) {
+        console.error('Notifications:', error);
+
+        if (notificationList) {
+            notificationList.textContent =
+                'Notifikasi tidak dapat dimuat. Silakan coba lagi.';
+        }
+    }
+}
+
+async function markNotificationAsRead(id, element) {
+    try {
+        const payload = await fetchJson(
+            `${notificationReadBaseUrl}/${encodeURIComponent(id)}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({})
+            }
+        );
+
+        element.dataset.read = 'true';
+        updateNotificationBadge(payload.count);
+    } catch (error) {
+        console.error('Mark notification as read:', error);
+    }
+}
 
 loadNotifications();
+loadNotificationCount();
 
-
-setInterval(
-loadNotifications,
-60000
-);
+setInterval(function () {
+    loadNotifications();
+    loadNotificationCount();
+}, 60000);
 
 
 </script>

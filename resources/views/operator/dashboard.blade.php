@@ -20,6 +20,35 @@
             return (string) $value;
         }
     };
+
+    $isBirthday = false;
+    $birthdayAge = null;
+    $birthDateValue = trim((string) (
+        $employee['tanggal_lahir'] ?? ''
+    ));
+
+    if ($birthDateValue !== '' && $birthDateValue !== '-') {
+        try {
+            $birthDate = \Carbon\Carbon::parse(
+                $birthDateValue,
+                'Asia/Jakarta'
+            );
+            $today = \Carbon\Carbon::now('Asia/Jakarta');
+
+            $isBirthday = $birthDate->format('m-d')
+                === $today->format('m-d');
+
+            if ($isBirthday) {
+                $birthdayAge = max(
+                    0,
+                    $today->year - $birthDate->year
+                );
+            }
+        } catch (\Throwable) {
+            $isBirthday = false;
+            $birthdayAge = null;
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -37,6 +66,22 @@
     >
 
     <title>Dashboard Operator — SYNRGYPRO | MINA AI</title>
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=2"
+    >
+    <link
+        rel="shortcut icon"
+        type="image/png"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=2"
+    >
+    <link
+        rel="apple-touch-icon"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=2"
+    >
+
     <style>
         * { box-sizing: border-box; }
         body {
@@ -134,6 +179,36 @@
             background: #eff6ff;
             font-size: 12px;
             font-weight: 800;
+        }
+        .birthday-notification {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+            padding: 15px 17px;
+            border: 1px solid #f0bd4c;
+            border-radius: 13px;
+            color: #633806;
+            background: linear-gradient(135deg, #fff8d9, #ffe49a);
+            box-shadow: 0 8px 22px rgba(180,114,0,.12);
+        }
+        .birthday-notification-icon {
+            flex: 0 0 auto;
+            font-size: 31px;
+            line-height: 1;
+        }
+        .birthday-notification-copy {
+            display: grid;
+            gap: 3px;
+            min-width: 0;
+        }
+        .birthday-notification-copy strong {
+            font-size: 15px;
+            line-height: 1.35;
+        }
+        .birthday-notification-copy span {
+            font-size: 12px;
+            line-height: 1.45;
         }
         .profile {
             display: grid;
@@ -274,6 +349,11 @@
             .profile-head h1 { font-size: 22px; }
             .info-grid, .stats { grid-template-columns: 1fr; }
             .info.wide { grid-column: auto; }
+            .birthday-notification {
+                align-items: flex-start;
+                padding: 13px 14px;
+            }
+            .birthday-notification-icon { font-size: 27px; }
         }
 
 
@@ -587,6 +667,30 @@
                 Data karyawan sedang memakai cache cadangan terakhir.
             @endif
         </div>
+
+        @if ($isBirthday)
+            <section
+                class="birthday-notification"
+                role="status"
+                aria-live="polite"
+            >
+                <span
+                    class="birthday-notification-icon"
+                    aria-hidden="true"
+                >🎉</span>
+
+                <div class="birthday-notification-copy">
+                    <strong>
+                        Selamat ulang tahun{{ $birthdayAge !== null ? ' ke-'.$birthdayAge : '' }},
+                        {{ $employee['nama'] ?? 'Karyawan' }}!
+                    </strong>
+                    <span>
+                        Semoga selalu diberikan kesehatan, keselamatan,
+                        dan kesuksesan dalam bekerja.
+                    </span>
+                </div>
+            </section>
+        @endif
 
         <section class="profile">
             <aside class="profile-side">
@@ -932,6 +1036,48 @@ function addMessage(text, type) {
     messages.scrollTop = messages.scrollHeight;
 
     return wrapper;
+}
+
+
+function appendLinks(messageWrapper, links = []) {
+    if (!messageWrapper || !Array.isArray(links)) {
+        return;
+    }
+
+    const bubble = messageWrapper.querySelector('.synrgy-chat-bubble');
+
+    links.forEach(function (link) {
+        try {
+            const url = new URL(String(link.url || ''));
+
+            if (!['http:', 'https:'].includes(url.protocol)) {
+                return;
+            }
+
+            const anchor = document.createElement('a');
+            anchor.href = url.href;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            anchor.className = 'mina-link';
+            anchor.textContent = '🔗 ' + (link.label || 'Buka Link Resmi');
+
+            bubble.appendChild(anchor);
+        } catch (error) {
+            console.warn('URL chatbot tidak valid:', link.url);
+        }
+    });
+}
+
+async function parseJsonResponse(response) {
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!contentType.includes('application/json')) {
+        throw new Error(
+            'Server tidak mengembalikan JSON. HTTP ' + response.status
+        );
+    }
+
+    return response.json();
 }
 
 

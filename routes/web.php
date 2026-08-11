@@ -17,6 +17,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OperatorPortalController;
 use App\Http\Controllers\StSpController;
 use App\Http\Controllers\SuratKeluarController;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
 
@@ -32,6 +33,22 @@ app(
 
 })
 ->dailyAt('00:05');
+
+/*
+|--------------------------------------------------------------------------
+| Notifikasi Harian — Ulang Tahun Operator/Karyawan
+|--------------------------------------------------------------------------
+| Membuat notifikasi ulang tahun dari data terbaru menggunakan zona waktu
+| SITE BA (WIB). firstOrNew mencegah notifikasi ulang tahun ganda.
+*/
+
+Schedule::call(function (): void {
+    app(NotificationService::class)->generateBirthday();
+})
+    ->name('notifications.generate-birthday')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('00:10')
+    ->withoutOverlapping();
 
 
 Route::middleware('auth')->group(function(){

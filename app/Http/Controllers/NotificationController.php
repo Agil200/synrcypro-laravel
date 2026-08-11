@@ -2,114 +2,153 @@
 
 namespace App\Http\Controllers;
 
-
 use App\Models\Notification;
-use App\Services\NotificationService;
-
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Throwable;
 
 class NotificationController extends Controller
 {
+    public function index(): JsonResponse
+    {
+        // Pembuatan notifikasi ditangani scheduler. Endpoint ini hanya membaca
+        // data agar membuka dropdown tidak membuat notifikasi berulang.
+        $data = $this->visibleNotificationsQuery()
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->unique(
+                fn (Notification $notification): string =>
+                    $this->notificationKey($notification)
+            )
+            ->take(20)
+            ->values();
 
+        return response()->json([
+            'success' => true,
+            'count' => $data->count(),
+            'unread_count' => $this->unreadCountValue(),
+            'data' => $data,
+        ]);
+    }
 
-public function index(
-    NotificationService $service
-)
-{
+    public function unreadCount(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'count' => $this->unreadCountValue(),
+        ]);
+    }
 
+    public function read(int $id): JsonResponse
+    {
+        $notification = $this->visibleNotificationsQuery()->find($id);
 
-    $service->generateDaily();
+        if (!$notification) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Notifikasi tidak ditemukan.',
+            ], 404);
+        }
 
+        if ($notification->type === 'birthday') {
+            $this->markBirthdayDuplicatesAsRead($notification);
+        } else {
+            $notification->update(['is_read' => true]);
+        }
 
+        return response()->json([
+            'success' => true,
+            'count' => $this->unreadCountValue(),
+        ]);
+    }
 
-    $role =
-    auth()->user()?->role ?? 'all';
+    private function visibleNotificationsQuery(): Builder
+    {
+        $role = trim((string) (auth()->user()?->role ?? ''));
+        $today = Carbon::now('Asia/Jakarta');
+        $birthdayStart = $today->copy()->startOfDay()->utc();
+        $birthdayEnd = $today->copy()->endOfDay()->utc();
 
+        return Notification::query()
+            ->where(function (Builder $query) use ($role): void {
+                $query->where('target_role', 'all');
 
+                if ($role !== '') {
+                    $query->orWhere('target_role', $role);
+                }
+            })
+            ->where(function (Builder $query) use (
+                $birthdayStart,
+                $birthdayEnd
+            ): void {
+                // Notifikasi selain ulang tahun tetap mengikuti riwayat.
+                // Notifikasi ulang tahun hanya berlaku pada hari tersebut.
+                $query->where('type', '!=', 'birthday')
+                    ->orWhere(function (Builder $birthdayQuery) use (
+                        $birthdayStart,
+                        $birthdayEnd
+                    ): void {
+                        $birthdayQuery
+                            ->where('type', 'birthday')
+                            ->whereBetween(
+                                'notification_date',
+                                [$birthdayStart, $birthdayEnd]
+                            );
+                    });
+            });
+    }
 
-    $data =
-    Notification::where(function($q) use($role){
+    private function unreadCountValue(): int
+    {
+        return $this->visibleNotificationsQuery()
+            ->where('is_read', false)
+            ->get()
+            ->unique(
+                fn (Notification $notification): string =>
+                    $this->notificationKey($notification)
+            )
+            ->count();
+    }
 
-        $q->where(
-            'target_role',
-            'all'
-        )
-        ->orWhere(
-            'target_role',
-            $role
-        );
+    private function notificationKey(Notification $notification): string
+    {
+        if ($notification->type !== 'birthday') {
+            return 'notification:'.$notification->getKey();
+        }
 
+        return 'birthday:'.$this->localNotificationDate($notification);
+    }
 
-    })
+    private function localNotificationDate(
+        Notification $notification
+    ): string {
+        try {
+            return Carbon::parse($notification->notification_date)
+                ->setTimezone('Asia/Jakarta')
+                ->toDateString();
+        } catch (Throwable) {
+            return (string) $notification->notification_date;
+        }
+    }
 
-    ->latest()
+    private function markBirthdayDuplicatesAsRead(
+        Notification $notification
+    ): void {
+        try {
+            $date = Carbon::parse($notification->notification_date)
+                ->setTimezone('Asia/Jakarta');
 
-    ->limit(20)
+            $start = $date->copy()->startOfDay()->utc();
+            $end = $date->copy()->endOfDay()->utc();
 
-    ->get();
-
-
-
-    return response()->json([
-
-        'success'=>true,
-
-        'count'=>$data->count(),
-
-        'data'=>$data
-
-    ]);
-
-}
-
-
-
-public function unreadCount()
-{
-
-
-    $count =
-    Notification::where(
-        'is_read',
-        false
-    )
-    ->count();
-
-
-
-    return response()->json([
-
-        'count'=>$count
-
-    ]);
-
-}
-
-
-
-public function read($id)
-{
-
-
-    Notification::where(
-        'id',
-        $id
-    )
-    ->update([
-
-        'is_read'=>true
-
-    ]);
-
-
-
-    return response()->json([
-
-        'success'=>true
-
-    ]);
-
-}
-
-
-
+            $this->visibleNotificationsQuery()
+                ->where('type', 'birthday')
+                ->whereBetween('notification_date', [$start, $end])
+                ->update(['is_read' => true]);
+        } catch (Throwable) {
+            $notification->update(['is_read' => true]);
+        }
+    }
 }
