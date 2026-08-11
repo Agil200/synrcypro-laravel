@@ -4,15 +4,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark">
-    <title>Verifikasi Operator — SYNRGYPRO</title>
+    <title>Verifikasi Data Karyawan Produksi — SYNRGYPRO</title>
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=3"
+    >
+    <link
+        rel="shortcut icon"
+        type="image/png"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=3"
+    >
+    <link
+        rel="apple-touch-icon"
+        href="{{ asset('assets/images/synrgypro-logo.png') }}?v=3"
+    >
 
     <style>
         :root {
-            --operator-blue: #6f89ee;
-            --operator-blue-dark: #536dd4;
+            --operator-blue: #718af0;
+            --operator-blue-dark: #526bd7;
             --operator-white: #ffffff;
             --operator-muted: rgba(255, 255, 255, .76);
-            --operator-panel: rgba(9, 17, 31, .82);
+            --operator-panel: rgba(7, 16, 30, .86);
             --operator-border: rgba(255, 255, 255, .20);
             --operator-danger: #ffd7dd;
         }
@@ -56,7 +70,7 @@
         .operator-access-background {
             z-index: 0;
             background:
-                url("{{ asset('assets/images/control-room.jpg') }}")
+                url("{{ asset('assets/images/control-room-bg.jpg') }}")
                 center center / cover no-repeat;
             transform: scale(1.01);
         }
@@ -66,16 +80,32 @@
             background:
                 radial-gradient(
                     circle at 50% 48%,
-                    rgba(5, 13, 27, .08) 0%,
-                    rgba(3, 9, 20, .30) 48%,
-                    rgba(1, 5, 13, .74) 100%
+                    rgba(5, 13, 27, .10) 0%,
+                    rgba(3, 9, 20, .34) 48%,
+                    rgba(1, 5, 13, .78) 100%
                 ),
                 linear-gradient(
                     180deg,
-                    rgba(1, 5, 12, .18) 0%,
-                    rgba(1, 5, 12, .54) 100%
+                    rgba(1, 5, 12, .28) 0%,
+                    rgba(1, 5, 12, .58) 100%
                 );
             box-shadow: inset 0 0 150px rgba(0, 0, 0, .48);
+        }
+
+        .operator-company-brand {
+            position: fixed;
+            z-index: 3;
+            top: clamp(22px, 4vw, 42px);
+            left: clamp(22px, 4vw, 44px);
+            display: block;
+            width: clamp(205px, 17vw, 300px);
+        }
+
+        .operator-company-brand img {
+            display: block;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .36));
         }
 
         .operator-access-shell {
@@ -84,12 +114,12 @@
             display: grid;
             min-height: 100vh;
             place-items: center;
-            padding: 28px 20px;
+            padding: 112px 20px 34px;
         }
 
         .operator-access-panel {
-            width: min(100%, 410px);
-            padding: 25px;
+            width: min(100%, 430px);
+            padding: 26px 27px 25px;
             border: 1px solid var(--operator-border);
             border-radius: 18px;
             background: var(--operator-panel);
@@ -100,25 +130,48 @@
             -webkit-backdrop-filter: blur(13px);
         }
 
+        .operator-product-brand {
+            display: grid;
+            justify-items: center;
+            gap: 3px;
+            margin: 0 auto 18px;
+            text-align: center;
+        }
+
+        .operator-product-brand img {
+            display: block;
+            width: min(235px, 72%);
+            height: auto;
+            filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .32));
+        }
+
+        .operator-product-version {
+            color: rgba(255, 255, 255, .72);
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
         .operator-access-heading {
-            margin-bottom: 21px;
+            margin-bottom: 20px;
             text-align: center;
         }
 
         .operator-access-kicker {
             display: block;
             margin-bottom: 7px;
-            color: rgba(255, 255, 255, .78);
+            color: #f4b13e;
             font-size: 10px;
             font-weight: 900;
-            letter-spacing: .15em;
+            letter-spacing: .13em;
             text-transform: uppercase;
         }
 
         .operator-access-heading h1 {
             margin: 0;
             color: #ffffff;
-            font-size: clamp(22px, 4vw, 28px);
+            font-size: clamp(23px, 4vw, 29px);
             font-weight: 900;
             letter-spacing: -.025em;
         }
@@ -256,9 +309,15 @@
         }
 
         @media (max-width: 560px) {
+            .operator-company-brand {
+                top: 20px;
+                left: 20px;
+                width: 205px;
+            }
+
             .operator-access-shell {
                 align-items: end;
-                padding: 18px 14px 24px;
+                padding: 105px 14px 24px;
             }
 
             .operator-access-panel {
@@ -272,23 +331,41 @@
     <div class="operator-access-background" aria-hidden="true"></div>
     <div class="operator-access-overlay" aria-hidden="true"></div>
 
+    <a
+        class="operator-company-brand"
+        href="{{ route('login') }}"
+        aria-label="Kembali ke halaman login SYNRGYPRO"
+    >
+        <img
+            src="{{ asset('assets/images/ppa-logo.png') }}"
+            alt="Putra Perkasa Abadi"
+        >
+    </a>
+
     <main class="operator-access-shell">
         <section
             class="operator-access-panel"
             aria-labelledby="operatorAccessTitle"
         >
+            <div class="operator-product-brand">
+                <img
+                    src="{{ asset('assets/images/synrgypro-logo.png') }}"
+                    alt="SYNRGYPRO Production Monitoring"
+                >
+                <span class="operator-product-version">Version V1.0</span>
+            </div>
+
             <header class="operator-access-heading">
                 <span class="operator-access-kicker">
-                    PORTAL OPERATOR · READ ONLY
+                    PORTAL KARYAWAN PRODUKSI · READ ONLY
                 </span>
 
                 <h1 id="operatorAccessTitle">
-                    Verifikasi Data Operator
+                    Verifikasi Data Karyawan Produksi
                 </h1>
 
                 <p>
-                    Masukkan NRP dan tanggal lahir sesuai
-                    MASTER_DATABASE untuk melihat dashboard pribadi.
+                    Masukkan NRP dan tanggal lahir sesuai data diri untuk menampilkan data operator sendiri.
                 </p>
             </header>
 

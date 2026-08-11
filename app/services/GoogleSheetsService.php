@@ -360,6 +360,83 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Perbarui values pada range Google Sheets yang sudah ada
+    |--------------------------------------------------------------------------
+    */
+
+    public function updateValues(
+        string $spreadsheetId,
+        string $range,
+        array $row
+    ): array {
+        $spreadsheetId = trim($spreadsheetId);
+        $range = trim($range);
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID tujuan belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range tujuan belum diatur.'
+            );
+        }
+
+        $row = array_map(
+            static fn (mixed $value): mixed => $value === null ? '' : $value,
+            array_values($row)
+        );
+
+        if ($row === []) {
+            throw new RuntimeException(
+                'Data yang akan diperbarui di Google Sheets masih kosong.'
+            );
+        }
+
+        $this->ensureWriteScope();
+
+        $accessToken = $this->getValidAccessToken();
+        $response = $this->requestUpdateValues(
+            $accessToken,
+            $spreadsheetId,
+            $range,
+            $row
+        );
+
+        if ($response->status() === 401) {
+            $accessToken = $this->getValidAccessToken(forceRefresh: true);
+            $response = $this->requestUpdateValues(
+                $accessToken,
+                $spreadsheetId,
+                $range,
+                $row
+            );
+        }
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                $this->googleErrorMessage(
+                    $response,
+                    'Gagal memperbarui data Google Spreadsheet.'
+                )
+            );
+        }
+
+        $result = $response->json();
+
+        if (!is_array($result)) {
+            throw new RuntimeException(
+                'Respons pembaruan Google Spreadsheet tidak valid.'
+            );
+        }
+
+        return $result;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Kirim request ke Google Sheets API
     |--------------------------------------------------------------------------
     */
@@ -428,6 +505,50 @@ class GoogleSheetsService
             ->asJson()
             ->timeout(30)
             ->post(
+                $url,
+                [
+                    'range' => $range,
+                    'majorDimension' => 'ROWS',
+                    'values' => [$row],
+                ]
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kirim request update ke Google Sheets API
+    |--------------------------------------------------------------------------
+    */
+
+    private function requestUpdateValues(
+        string $accessToken,
+        string $spreadsheetId,
+        string $range,
+        array $row
+    ): Response {
+        $query = http_build_query(
+            [
+                'valueInputOption' => 'USER_ENTERED',
+                'includeValuesInResponse' => 'true',
+            ],
+            '',
+            '&',
+            PHP_QUERY_RFC3986
+        );
+
+        $url =
+            'https://sheets.googleapis.com/v4/spreadsheets/' .
+            rawurlencode($spreadsheetId) .
+            '/values/' .
+            rawurlencode($range) .
+            '?' .
+            $query;
+
+        return Http::withToken($accessToken)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(30)
+            ->put(
                 $url,
                 [
                     'range' => $range,

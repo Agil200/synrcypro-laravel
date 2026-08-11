@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bnn;
 use App\Models\Employee;
+use App\Models\Notification;
 use App\Services\GoogleSheetsService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -14,6 +15,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
 
@@ -33,7 +35,9 @@ class BNNController extends Controller
      */
     public function index(): View
     {
-        return view('manpower.bnn.form');
+        return view('manpower.bnn.form', [
+            'sourceUrl' => $this->monitoringSourceUrl(),
+        ]);
     }
 
 
@@ -80,37 +84,85 @@ class BNNController extends Controller
 
 
     /**
-     * Menyimpan data dari form lokal yang sudah ada.
-     * Monitoring pada file ini tetap membaca sumber Google Spreadsheet.
+     * Menyimpan jadwal BNN ke baris peserta yang sama pada Google Spreadsheet.
+     * Data identitas selalu diambil ulang dari server agar field readonly pada
+     * browser tidak dapat dimanipulasi.
      */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'nrp' => ['required', 'string', 'max:50'],
-            'nama' => ['required', 'string', 'max:255'],
-            'jenis_kelamin' => ['nullable', 'string', 'max:50'],
-            'perusahaan' => ['nullable', 'string', 'max:255'],
-            'dept' => ['nullable', 'string', 'max:255'],
-            'posisi' => ['nullable', 'string', 'max:255'],
-            'usia' => ['nullable', 'string', 'max:50'],
-            'kontak' => ['nullable', 'string', 'max:100'],
-            'nik' => ['nullable', 'string', 'max:100'],
             'tanggal_pemeriksaan' => ['required', 'date'],
             'akomodasi' => [
                 'required',
                 Rule::in([
-                    'DIANTAR DI MESS',
+                    'DIANTAR DARI MESS TAMBANG',
                     'BERANGKAT SENDIRI',
-                    'BANGKO',
+                    'BERANGKAT DARI BANGKO',
                 ]),
             ],
         ]);
 
-        Bnn::create($validated);
+        try {
+            $participant = $this->findParticipantByNrp($validated['nrp']);
+
+            if ($participant === null) {
+                throw ValidationException::withMessages([
+                    'nrp' => 'NRP tidak ditemukan pada tab ALL BNN.',
+                ]);
+            }
+
+            $spreadsheetId = trim((string) config(
+                'services.google_sheets.test_bnn_spreadsheet_id'
+            ));
+            $sheetRow = (int) ($participant['sheet_row'] ?? 0);
+
+            if ($spreadsheetId === '' || $sheetRow < 1) {
+                throw new RuntimeException(
+                    'Konfigurasi spreadsheet atau nomor baris peserta tidak valid.'
+                );
+            }
+
+            $tanggalPemeriksaan = Carbon::parse(
+                $validated['tanggal_pemeriksaan']
+            )->format('Y-m-d');
+
+            $this->googleSheets->updateValues(
+                $spreadsheetId,
+                "'ALL BNN'!K{$sheetRow}:L{$sheetRow}",
+                [$tanggalPemeriksaan, $validated['akomodasi']]
+            );
+
+            Bnn::updateOrCreate(
+                [
+                    'nrp' => $participant['nrp'],
+                    'tanggal_pemeriksaan' => $tanggalPemeriksaan,
+                ],
+                [
+                    'nama' => $participant['nama'],
+                    'jenis_kelamin' => $participant['jenis_kelamin'],
+                    'perusahaan' => $participant['perusahaan'],
+                    'dept' => $participant['dept'],
+                    'posisi' => $participant['posisi'],
+                    'usia' => $participant['usia'],
+                    'kontak' => $participant['kontak'],
+                    'nik' => $participant['nik'],
+                    'akomodasi' => $validated['akomodasi'],
+                ]
+            );
+
+            Cache::forget(self::MONITORING_CACHE_KEY);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return back()
+                ->withInput()
+                ->with('error', 'Data belum tersimpan: ' . $exception->getMessage());
+        }
 
         return redirect()
             ->route('bnn.monitoring')
-            ->with('success', 'Data BNN berhasil disimpan.');
+            ->with('success', 'Jadwal BNN berhasil disimpan ke Google Spreadsheet.');
     }
 
     /**
@@ -140,9 +192,15 @@ class BNNController extends Controller
         ];
 
         $akomodasi = [
-            'mess' => Bnn::where('akomodasi', 'DIANTAR DI MESS')->count(),
+            'mess' => Bnn::whereIn('akomodasi', [
+                'DIANTAR DARI MESS TAMBANG',
+                'DIANTAR DI MESS',
+            ])->count(),
             'sendiri' => Bnn::where('akomodasi', 'BERANGKAT SENDIRI')->count(),
-            'bangko' => Bnn::where('akomodasi', 'BANGKO')->count(),
+            'bangko' => Bnn::whereIn('akomodasi', [
+                'BERANGKAT DARI BANGKO',
+                'BANGKO',
+            ])->count(),
         ];
 
         $trend = [];
@@ -222,8 +280,11 @@ class BNNController extends Controller
                     $this->normalize($row['status_test'] ?? '') === 'BELUM TEST'
             )->count(),
             'diantar_mess' => $filteredRows->filter(
-                fn (array $row): bool =>
-                    $this->normalize($row['akomodasi'] ?? '') === 'DIANTAR DI MESS'
+                fn (array $row): bool => in_array(
+                    $this->normalize($row['akomodasi'] ?? ''),
+                    ['DIANTAR DARI MESS TAMBANG', 'DIANTAR DI MESS'],
+                    true
+                )
             )->count(),
         ];
 
@@ -301,27 +362,85 @@ class BNNController extends Controller
      */
     public function cariNRP(string $nrp): JsonResponse
     {
-        $data = Employee::query()->where('nrp', trim($nrp))->first();
+        try {
+            $data = $this->findParticipantByNrp($nrp);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Spreadsheet belum dapat dibaca: ' . $exception->getMessage(),
+            ], 503);
+        }
 
         if (! $data) {
             return response()->json([
                 'status' => false,
-                'message' => 'NRP tidak ditemukan.',
+                'message' => 'NRP tidak ditemukan pada tab ALL BNN.',
             ], 404);
         }
 
         return response()->json([
             'status' => true,
-            'nrp' => $data->nrp,
-            'nama' => $data->nama,
-            'jenis_kelamin' => $data->jenis_kelamin,
-            'perusahaan' => $data->perusahaan,
-            'dept' => $data->dept,
-            'posisi' => $data->posisi,
-            'usia' => $data->usia,
-            'kontak' => $data->kontak,
-            'nik' => $data->nik,
+            'nrp' => $data['nrp'],
+            'nama' => $data['nama'],
+            'jenis_kelamin' => $data['jenis_kelamin'],
+            'perusahaan' => $data['perusahaan'],
+            'dept' => $data['dept'],
+            'posisi' => $data['posisi'],
+            'usia' => $data['usia'],
+            'kontak' => $data['kontak'],
+            'nik' => $data['nik'],
         ]);
+    }
+
+    private function findParticipantByNrp(string $nrp): ?array
+    {
+        $needle = trim($nrp);
+
+        if ($needle === '') {
+            return null;
+        }
+
+        $find = static function (array $rows) use ($needle): ?array {
+            $matches = array_values(array_filter(
+                $rows,
+                static fn (array $row): bool =>
+                    trim((string) ($row['nrp'] ?? '')) === $needle
+            ));
+
+            if ($matches === []) {
+                return null;
+            }
+
+            // Jika NRP pernah muncul beberapa kali, utamakan baris terbaru
+            // yang tanggal pemeriksaannya masih kosong.
+            usort(
+                $matches,
+                static fn (array $left, array $right): int =>
+                    ((int) ($right['sheet_row'] ?? 0)) <=>
+                    ((int) ($left['sheet_row'] ?? 0))
+            );
+
+            foreach ($matches as $match) {
+                if (trim((string) ($match['tanggal_pemeriksaan'] ?? '')) === '') {
+                    return $match;
+                }
+            }
+
+            return $matches[0];
+        };
+
+        $snapshot = $this->monitoringSnapshot();
+        $participant = $find($snapshot['rows']);
+
+        if ($participant !== null) {
+            return $participant;
+        }
+
+        // Cache mungkin belum memuat peserta baru, jadi sinkronkan sekali lagi.
+        Cache::forget(self::MONITORING_CACHE_KEY);
+        $freshSnapshot = $this->fetchAndCacheMonitoring();
+
+        return $find($freshSnapshot['rows']);
     }
 
     private function monitoringSnapshot(): array
@@ -360,7 +479,7 @@ class BNNController extends Controller
 
         $range = trim((string) config(
             'services.google_sheets.test_bnn_range',
-            "'DAFTAR TEST BNN'!A:AZ"
+            "'ALL BNN'!A:M"
         ));
 
         if ($spreadsheetId === '') {
@@ -717,7 +836,7 @@ class BNNController extends Controller
 
         $gid = (int) config(
             'services.google_sheets.test_bnn_sheet_gid',
-            615934612
+            1222417791
         );
 
         return 'https://docs.google.com/spreadsheets/d/' .

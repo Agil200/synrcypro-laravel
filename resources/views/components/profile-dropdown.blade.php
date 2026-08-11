@@ -6,6 +6,119 @@
         : asset('assets/images/profile.png');
 @endphp
 
+<style>
+    .syn-notification-dropdown {
+        width: min(390px, calc(100vw - 24px));
+        max-height: min(480px, calc(100vh - 90px));
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #ffffff;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .20);
+    }
+
+    .syn-notification-title {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 13px 16px;
+        color: #ffffff;
+        background: #171717;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .04em;
+    }
+
+    #notificationList {
+        max-height: 410px;
+        overflow-y: auto;
+        background: #f8fafc;
+        scrollbar-width: thin;
+    }
+
+    .syn-notification-empty,
+    .syn-notification-error {
+        padding: 22px 16px;
+        color: #64748b;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    .syn-notification-error {
+        color: #991b1b;
+        background: #fff1f2;
+    }
+
+    .notification-item {
+        margin: 10px;
+        padding: 13px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, .04);
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .notification-item[data-read="false"] {
+        border-left: 4px solid #ea580c;
+        cursor: pointer;
+    }
+
+    .notification-item[data-read="true"] {
+        opacity: .82;
+    }
+
+    .syn-notification-item-title {
+        display: block;
+        margin-bottom: 5px;
+        color: #172033;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .syn-notification-message,
+    .syn-birthday-summary {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .syn-birthday-list {
+        display: grid;
+        gap: 7px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .syn-birthday-person {
+        position: relative;
+        padding: 8px 9px 8px 30px;
+        color: #334155;
+        border-radius: 8px;
+        background: #fff7ed;
+        overflow-wrap: anywhere;
+    }
+
+    .syn-birthday-person::before {
+        position: absolute;
+        top: 8px;
+        left: 9px;
+        content: '🎉';
+        font-size: 12px;
+    }
+
+    @media (max-width: 520px) {
+        .syn-notification-dropdown {
+            position: fixed;
+            top: 64px;
+            right: 12px;
+            left: 12px;
+            width: auto;
+        }
+    }
+</style>
+
 
 {{-- NOTIFICATION --}}
 <div class="syn-notification-wrapper">
@@ -284,7 +397,7 @@ function renderNotifications(items) {
 
     if (!Array.isArray(items) || items.length === 0) {
         const emptyState = document.createElement('div');
-        emptyState.style.padding = '15px';
+        emptyState.className = 'syn-notification-empty';
         emptyState.textContent = 'Tidak ada notifikasi';
         notificationList.appendChild(emptyState);
         return;
@@ -294,17 +407,25 @@ function renderNotifications(items) {
         const notificationItem = document.createElement('div');
         notificationItem.className = 'notification-item';
         notificationItem.dataset.notificationId = String(item.id || '');
+        notificationItem.dataset.read = item.is_read ? 'true' : 'false';
 
         const title = document.createElement('strong');
+        title.className = 'syn-notification-item-title';
         title.textContent = String(item.title || 'Notifikasi');
 
-        const message = document.createTextNode(
-            String(item.message || '')
-        );
-
         notificationItem.appendChild(title);
-        notificationItem.appendChild(document.createElement('br'));
-        notificationItem.appendChild(message);
+
+        if (item.type === 'birthday') {
+            appendBirthdayMessage(
+                notificationItem,
+                String(item.message || '')
+            );
+        } else {
+            const message = document.createElement('p');
+            message.className = 'syn-notification-message';
+            message.textContent = String(item.message || '');
+            notificationItem.appendChild(message);
+        }
 
         if (!item.is_read && item.id) {
             notificationItem.addEventListener('click', function () {
@@ -314,6 +435,41 @@ function renderNotifications(items) {
 
         notificationList.appendChild(notificationItem);
     });
+}
+
+function appendBirthdayMessage(container, rawMessage) {
+    const separatorIndex = rawMessage.indexOf(':');
+    const summaryText = separatorIndex >= 0
+        ? rawMessage.slice(0, separatorIndex).trim()
+        : 'Daftar karyawan yang berulang tahun hari ini';
+    const peopleText = separatorIndex >= 0
+        ? rawMessage.slice(separatorIndex + 1)
+        : rawMessage;
+    const people = peopleText
+        .split(';')
+        .map((person) => person.trim())
+        .filter(Boolean);
+
+    const summary = document.createElement('p');
+    summary.className = 'syn-birthday-summary';
+    summary.textContent = summaryText;
+    container.appendChild(summary);
+
+    if (people.length === 0) {
+        return;
+    }
+
+    const list = document.createElement('ul');
+    list.className = 'syn-birthday-list';
+
+    people.forEach((person) => {
+        const listItem = document.createElement('li');
+        listItem.className = 'syn-birthday-person';
+        listItem.textContent = person;
+        list.appendChild(listItem);
+    });
+
+    container.appendChild(list);
 }
 
 async function loadNotificationCount() {
@@ -336,8 +492,12 @@ async function loadNotifications() {
         console.error('Notifications:', error);
 
         if (notificationList) {
-            notificationList.textContent =
+            notificationList.replaceChildren();
+            const errorState = document.createElement('div');
+            errorState.className = 'syn-notification-error';
+            errorState.textContent =
                 'Notifikasi tidak dapat dimuat. Silakan coba lagi.';
+            notificationList.appendChild(errorState);
         }
     }
 }
