@@ -128,11 +128,17 @@ class ManpowerDashboardController extends Controller
             $akhirBulan
         );
 
+        $mcuSummary = $this->mcuSummary(
+            $mcuTable,
+            $awalBulan,
+            $akhirBulan
+        );
+
         $minePermitTotal = $minePermitSummary['total'];
         $bnnTotal = $bnnSummary['total'] ?? 0;
         $bastTotal = $this->safeCount($bastTable);
         $apdTotal = $this->safeCount($apdTable);
-        $mcuTotal = $this->safeCount($mcuTable);
+        $mcuTotal = $mcuSummary['total'];
 
         /*
         |--------------------------------------------------------------------------
@@ -192,11 +198,7 @@ class ManpowerDashboardController extends Controller
             $akhirBulan
         );
 
-        $mcuBulan = $this->safeCountOptionalModuleByPeriod(
-            $mcuTable,
-            $awalBulan,
-            $akhirBulan
-        );
+        $mcuBulan = $mcuSummary['month'];
 
         $totalTersimpan = array_sum([
             $documentOutTotal,
@@ -314,11 +316,13 @@ class ManpowerDashboardController extends Controller
                 'icon' => '✚',
                 'total' => $mcuTotal,
                 'month' => $mcuBulan,
-                'available' => $mcuTable !== null,
-                'description' => $mcuTable
-                    ? 'Data MCU dan tindak lanjut'
-                    : 'Tabel MCU & FU belum terhubung',
-                'url' => '#',
+                'available' => $mcuSummary['available'],
+                'description' => match ($mcuSummary['source']) {
+                    'google_sheets' => 'Data MCU & FU dari Google Sheets',
+                    'local' => 'Data MCU dan tindak lanjut',
+                    default => 'Sumber data MCU & FU belum terhubung',
+                },
+                'url' => route('mcu-fu.index'),
                 'tone' => 'pink',
             ],
             [
@@ -576,6 +580,126 @@ class ManpowerDashboardController extends Controller
     }
 
     /**
+     * @return array{total: int, month: int, available: bool, source: ?string}
+     */
+    private function mcuSummary(
+        ?string $fallbackTable,
+        Carbon $start,
+        Carbon $end
+    ): array {
+        $sheetSummary = $this->safeMcuSheetSummary(
+            $start,
+            $end
+        );
+
+        if ($sheetSummary !== null) {
+            return [
+                'total' => $sheetSummary['total'],
+                'month' => $sheetSummary['month'],
+                'available' => true,
+                'source' => 'google_sheets',
+            ];
+        }
+
+        if ($fallbackTable !== null) {
+            return [
+                'total' => $this->safeCount($fallbackTable),
+                'month' => $this->safeCountOptionalModuleByPeriod(
+                    $fallbackTable,
+                    $start,
+                    $end
+                ),
+                'available' => true,
+                'source' => 'local',
+            ];
+        }
+
+        return [
+            'total' => 0,
+            'month' => 0,
+            'available' => false,
+            'source' => null,
+        ];
+    }
+
+    /**
+     * @return array{total: int, month: int}|null
+     */
+    private function safeMcuSheetSummary(
+        Carbon $start,
+        Carbon $end
+    ): ?array {
+        try {
+            if (! $this->googleSheets->hasStoredToken()) {
+                return null;
+            }
+
+            $spreadsheetId = trim((string) config(
+                'services.google_sheets.mcu_fu_spreadsheet_id',
+                '1egikgV_mfFYCepDl9hQnjgCvLx4H8JL5_NYw7I46pKU'
+            ));
+
+            $sheetId = trim((string) config(
+                'services.google_sheets.mcu_fu_sheet_gid',
+                '1692836561'
+            ));
+
+            $columns = trim((string) config(
+                'services.google_sheets.mcu_fu_columns',
+                'A:AZ'
+            ));
+
+            if ($spreadsheetId === '' || $sheetId === '') {
+                return null;
+            }
+
+            $values = $this->googleSheets->getValuesBySheetId(
+                $spreadsheetId,
+                $sheetId,
+                $columns
+            );
+
+            $sheet = $this->tabularSheetData($values);
+            $identityColumn = $this->findSheetColumn(
+                $sheet['headers'],
+                [
+                    'NRP',
+                    'NIK',
+                    'NAMA KARYAWAN',
+                    'NAMA',
+                ]
+            );
+
+            $records = $identityColumn === null
+                ? $sheet['rows']
+                : array_values(array_filter(
+                    $sheet['rows'],
+                    fn (array $row): bool =>
+                        trim((string) ($row[$identityColumn] ?? '')) !== ''
+                ));
+
+            $dateColumn = $this->findMcuDateColumn(
+                $sheet['headers'],
+                $records
+            );
+
+            return [
+                'total' => count($records),
+                'month' => $dateColumn === null
+                    ? 0
+                    : $this->countSheetRowsByPeriod(
+                        $records,
+                        $dateColumn,
+                        $start,
+                        $end
+                    ),
+            ];
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * @return array{total: int, month: int}|null
      */
     private function safeMinePermitSheetSummary(
@@ -753,6 +877,45 @@ class ManpowerDashboardController extends Controller
                 );
 
             if ($isSubmissionDate) {
+                return (int) $index;
+            }
+        }
+
+        return $this->guessSheetDateColumn($rows);
+    }
+
+    private function findMcuDateColumn(
+        array $headers,
+        array $rows
+    ): ?int {
+        $dateColumn = $this->findSheetColumn(
+            $headers,
+            [
+                'TANGGAL MCU',
+                'TANGGAL PEMERIKSAAN',
+                'TANGGAL MEDICAL CHECK UP',
+                'TANGGAL FOLLOW UP',
+                'TANGGAL FU',
+                'TANGGAL',
+                'DATE',
+            ]
+        );
+
+        if ($dateColumn !== null) {
+            return $dateColumn;
+        }
+
+        foreach ($headers as $index => $header) {
+            $isMcuDate = str_contains($header, 'TANGGAL')
+                && (
+                    str_contains($header, 'MCU')
+                    || str_contains($header, 'PEMERIKSAAN')
+                    || str_contains($header, 'MEDICAL')
+                    || str_contains($header, 'FOLLOW')
+                    || str_contains($header, 'FU')
+                );
+
+            if ($isMcuDate) {
                 return (int) $index;
             }
         }

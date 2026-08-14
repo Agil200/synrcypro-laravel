@@ -272,6 +272,59 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Baca values berdasarkan sheet gid
+    |--------------------------------------------------------------------------
+    |
+    | Google Sheets API membaca data berdasarkan nama tab, sedangkan tautan
+    | spreadsheet biasanya memberikan gid. Method ini mencari nama tab dari
+    | gid terlebih dahulu agar integrasi tidak rusak saat nama tab berubah.
+    */
+
+    public function getValuesBySheetId(
+        string $spreadsheetId,
+        int|string $sheetId,
+        string $columns = 'A:AZ'
+    ): array {
+        $spreadsheetId = trim($spreadsheetId);
+        $sheetId = trim((string) $sheetId);
+        $columns = strtoupper(trim($columns));
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID belum diatur.'
+            );
+        }
+
+        if ($sheetId === '' || ! ctype_digit($sheetId)) {
+            throw new RuntimeException(
+                'Sheet gid belum diatur atau tidak valid.'
+            );
+        }
+
+        if (
+            $columns === ''
+            || ! preg_match('/^[A-Z]+(?::[A-Z]+)?$/', $columns)
+        ) {
+            throw new RuntimeException(
+                'Rentang kolom Google Sheets tidak valid.'
+            );
+        }
+
+        $sheetTitle = $this->sheetTitleById(
+            $spreadsheetId,
+            $sheetId
+        );
+
+        $escapedTitle = str_replace("'", "''", $sheetTitle);
+
+        return $this->getValues(
+            $spreadsheetId,
+            "'{$escapedTitle}'!{$columns}"
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Tambahkan values sebagai baris baru Google Sheets
     |--------------------------------------------------------------------------
     */
@@ -510,6 +563,89 @@ class GoogleSheetsService
                     'range' => $range,
                     'majorDimension' => 'ROWS',
                     'values' => [$row],
+                ]
+            );
+    }
+
+    private function sheetTitleById(
+        string $spreadsheetId,
+        string $sheetId
+    ): string {
+        $accessToken = $this->getValidAccessToken();
+        $response = $this->requestSpreadsheetMetadata(
+            $accessToken,
+            $spreadsheetId
+        );
+
+        if ($response->status() === 401) {
+            $accessToken = $this->getValidAccessToken(
+                forceRefresh: true
+            );
+
+            $response = $this->requestSpreadsheetMetadata(
+                $accessToken,
+                $spreadsheetId
+            );
+        }
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                $this->googleErrorMessage(
+                    $response,
+                    'Gagal membaca daftar sheet Google Spreadsheet.'
+                )
+            );
+        }
+
+        $sheets = $response->json('sheets', []);
+
+        if (! is_array($sheets)) {
+            $sheets = [];
+        }
+
+        foreach ($sheets as $sheet) {
+            $currentId = (string) Arr::get(
+                $sheet,
+                'properties.sheetId',
+                ''
+            );
+
+            if ($currentId !== $sheetId) {
+                continue;
+            }
+
+            $title = trim((string) Arr::get(
+                $sheet,
+                'properties.title',
+                ''
+            ));
+
+            if ($title !== '') {
+                return $title;
+            }
+        }
+
+        throw new RuntimeException(
+            "Sheet dengan gid {$sheetId} tidak ditemukan."
+        );
+    }
+
+    private function requestSpreadsheetMetadata(
+        string $accessToken,
+        string $spreadsheetId
+    ): Response {
+        $url =
+            'https://sheets.googleapis.com/v4/spreadsheets/' .
+            rawurlencode($spreadsheetId);
+
+        return Http::withToken($accessToken)
+            ->acceptJson()
+            ->timeout(30)
+            ->get(
+                $url,
+                [
+                    'includeGridData' => 'false',
+                    'fields' => 'sheets.properties(sheetId,title)',
                 ]
             );
     }
