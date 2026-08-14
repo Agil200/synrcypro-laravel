@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\GoogleSheetsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -12,6 +13,11 @@ use Throwable;
 
 class ManpowerDashboardController extends Controller
 {
+    public function __construct(
+        private readonly GoogleSheetsService $googleSheets
+    ) {
+    }
+
     /**
      * Menampilkan dashboard Manpower dari data yang tersimpan.
      *
@@ -107,7 +113,23 @@ class ManpowerDashboardController extends Controller
             'medical_follow_ups',
         ]);
 
-        $minePermitTotal = $this->safeCount($minePermitTable);
+        /*
+         * Mine Permit pada aplikasi ini bersumber dari Google Sheets.
+         * Tabel lokal hanya dipakai sebagai fallback untuk instalasi lama.
+         */
+        $minePermitSummary = $this->minePermitSummary(
+            $minePermitTable,
+            $awalBulan,
+            $akhirBulan
+        );
+
+        $bnnSummary = $this->bnnSummary(
+            $awalBulan,
+            $akhirBulan
+        );
+
+        $minePermitTotal = $minePermitSummary['total'];
+        $bnnTotal = $bnnSummary['total'] ?? 0;
         $bastTotal = $this->safeCount($bastTable);
         $apdTotal = $this->safeCount($apdTable);
         $mcuTotal = $this->safeCount($mcuTable);
@@ -155,11 +177,8 @@ class ManpowerDashboardController extends Controller
             )
         );
 
-        $minePermitBulan = $this->safeCountOptionalModuleByPeriod(
-            $minePermitTable,
-            $awalBulan,
-            $akhirBulan
-        );
+        $minePermitBulan = $minePermitSummary['month'];
+        $bnnBulan = $bnnSummary['month'];
 
         $bastBulan = $this->safeCountOptionalModuleByPeriod(
             $bastTable,
@@ -185,6 +204,7 @@ class ManpowerDashboardController extends Controller
             $teguranTotal,
             $peringatanTotal,
             $minePermitTotal,
+            $bnnTotal,
             $bastTotal,
             $apdTotal,
             $mcuTotal,
@@ -196,6 +216,7 @@ class ManpowerDashboardController extends Controller
             $teguranBulan,
             $peringatanBulan,
             $minePermitBulan,
+            $bnnBulan,
             $bastBulan,
             $apdBulan,
             $mcuBulan,
@@ -213,23 +234,26 @@ class ManpowerDashboardController extends Controller
                 'icon' => '⛏',
                 'total' => $minePermitTotal,
                 'month' => $minePermitBulan,
-                'available' => $minePermitTable !== null,
-                'description' => $minePermitTable
-                    ? 'Data Mine Permit tersimpan'
-                    : 'Monitoring tersedia, database lokal belum terdeteksi',
-                'url' => route('mine-permit.monitoring-she'),
+                'available' => $minePermitSummary['available'],
+                'description' => match ($minePermitSummary['source']) {
+                    'google_sheets' => 'Data pengajuan dari Google Sheets',
+                    'local' => 'Data Mine Permit tersimpan',
+                    default => 'Sumber data Mine Permit belum terhubung',
+                },
+                'url' => route('mine-permit.dashboard'),
                 'tone' => 'orange',
             ],
             [
                 'title' => 'Test BNN',
                 'icon' => '⚕',
-                'total' => null,
-                'month' => null,
-                'available' => false,
-                'description' => 'Data saat ini terhubung melalui Google Sheets',
-                'url' => 'https://docs.google.com/spreadsheets/d/1V9LU2Ft9NpxHULY7cVWczqpclCDy_Vja6qWtr7la38o/edit?usp=sharing',
+                'total' => $bnnSummary['total'],
+                'month' => $bnnBulan,
+                'available' => $bnnSummary['available'],
+                'description' => $bnnSummary['available']
+                    ? 'Peserta HADIR pada sheet PRO'
+                    : 'Data BNN dari sheet PRO belum dapat dibaca',
+                'url' => route('bnn.monitoring'),
                 'tone' => 'purple',
-                'external' => true,
             ],
             [
                 'title' => 'Berita Acara Asset',
@@ -413,6 +437,453 @@ class ManpowerDashboardController extends Controller
         return preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)
             ? $month
             : now()->format('Y-m');
+    }
+
+    /**
+     * Mengambil ringkasan Mine Permit dari sumber yang benar.
+     *
+     * Google Sheets menjadi sumber utama karena halaman Mine Permit juga
+     * membaca sheet Monitoring SHE. Jika koneksi sheet sedang tidak tersedia,
+     * controller tetap aman dan mencoba tabel lokal sebagai fallback.
+     *
+     * @return array{total: int, month: int, available: bool, source: ?string}
+     */
+    private function minePermitSummary(
+        ?string $fallbackTable,
+        Carbon $start,
+        Carbon $end
+    ): array {
+        $sheetSummary = $this->safeMinePermitSheetSummary(
+            $start,
+            $end
+        );
+
+        if ($sheetSummary !== null) {
+            return [
+                'total' => $sheetSummary['total'],
+                'month' => $sheetSummary['month'],
+                'available' => true,
+                'source' => 'google_sheets',
+            ];
+        }
+
+        if ($fallbackTable !== null) {
+            return [
+                'total' => $this->safeCount($fallbackTable),
+                'month' => $this->safeCountOptionalModuleByPeriod(
+                    $fallbackTable,
+                    $start,
+                    $end
+                ),
+                'available' => true,
+                'source' => 'local',
+            ];
+        }
+
+        return [
+            'total' => 0,
+            'month' => 0,
+            'available' => false,
+            'source' => null,
+        ];
+    }
+
+    /**
+     * Menghitung hanya peserta BNN dengan KETERANGAN bernilai HADIR.
+     *
+     * @return array{total: ?int, month: int, available: bool}
+     */
+    private function bnnSummary(
+        Carbon $start,
+        Carbon $end
+    ): array {
+        try {
+            if (! $this->googleSheets->hasStoredToken()) {
+                return $this->unavailableBnnSummary();
+            }
+
+            $spreadsheetId = trim((string) config(
+                'services.google_sheets.test_bnn_spreadsheet_id'
+            ));
+
+            $range = trim((string) config(
+                'services.google_sheets.test_bnn_range',
+                "'PRO'!A:AZ"
+            ));
+
+            if ($spreadsheetId === '' || $range === '') {
+                return $this->unavailableBnnSummary();
+            }
+
+            $values = $this->googleSheets->getValues(
+                $spreadsheetId,
+                $range
+            );
+
+            $sheet = $this->tabularSheetData($values);
+            $attendanceColumn = $this->findSheetColumn(
+                $sheet['headers'],
+                ['KETERANGAN']
+            );
+
+            if ($attendanceColumn === null) {
+                return $this->unavailableBnnSummary();
+            }
+
+            $dateColumn = $this->findSheetColumn(
+                $sheet['headers'],
+                [
+                    'TANGGAL PEMERIKSAAN',
+                    'TGL PEMERIKSAAN',
+                ]
+            );
+
+            $presentRows = array_values(array_filter(
+                $sheet['rows'],
+                fn (array $row): bool =>
+                    $this->normalizeSheetHeader(
+                        $row[$attendanceColumn] ?? ''
+                    ) === 'HADIR'
+            ));
+
+            return [
+                'total' => count($presentRows),
+                'month' => $dateColumn === null
+                    ? 0
+                    : $this->countSheetRowsByPeriod(
+                        $presentRows,
+                        $dateColumn,
+                        $start,
+                        $end
+                    ),
+                'available' => true,
+            ];
+        } catch (Throwable) {
+            return $this->unavailableBnnSummary();
+        }
+    }
+
+    /**
+     * @return array{total: null, month: int, available: false}
+     */
+    private function unavailableBnnSummary(): array
+    {
+        return [
+            'total' => null,
+            'month' => 0,
+            'available' => false,
+        ];
+    }
+
+    /**
+     * @return array{total: int, month: int}|null
+     */
+    private function safeMinePermitSheetSummary(
+        Carbon $start,
+        Carbon $end
+    ): ?array {
+        try {
+            if (! $this->googleSheets->hasStoredToken()) {
+                return null;
+            }
+
+            $values = $this->googleSheets->getMonitoringSheValues();
+            $sheet = $this->tabularSheetData($values);
+            $dateColumn = $this->findSheetDateColumn(
+                $sheet['headers'],
+                $sheet['rows']
+            );
+
+            return [
+                'total' => count($sheet['rows']),
+                'month' => $dateColumn === null
+                    ? 0
+                    : $this->countSheetRowsByPeriod(
+                        $sheet['rows'],
+                        $dateColumn,
+                        $start,
+                        $end
+                    ),
+            ];
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Menghapus baris kosong serta menemukan baris header secara defensif.
+     *
+     * @return array{headers: array<int, string>, rows: array<int, array>}
+     */
+    private function tabularSheetData(array $values): array
+    {
+        $rows = array_values(array_filter(
+            $values,
+            fn ($row) => is_array($row) && $this->sheetRowHasValue($row)
+        ));
+
+        if ($rows === []) {
+            return [
+                'headers' => [],
+                'rows' => [],
+            ];
+        }
+
+        $headerIndex = $this->findSheetHeaderRow($rows);
+        $headers = array_map(
+            fn ($header) => $this->normalizeSheetHeader($header),
+            $rows[$headerIndex]
+        );
+
+        $dataRows = array_slice($rows, $headerIndex + 1);
+        $dataRows = array_values(array_filter(
+            $dataRows,
+            fn ($row) => is_array($row) && $this->sheetRowHasValue($row)
+        ));
+
+        return [
+            'headers' => $headers,
+            'rows' => $dataRows,
+        ];
+    }
+
+    private function findSheetHeaderRow(array $rows): int
+    {
+        $bestIndex = 0;
+        $bestScore = -1;
+
+        foreach (array_slice($rows, 0, 10, true) as $index => $row) {
+            $score = 0;
+
+            foreach ($row as $cell) {
+                $header = $this->normalizeSheetHeader($cell);
+
+                foreach (
+                    [
+                        'TANGGAL',
+                        'PENGAJUAN',
+                        'NAMA',
+                        'NRP',
+                        'STATUS',
+                        'PERMIT',
+                        'DEPARTEMEN',
+                    ] as $keyword
+                ) {
+                    if (str_contains($header, $keyword)) {
+                        $score++;
+                    }
+                }
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestIndex = (int) $index;
+            }
+        }
+
+        return $bestIndex;
+    }
+
+    private function sheetRowHasValue(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeSheetHeader(mixed $value): string
+    {
+        $header = mb_strtoupper(trim((string) $value));
+        $header = preg_replace('/[^A-Z0-9]+/u', ' ', $header) ?? '';
+
+        return trim(preg_replace('/\s+/', ' ', $header) ?? '');
+    }
+
+    private function findSheetColumn(
+        array $headers,
+        array $candidates
+    ): ?int {
+        foreach ($candidates as $candidate) {
+            $candidate = $this->normalizeSheetHeader($candidate);
+            $index = array_search($candidate, $headers, true);
+
+            if ($index !== false) {
+                return (int) $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function findSheetDateColumn(
+        array $headers,
+        array $rows
+    ): ?int {
+        $exactCandidates = [
+            'TANGGAL PENGAJUAN',
+            'TGL PENGAJUAN',
+            'TANGGAL REQUEST',
+            'TGL REQUEST',
+            'SUBMIT DATE',
+            'DATE SUBMITTED',
+            'TANGGAL SUBMIT',
+            'TANGGAL',
+            'DATE',
+        ];
+
+        foreach ($exactCandidates as $candidate) {
+            $index = array_search($candidate, $headers, true);
+
+            if ($index !== false) {
+                return (int) $index;
+            }
+        }
+
+        foreach ($headers as $index => $header) {
+            $isSubmissionDate = str_contains($header, 'TANGGAL')
+                && (
+                    str_contains($header, 'PENGAJUAN')
+                    || str_contains($header, 'REQUEST')
+                    || str_contains($header, 'SUBMIT')
+                    || str_contains($header, 'PERMIT')
+                );
+
+            if ($isSubmissionDate) {
+                return (int) $index;
+            }
+        }
+
+        return $this->guessSheetDateColumn($rows);
+    }
+
+    private function guessSheetDateColumn(array $rows): ?int
+    {
+        $scores = [];
+
+        foreach (array_slice($rows, 0, 25) as $row) {
+            foreach ($row as $index => $value) {
+                if ($this->parseSheetDate($value) !== null) {
+                    $scores[$index] = ($scores[$index] ?? 0) + 1;
+                }
+            }
+        }
+
+        if ($scores === []) {
+            return null;
+        }
+
+        arsort($scores);
+        $index = array_key_first($scores);
+
+        return ($scores[$index] ?? 0) >= 2
+            ? (int) $index
+            : null;
+    }
+
+    private function countSheetRowsByPeriod(
+        array $rows,
+        int $dateColumn,
+        Carbon $start,
+        Carbon $end
+    ): int {
+        $count = 0;
+        $start = $start->copy()->startOfDay();
+        $end = $end->copy()->endOfDay();
+
+        foreach ($rows as $row) {
+            $date = $this->parseSheetDate(
+                $row[$dateColumn] ?? null
+            );
+
+            if ($date !== null && $date->betweenIncluded($start, $end)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function parseSheetDate(mixed $value): ?Carbon
+    {
+        $value = trim((string) $value);
+
+        if (
+            $value === ''
+            || ! preg_match('/[\/-]|[A-Za-z]/', $value)
+        ) {
+            return null;
+        }
+
+        $value = str_ireplace(
+            [
+                'Januari',
+                'Februari',
+                'Maret',
+                'April',
+                'Mei',
+                'Juni',
+                'Juli',
+                'Agustus',
+                'September',
+                'Oktober',
+                'November',
+                'Desember',
+            ],
+            [
+                'January',
+                'February',
+                'March',
+                'April',
+                'May',
+                'June',
+                'July',
+                'August',
+                'September',
+                'October',
+                'November',
+                'December',
+            ],
+            $value
+        );
+
+        foreach (
+            [
+                'd/m/Y H:i:s',
+                'd/m/Y H:i',
+                'd-m-Y H:i:s',
+                'd-m-Y H:i',
+                'Y-m-d H:i:s',
+                'Y-m-d H:i',
+                'd/m/Y',
+                'j/n/Y',
+                'd-m-Y',
+                'j-n-Y',
+                'Y-m-d',
+                'Y/m/d',
+                'm/d/Y',
+                'd-M-Y',
+            ] as $format
+        ) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+
+                if ($date !== false) {
+                    return $date;
+                }
+            } catch (Throwable) {
+                // Coba format berikutnya.
+            }
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function firstExistingTable(array $tables): ?string
