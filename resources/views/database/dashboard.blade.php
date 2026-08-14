@@ -942,6 +942,14 @@
         </div>
 
         <div class="employee-dashboard-heading-actions">
+            <a
+                href="{{ route('database.files') }}"
+                class="employee-dashboard-button employee-dashboard-source-button"
+            >
+                <span aria-hidden="true">▣</span>
+                PUSAT FILE
+            </a>
+
             @if (!empty($sourceUrl))
                 <a
                     href="{{ $sourceUrl }}"

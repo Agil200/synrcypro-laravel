@@ -1,688 +1,394 @@
 @php
-    $categoryOptions = [
-        'Senter P101X',
-        'Laser',
-        'Laptop',
-        'Radio HT',
-        'Lainnya',
+    $meta = is_array($catalogMeta ?? null) ? $catalogMeta : [];
+    $connected = (bool) ($meta['connected'] ?? false);
+    $typeIcons = [
+        'FOLDER' => '▰',
+        'DOKUMEN' => '▤',
+        'SPREADSHEET' => '▦',
+        'PRESENTASI' => '▧',
+        'PDF' => 'PDF',
+        'FILE' => '◆',
     ];
-
-    $selectedCategory = trim((string) ($category ?? 'Senter P101X'));
-
-    if ($selectedCategory === '') {
-        $selectedCategory = 'Senter P101X';
-    }
-
-    $isPaginator = is_object($assets)
-        && method_exists($assets, 'total')
-        && method_exists($assets, 'firstItem');
-
-    $totalAssets = $isPaginator
-        ? $assets->total()
-        : collect($assets)->count();
-
-    $firstItem = $isPaginator
-        ? ($assets->firstItem() ?? 0)
-        : ($totalAssets > 0 ? 1 : 0);
-
-    $lastItem = $isPaginator
-        ? ($assets->lastItem() ?? 0)
-        : $totalAssets;
 @endphp
 
-@include('manpower.cc-st-sp.partials.styles')
-
 <style>
-    .bast-category-select {
-        cursor: pointer;
+    .drive-files-page {
+        display: grid;
+        gap: 16px;
+        color: #13213a;
     }
 
-    .bast-name {
-        min-width: 170px;
-        font-weight: 700;
+    .drive-files-page * {
+        box-sizing: border-box;
     }
 
-    .bast-code {
-        white-space: nowrap;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-            "Liberation Mono", monospace;
+    .drive-files-hero,
+    .drive-files-toolbar,
+    .drive-files-empty,
+    .drive-file-card {
+        border: 1px solid #d9e1eb;
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
     }
 
-    .bast-readonly {
-        color: #677184;
-        background: #f5f7fa;
+    .drive-files-hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px;
     }
 
-    .bast-search-empty {
-        display: none;
+    .drive-files-title h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.15;
     }
 
-    .bast-note {
-        margin-top: 7px;
-        color: #798294;
+    .drive-files-title p {
+        margin: 7px 0 0;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .drive-files-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .drive-files-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid #cfd8e5;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #13213a;
+        font-size: 11px;
+        font-weight: 800;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+
+    .drive-files-button.is-primary {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #ffffff;
+    }
+
+    .drive-files-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        background: #ecfdf5;
+        color: #166534;
+        font-size: 12px;
+    }
+
+    .drive-files-status.is-error {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .drive-files-toolbar {
+        padding: 14px;
+    }
+
+    .drive-files-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) auto;
+        gap: 10px;
+    }
+
+    .drive-files-input,
+    .drive-files-select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #cfd8e5;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #13213a;
+        padding: 0 12px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .drive-files-input:focus,
+    .drive-files-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+    }
+
+    .drive-files-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .drive-file-card {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: 12px;
+        padding: 15px;
+        min-height: 156px;
+    }
+
+    .drive-file-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .drive-file-copy {
+        min-width: 0;
+    }
+
+    .drive-file-copy h2 {
+        margin: 1px 0 5px;
+        color: #0f172a;
+        font-size: 14px;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    .drive-file-copy p {
+        display: -webkit-box;
+        margin: 0;
+        overflow: hidden;
+        color: #64748b;
         font-size: 11px;
         line-height: 1.45;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
     }
 
-    @media print {
-        #openCreateBast,
-        .ccsp-toolbar,
-        .ccsp-footer {
-            display: none !important;
+    .drive-file-meta {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    .drive-file-pill {
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .drive-file-footer {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 10px;
+        border-top: 1px solid #edf1f6;
+    }
+
+    .drive-file-date {
+        color: #64748b;
+        font-size: 10px;
+    }
+
+    .drive-file-open {
+        color: #2563eb;
+        font-size: 10px;
+        font-weight: 900;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+
+    .drive-files-empty {
+        padding: 32px 20px;
+        text-align: center;
+    }
+
+    .drive-files-empty h2 {
+        margin: 0 0 8px;
+        font-size: 17px;
+    }
+
+    .drive-files-empty p {
+        max-width: 620px;
+        margin: 0 auto;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    .drive-files-pagination {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 980px) {
+        .drive-files-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .drive-files-hero {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .drive-files-form,
+        .drive-files-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .drive-files-status {
+            align-items: flex-start;
+            flex-direction: column;
         }
     }
 </style>
 
-<div class="ccsp-page">
-    <section class="ccsp-card">
-        <div class="ccsp-header">
-            <div>
-                <h1 class="ccsp-title">Berita Acara Serah Terima Asset</h1>
-                <p class="ccsp-subtitle">
-                    Monitoring penyerahan asset berdasarkan NRP, nama penerima,
-                    jenis asset, dan dokumen PDF.
-                </p>
-            </div>
-
-            <button
-                type="button"
-                class="ccsp-primary"
-                id="openCreateBast"
-            >
-                ＋ Input BAST
-            </button>
+<section class="drive-files-page" aria-labelledby="driveFilesTitle">
+    <header class="drive-files-hero">
+        <div class="drive-files-title">
+            <h1 id="driveFilesTitle">Pusat File</h1>
+            <p>
+                Kumpulan file Google Drive yang dikelola langsung melalui Spreadsheet admin.
+            </p>
         </div>
 
-        @if (session('success'))
-            <div class="ccsp-alert ccsp-success">
-                {{ session('success') }}
-            </div>
-        @endif
+        <div class="drive-files-actions">
+            <a href="{{ route('database.dashboard') }}" class="drive-files-button">
+                Kembali
+            </a>
 
-        @if (session('error'))
-            <div class="ccsp-alert ccsp-error">
-                {{ session('error') }}
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div class="ccsp-alert ccsp-error">
-                Data belum dapat disimpan.
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <div class="ccsp-toolbar">
-            <div class="ccsp-field">
-                <label for="bastCategoryFilter">Kategori Asset</label>
-                <select
-                    id="bastCategoryFilter"
-                    class="ccsp-input bast-category-select"
+            @if (!empty($meta['source_url']))
+                <a
+                    href="{{ $meta['source_url'] }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="drive-files-button"
                 >
-                    @foreach ($categoryOptions as $option)
-                        <option
-                            value="{{ $option }}"
-                            @selected($selectedCategory === $option)
-                        >
-                            {{ $option }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="ccsp-field">
-                <label for="bastSearch">
-                    Cari NRP / Nama / Jabatan / Asset
-                </label>
-                <input
-                    type="search"
-                    id="bastSearch"
-                    class="ccsp-input"
-                    placeholder="Ketik kata pencarian"
-                    autocomplete="off"
-                >
-            </div>
-
-            <div class="ccsp-stat">
-                <span>Total Berita Acara</span>
-                <strong>{{ number_format($totalAssets) }}</strong>
-            </div>
-
-            <div class="ccsp-stat">
-                <span>Kategori Aktif</span>
-                <strong>{{ $selectedCategory }}</strong>
-            </div>
-        </div>
-
-        <div class="ccsp-table-wrap">
-            <table class="ccsp-table" id="bastTable">
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>NRP</th>
-                        <th>Nama</th>
-                        <th>Jabatan</th>
-                        <th>Jenis Asset</th>
-                        <th>Nomor Asset</th>
-                        <th>Serial Number</th>
-                        <th>Tanggal Ambil</th>
-                        <th>File PDF</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    @forelse ($assets as $item)
-                        <tr class="js-bast-row">
-                            <td>
-                                {{
-                                    $isPaginator
-                                        ? (($assets->firstItem() ?? 1) + $loop->index)
-                                        : ($loop->index + 1)
-                                }}
-                            </td>
-                            <td>{{ $item->nrp ?: '-' }}</td>
-                            <td class="bast-name">{{ $item->nama ?: '-' }}</td>
-                            <td>{{ $item->jabatan ?: '-' }}</td>
-                            <td>{{ $item->jenis_asset ?: $selectedCategory }}</td>
-                            <td class="bast-code">{{ $item->no_asset ?: '-' }}</td>
-                            <td class="bast-code">
-                                {{ $item->serial_number ?: '-' }}
-                            </td>
-                            <td>
-                                {{
-                                    $item->tanggal_ambil
-                                        ? \Carbon\Carbon::parse(
-                                            $item->tanggal_ambil
-                                        )->format('d/m/Y')
-                                        : '-'
-                                }}
-                            </td>
-                            <td>
-                                @if ($item->file_pdf)
-                                    <a
-                                        href="{{ asset('storage/'.$item->file_pdf) }}"
-                                        target="_blank"
-                                        rel="noopener"
-                                        class="ccsp-file"
-                                    >
-                                        <span>📄</span>
-                                        <span>Lihat PDF</span>
-                                    </a>
-                                @else
-                                    <span>-</span>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr id="initialBastEmpty">
-                            <td colspan="9" class="ccsp-empty">
-                                Belum ada data BAST untuk kategori
-                                {{ $selectedCategory }}.
-                            </td>
-                        </tr>
-                    @endforelse
-
-                    <tr id="bastSearchEmpty" class="bast-search-empty">
-                        <td colspan="9" class="ccsp-empty">
-                            Data BAST tidak ditemukan.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="ccsp-footer">
-            <span>
-                Menampilkan {{ $firstItem }} sampai {{ $lastItem }}
-                dari {{ $totalAssets }} data
-            </span>
-
-            @if ($isPaginator && $assets->hasPages())
-                <nav class="ccsp-pagination">
-                    <a
-                        href="{{ $assets->previousPageUrl() ?: '#' }}"
-                        class="ccsp-page-link
-                            {{ $assets->onFirstPage() ? 'ccsp-disabled' : '' }}"
-                    >
-                        ‹
-                    </a>
-
-                    <span>
-                        Halaman {{ $assets->currentPage() }}
-                        dari {{ $assets->lastPage() }}
-                    </span>
-
-                    <a
-                        href="{{ $assets->nextPageUrl() ?: '#' }}"
-                        class="ccsp-page-link
-                            {{ $assets->hasMorePages() ? '' : 'ccsp-disabled' }}"
-                    >
-                        ›
-                    </a>
-                </nav>
+                    Kelola Spreadsheet
+                </a>
             @endif
+
+            <a href="{{ route('database.files') }}" class="drive-files-button is-primary">
+                Refresh Data
+            </a>
         </div>
-    </section>
-</div>
+    </header>
 
-{{-- Form tambah BAST --}}
-<div class="ccsp-modal" id="createBastModal" aria-hidden="true" hidden>
-    <div
-        class="ccsp-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="createBastTitle"
-    >
-        <form
-            method="POST"
-            action="{{ route('bast.store') }}"
-            enctype="multipart/form-data"
-            id="createBastForm"
-        >
-            @csrf
+    <div class="drive-files-status {{ $connected ? '' : 'is-error' }}">
+        <strong>{{ $meta['message'] ?? 'Status sumber data belum tersedia.' }}</strong>
+        <span>
+            {{ number_format((int) ($meta['total'] ?? 0)) }} file aktif
+            · {{ $meta['range'] ?? 'A:Z' }}
+            @if (!empty($meta['synced_at']))
+                · {{ $meta['synced_at'] }}
+            @endif
+        </span>
+    </div>
 
-            <header class="ccsp-reference-toolbar">
-                <button
-                    type="button"
-                    class="ccsp-reference-close js-close-bast"
-                    aria-label="Tutup"
-                >
-                    ×
-                </button>
+    <div class="drive-files-toolbar">
+        <form method="GET" action="{{ route('database.files') }}" class="drive-files-form">
+            <input
+                type="search"
+                name="search"
+                value="{{ $search ?? '' }}"
+                class="drive-files-input"
+                placeholder="Cari judul, kategori, deskripsi, atau tipe file..."
+            >
 
-                <h2
-                    class="ccsp-reference-title"
-                    id="createBastTitle"
-                >
-                    BAST ASSET Form
-                </h2>
-
-                <div class="ccsp-reference-actions">
-                    <button
-                        type="button"
-                        class="ccsp-form-cancel js-close-bast"
+            <select name="category" class="drive-files-select">
+                <option value="ALL">Semua kategori</option>
+                @foreach ($categories ?? [] as $categoryOption)
+                    <option
+                        value="{{ $categoryOption }}"
+                        {{ strcasecmp((string) ($selectedCategory ?? 'ALL'), $categoryOption) === 0
+                            ? 'selected'
+                            : '' }}
                     >
-                        Cancel
-                    </button>
+                        {{ $categoryOption }}
+                    </option>
+                @endforeach
+            </select>
 
-                    <button
-                        type="submit"
-                        class="ccsp-form-save"
-                        id="saveBastButton"
-                    >
-                        Save
-                    </button>
-                </div>
-            </header>
-
-            <div class="ccsp-page-tabbar">
-                <div class="ccsp-page-tab">Page 1</div>
-            </div>
-
-            <div class="ccsp-reference-body">
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastNrp"
-                        class="ccsp-reference-label"
-                    >
-                        NRP*
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="text"
-                            name="nrp"
-                            id="bastNrp"
-                            class="ccsp-reference-input"
-                            value="{{ old('nrp') }}"
-                            maxlength="50"
-                            autocomplete="off"
-                            required
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastNama"
-                        class="ccsp-reference-label"
-                    >
-                        NAMA*
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="text"
-                            name="nama"
-                            id="bastNama"
-                            class="ccsp-reference-input"
-                            value="{{ old('nama') }}"
-                            maxlength="150"
-                            autocomplete="name"
-                            required
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastJabatan"
-                        class="ccsp-reference-label"
-                    >
-                        JABATAN*
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <select
-                            name="jabatan"
-                            id="bastJabatan"
-                            class="ccsp-reference-select"
-                            required
-                        >
-                            <option value="">PILIH JABATAN</option>
-                            @foreach (['DUMPMAN', 'GL', 'SH', 'DH'] as $jabatan)
-                                <option
-                                    value="{{ $jabatan }}"
-                                    @selected(old('jabatan') === $jabatan)
-                                >
-                                    {{ $jabatan }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastDepartemen"
-                        class="ccsp-reference-label"
-                    >
-                        DEPARTEMEN
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="text"
-                            name="departemen"
-                            id="bastDepartemen"
-                            class="ccsp-reference-input bast-readonly"
-                            value="{{ old('departemen', 'PRODUKSI') }}"
-                            readonly
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastJenisAsset"
-                        class="ccsp-reference-label"
-                    >
-                        JENIS ASSET*
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <select
-                            name="jenis_asset"
-                            id="bastJenisAsset"
-                            class="ccsp-reference-select"
-                            required
-                        >
-                            @foreach ($categoryOptions as $option)
-                                <option
-                                    value="{{ $option }}"
-                                    @selected(
-                                        old(
-                                            'jenis_asset',
-                                            $selectedCategory
-                                        ) === $option
-                                    )
-                                >
-                                    {{ $option }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastNoAsset"
-                        class="ccsp-reference-label"
-                    >
-                        NOMOR ASSET
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="text"
-                            name="no_asset"
-                            id="bastNoAsset"
-                            class="ccsp-reference-input"
-                            value="{{ old('no_asset') }}"
-                            maxlength="255"
-                            autocomplete="off"
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastSerialNumber"
-                        class="ccsp-reference-label"
-                    >
-                        SERIAL NUMBER
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="text"
-                            name="serial_number"
-                            id="bastSerialNumber"
-                            class="ccsp-reference-input"
-                            value="{{ old('serial_number') }}"
-                            maxlength="255"
-                            autocomplete="off"
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row">
-                    <label
-                        for="bastTanggalAmbil"
-                        class="ccsp-reference-label"
-                    >
-                        TANGGAL AMBIL*
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="date"
-                            name="tanggal_ambil"
-                            id="bastTanggalAmbil"
-                            class="ccsp-reference-input"
-                            value="{{ old('tanggal_ambil', now()->format('Y-m-d')) }}"
-                            required
-                        >
-                    </div>
-                </div>
-
-                <div class="ccsp-reference-row is-top">
-                    <label
-                        for="bastFile"
-                        class="ccsp-reference-label"
-                    >
-                        LINK
-                    </label>
-
-                    <div class="ccsp-reference-control">
-                        <input
-                            type="file"
-                            name="file_pdf"
-                            id="bastFile"
-                            class="ccsp-reference-upload-input js-bast-file"
-                            accept="application/pdf,.pdf"
-                        >
-
-                        <label
-                            for="bastFile"
-                            class="ccsp-reference-upload"
-                        >
-                            <span class="ccsp-reference-upload-icon">
-                                📄
-                            </span>
-                            <span
-                                class="ccsp-reference-upload-name"
-                                id="bastFileName"
-                            >
-                                Pilih file PDF
-                            </span>
-                        </label>
-
-                        <div class="bast-note">
-                            Gunakan dokumen BAST dalam format PDF.
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <button type="submit" class="drive-files-button is-primary">
+                Terapkan
+            </button>
         </form>
     </div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const createModal = document.getElementById('createBastModal');
-    const openButton = document.getElementById('openCreateBast');
-    const searchInput = document.getElementById('bastSearch');
-    const categoryFilter = document.getElementById('bastCategoryFilter');
-    const categoryInput = document.getElementById('bastJenisAsset');
-    const searchEmpty = document.getElementById('bastSearchEmpty');
-    const initialEmpty = document.getElementById('initialBastEmpty');
-    const fileInput = document.getElementById('bastFile');
-    const fileName = document.getElementById('bastFileName');
-    const createForm = document.getElementById('createBastForm');
-    const saveButton = document.getElementById('saveBastButton');
+    @if (($files ?? collect())->count() > 0)
+        <div class="drive-files-grid">
+            @foreach ($files as $file)
+                <article class="drive-file-card">
+                    <div class="drive-file-icon" aria-hidden="true">
+                        {{ $typeIcons[$file['type']] ?? '◆' }}
+                    </div>
 
-    const categoryUrl = @json(
-        route('bast.index', ['category' => '__CATEGORY__'])
-    );
+                    <div class="drive-file-copy">
+                        <h2>{{ $file['title'] }}</h2>
+                        <p>{{ $file['description'] ?: 'Tidak ada deskripsi.' }}</p>
 
-    function openModal(modal) {
-        if (!modal) {
-            return;
-        }
+                        <div class="drive-file-meta">
+                            <span class="drive-file-pill">{{ $file['category'] }}</span>
+                            <span class="drive-file-pill">{{ $file['type'] }}</span>
+                            <span class="drive-file-pill">{{ $file['access'] }}</span>
+                        </div>
+                    </div>
 
-        modal.hidden = false;
-        modal.removeAttribute('hidden');
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('ccsp-modal-open');
-    }
+                    <div class="drive-file-footer">
+                        <span class="drive-file-date">
+                            {{ $file['date'] ?: 'Tanggal belum diisi' }}
+                        </span>
 
-    function closeModal(modal) {
-        if (!modal) {
-            return;
-        }
+                        <a
+                            href="{{ $file['url'] }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="drive-file-open"
+                        >
+                            Buka File ↗
+                        </a>
+                    </div>
+                </article>
+            @endforeach
+        </div>
 
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
-        modal.hidden = true;
-        modal.setAttribute('hidden', '');
-
-        if (!document.querySelector('.ccsp-modal.is-open')) {
-            document.body.classList.remove('ccsp-modal-open');
-        }
-    }
-
-    openButton?.addEventListener('click', function () {
-        if (categoryInput && categoryFilter) {
-            categoryInput.value = categoryFilter.value;
-        }
-
-        openModal(createModal);
-    });
-
-    document
-        .querySelectorAll('.js-close-bast')
-        .forEach(function (button) {
-            button.addEventListener('click', function () {
-                closeModal(button.closest('.ccsp-modal'));
-            });
-        });
-
-    createModal?.addEventListener('click', function (event) {
-        if (event.target === createModal) {
-            closeModal(createModal);
-        }
-    });
-
-    categoryFilter?.addEventListener('change', function () {
-        window.location.href = categoryUrl.replace(
-            '__CATEGORY__',
-            encodeURIComponent(this.value)
-        );
-    });
-
-    searchInput?.addEventListener('input', function () {
-        const keyword = this.value.trim().toLowerCase();
-        const rows = Array.from(
-            document.querySelectorAll('.js-bast-row')
-        );
-        let visibleRows = 0;
-
-        rows.forEach(function (row) {
-            const isVisible = row.textContent
-                .toLowerCase()
-                .includes(keyword);
-
-            row.style.display = isVisible ? '' : 'none';
-
-            if (isVisible) {
-                visibleRows += 1;
-            }
-        });
-
-        if (searchEmpty) {
-            searchEmpty.style.display =
-                rows.length > 0 && visibleRows === 0
-                    ? 'table-row'
-                    : 'none';
-        }
-
-        if (initialEmpty) {
-            initialEmpty.style.display = keyword === '' ? '' : 'none';
-        }
-    });
-
-    fileInput?.addEventListener('change', function () {
-        if (!fileName) {
-            return;
-        }
-
-        fileName.textContent =
-            this.files?.[0]?.name || 'Pilih file PDF';
-    });
-
-    createForm?.addEventListener('submit', function () {
-        if (!saveButton) {
-            return;
-        }
-
-        saveButton.disabled = true;
-        saveButton.textContent = 'Menyimpan...';
-    });
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            closeModal(createModal);
-        }
-    });
-
-    @if ($errors->any())
-        openModal(createModal);
+        @if ($files->hasPages())
+            <div class="drive-files-pagination">
+                {{ $files->links() }}
+            </div>
+        @endif
+    @else
+        <div class="drive-files-empty">
+            <h2>Belum ada file yang dapat ditampilkan</h2>
+            <p>
+                Tambahkan link Google Drive pada Spreadsheet. Header yang dikenali antara lain:
+                JUDUL, KATEGORI, DESKRIPSI, TIPE, LINK DRIVE, TANGGAL, AKSES, STATUS, dan URUTAN.
+                Gunakan STATUS AKTIF agar file ditampilkan.
+            </p>
+        </div>
     @endif
-});
-</script>
+</section>

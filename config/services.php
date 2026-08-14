@@ -224,6 +224,37 @@ return [
 
         /*
         |--------------------------------------------------------------------------
+        | Spreadsheet Pusat File Google Drive
+        |--------------------------------------------------------------------------
+        |
+        | Secara bawaan membaca sheet pertama. Nilai range dapat diganti menjadi
+        | "'ARSIP_DRIVE'!A:Z" melalui .env jika tab khusus sudah dibuat.
+        |
+        */
+
+        'drive_files_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_DRIVE_FILES_SPREADSHEET_ID',
+                '1lpHhFKkpYBUAmAHcfW2EWCn_g98CB-sicTQKr8Tgrpc'
+            )
+        ),
+
+        'drive_files_range' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_DRIVE_FILES_RANGE',
+                'A:Z'
+            )
+        ),
+
+        'drive_files_source_url' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_DRIVE_FILES_SOURCE_URL',
+                'https://docs.google.com/spreadsheets/d/1lpHhFKkpYBUAmAHcfW2EWCn_g98CB-sicTQKr8Tgrpc/edit?usp=sharing'
+            )
+        ),
+
+        /*
+        |--------------------------------------------------------------------------
         | Spreadsheet UPDATE_DATA_KARYAWAN
         |--------------------------------------------------------------------------
         |

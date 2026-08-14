@@ -130,6 +130,45 @@ class GoogleSheetsService
 
     /*
     |--------------------------------------------------------------------------
+    | Ambil katalog file Google Drive dari Spreadsheet
+    |--------------------------------------------------------------------------
+    */
+
+    public function getDriveFileValues(): array
+    {
+        $spreadsheetId = trim(
+            (string) config(
+                'services.google_sheets.drive_files_spreadsheet_id'
+            )
+        );
+
+        $range = trim(
+            (string) config(
+                'services.google_sheets.drive_files_range',
+                'A:Z'
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID Pusat File belum diatur.'
+            );
+        }
+
+        if ($range === '') {
+            throw new RuntimeException(
+                'Range Pusat File belum diatur.'
+            );
+        }
+
+        return $this->getValuesWithLinks(
+            $spreadsheetId,
+            $range
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Tambahkan satu baris ke UPDATE_DATA_KARYAWAN
     |--------------------------------------------------------------------------
     */
@@ -321,6 +360,153 @@ class GoogleSheetsService
             $spreadsheetId,
             "'{$escapedTitle}'!{$columns}"
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Baca nilai sekaligus hyperlink / smart chip Google Drive
+    |--------------------------------------------------------------------------
+    */
+
+    private function getValuesWithLinks(
+        string $spreadsheetId,
+        string $range
+    ): array {
+        $accessToken = $this->getValidAccessToken();
+        $response = $this->requestGridValues(
+            $accessToken,
+            $spreadsheetId,
+            $range
+        );
+
+        if ($response->status() === 401) {
+            $accessToken = $this->getValidAccessToken(
+                forceRefresh: true
+            );
+
+            $response = $this->requestGridValues(
+                $accessToken,
+                $spreadsheetId,
+                $range
+            );
+        }
+
+        if ($response->failed()) {
+            throw new RuntimeException(
+                $this->googleErrorMessage(
+                    $response,
+                    'Gagal membaca katalog file Google Spreadsheet.'
+                )
+            );
+        }
+
+        $sheets = $response->json('sheets', []);
+        $rows = [];
+
+        if (! is_array($sheets)) {
+            return [];
+        }
+
+        foreach ($sheets as $sheet) {
+            $dataBlocks = Arr::get($sheet, 'data', []);
+
+            if (! is_array($dataBlocks)) {
+                continue;
+            }
+
+            foreach ($dataBlocks as $dataBlock) {
+                $rowData = Arr::get($dataBlock, 'rowData', []);
+
+                if (! is_array($rowData)) {
+                    continue;
+                }
+
+                foreach ($rowData as $row) {
+                    $cells = Arr::get($row, 'values', []);
+
+                    if (! is_array($cells)) {
+                        $cells = [];
+                    }
+
+                    $rows[] = array_map(
+                        fn ($cell): mixed => is_array($cell)
+                            ? $this->gridCellValue($cell)
+                            : '',
+                        $cells
+                    );
+                }
+            }
+        }
+
+        return $rows;
+    }
+
+    private function gridCellValue(array $cell): mixed
+    {
+        $hyperlink = trim((string) Arr::get(
+            $cell,
+            'hyperlink',
+            ''
+        ));
+
+        if ($hyperlink !== '') {
+            return $hyperlink;
+        }
+
+        $chipRuns = Arr::get($cell, 'chipRuns', []);
+
+        if (is_array($chipRuns)) {
+            foreach ($chipRuns as $chipRun) {
+                $uri = trim((string) Arr::get(
+                    $chipRun,
+                    'chip.richLinkProperties.uri',
+                    ''
+                ));
+
+                if ($uri !== '') {
+                    return $uri;
+                }
+            }
+        }
+
+        $textFormatRuns = Arr::get($cell, 'textFormatRuns', []);
+
+        if (is_array($textFormatRuns)) {
+            foreach ($textFormatRuns as $textFormatRun) {
+                $uri = trim((string) Arr::get(
+                    $textFormatRun,
+                    'format.link.uri',
+                    ''
+                ));
+
+                if ($uri !== '') {
+                    return $uri;
+                }
+            }
+        }
+
+        $formattedValue = Arr::get($cell, 'formattedValue');
+
+        if ($formattedValue !== null) {
+            return $formattedValue;
+        }
+
+        $effectiveValue = Arr::get($cell, 'effectiveValue', []);
+
+        if (! is_array($effectiveValue)) {
+            return '';
+        }
+
+        foreach (
+            ['stringValue', 'numberValue', 'boolValue', 'formulaValue']
+            as $valueKey
+        ) {
+            if (array_key_exists($valueKey, $effectiveValue)) {
+                return $effectiveValue[$valueKey];
+            }
+        }
+
+        return '';
     }
 
     /*
@@ -518,6 +704,36 @@ class GoogleSheetsService
                         'FORMATTED_VALUE',
                     'dateTimeRenderOption' =>
                         'FORMATTED_STRING',
+                ]
+            );
+    }
+
+    private function requestGridValues(
+        string $accessToken,
+        string $spreadsheetId,
+        string $range
+    ): Response {
+        $url =
+            'https://sheets.googleapis.com/v4/spreadsheets/' .
+            rawurlencode($spreadsheetId);
+
+        return Http::withToken($accessToken)
+            ->acceptJson()
+            ->timeout(30)
+            ->get(
+                $url,
+                [
+                    'ranges' => $range,
+                    'includeGridData' => 'true',
+                    'fields' => implode(
+                        '',
+                        [
+                            'sheets(data(rowData(values(',
+                            'effectiveValue,formattedValue,hyperlink,',
+                            'chipRuns,textFormatRuns',
+                            '))))',
+                        ]
+                    ),
                 ]
             );
     }
