@@ -593,41 +593,18 @@ Route::prefix('database/employees')
     )->middleware('can:admin-all.view')
         ->name('admin-all');
 
-    Route::prefix('admin-all')
-        ->name('admin-all.')
-        ->middleware('can:admin-all.view')
-        ->controller(\App\Http\Controllers\Admin\UserManagementController::class)
-        ->group(function (): void {
-            Route::get(
-                '/users',
-                'index'
-            )->middleware('can:users.view')
-                ->name('users.index');
+         Route::get(
+        '/admin-all/suggestion-system',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestion']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.index');   
 
-            Route::post(
-                '/users',
-                'store'
-            )->middleware([
-                'can:users.create',
-                'throttle:10,1',
-            ])->name('users.store');
+         Route::get(
+        '/admin-all/suggestion-system/monitoring',
+         [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionMonitoring']
+    )->middleware('can:admin-all.view')
+         ->name('admin-all.suggestion.monitoring');
 
-            Route::patch(
-                '/users/{user}/role',
-                'updateRole'
-            )->middleware([
-                'can:users.assign-role',
-                'throttle:20,1',
-            ])->name('users.role');
-
-            Route::patch(
-                '/users/{user}/status',
-                'updateStatus'
-            )->middleware([
-                'can:users.change-status',
-                'throttle:20,1',
-            ])->name('users.status');
-        });
 
     /*
     |--------------------------------------------------------------------------
