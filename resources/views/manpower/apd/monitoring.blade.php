@@ -120,6 +120,27 @@
                 ];
             });
     }
+
+    $shoeScheduleStats = array_merge(
+        [
+            'ready_now' => 0,
+            'next_30_days' => 0,
+            'next_90_days' => 0,
+            'upcoming_total' => 0,
+        ],
+        $shoeScheduleStats ?? []
+    );
+
+    $shoeUpcomingRows = $shoeUpcomingRows
+        ?? new \Illuminate\Pagination\LengthAwarePaginator(
+            [],
+            0,
+            12,
+            1
+        );
+    $shoeScheduleYears = collect($shoeScheduleYears ?? []);
+    $shoeSearch = trim((string) ($shoeSearch ?? ''));
+    $shoeYear = trim((string) ($shoeYear ?? ''));
 @endphp
 
 <style>
@@ -311,6 +332,222 @@
         color: var(--apd-navy);
         font-size: 20px;
         font-weight: 900;
+    }
+
+    .apd-shoe-schedule {
+        margin: 0 20px 16px;
+        overflow: hidden;
+        border: 1px solid #cfd8ff;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #fbfcff, #f5f6ff);
+    }
+
+    .apd-shoe-schedule-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 15px 16px 12px;
+    }
+
+    .apd-shoe-schedule-filter {
+        display: grid;
+        grid-template-columns:
+            minmax(210px, 1fr)
+            minmax(130px, 160px)
+            auto
+            auto;
+        gap: 8px;
+        align-items: end;
+        width: min(650px, 100%);
+    }
+
+    .apd-shoe-filter-field {
+        display: grid;
+        gap: 4px;
+    }
+
+    .apd-shoe-filter-field label {
+        color: #475467;
+        font-size: 9px;
+        font-weight: 900;
+    }
+
+    .apd-shoe-filter-button,
+    .apd-shoe-filter-reset {
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 12px;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 900;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .apd-shoe-filter-button {
+        border: 0;
+        color: #ffffff;
+        background: #5146e5;
+    }
+
+    .apd-shoe-filter-reset {
+        border: 1px solid #d0d5dd;
+        color: #475467;
+        background: #ffffff;
+    }
+
+    .apd-shoe-schedule-title {
+        margin: 0 0 4px;
+        color: var(--apd-navy);
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .apd-shoe-schedule-copy {
+        margin: 0;
+        color: var(--apd-muted);
+        font-size: 10px;
+        line-height: 1.5;
+    }
+
+    .apd-shoe-schedule-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(110px, 1fr));
+        gap: 8px;
+        padding: 0 16px 13px;
+    }
+
+    .apd-shoe-schedule-stat {
+        padding: 9px 11px;
+        border: 1px solid #e0e5ff;
+        border-radius: 9px;
+        background: rgba(255, 255, 255, .88);
+    }
+
+    .apd-shoe-schedule-stat span {
+        display: block;
+        margin-bottom: 3px;
+        color: #667085;
+        font-size: 9px;
+        font-weight: 800;
+    }
+
+    .apd-shoe-schedule-stat strong {
+        color: #312e81;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .apd-shoe-schedule-table-wrap {
+        overflow-x: auto;
+        border-top: 1px solid #dfe4fb;
+        background: #ffffff;
+    }
+
+    .apd-shoe-schedule-table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+        color: #344054;
+        font-size: 10px;
+    }
+
+    .apd-shoe-schedule-table th,
+    .apd-shoe-schedule-table td {
+        padding: 9px 12px;
+        border-bottom: 1px solid #edf0f5;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .apd-shoe-schedule-table th {
+        color: #475467;
+        background: #f8f9fc;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .035em;
+        white-space: nowrap;
+    }
+
+    .apd-shoe-schedule-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .apd-shoe-countdown {
+        display: inline-flex;
+        min-width: 88px;
+        min-height: 25px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 9px;
+        border-radius: 999px;
+        color: #92400e;
+        background: #fef3c7;
+        font-size: 9px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .apd-shoe-countdown.soon {
+        color: #9a3412;
+        background: #ffedd5;
+    }
+
+    .apd-shoe-countdown.urgent {
+        color: #991b1b;
+        background: #fee2e2;
+    }
+
+    .apd-shoe-schedule-empty {
+        padding: 24px 16px;
+        color: #667085;
+        text-align: center;
+        font-size: 11px;
+    }
+
+    .apd-shoe-schedule-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 12px;
+        border-top: 1px solid #edf0f5;
+        color: #667085;
+        background: #ffffff;
+        font-size: 9px;
+    }
+
+    .apd-shoe-pagination {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+    }
+
+    .apd-shoe-page-link {
+        display: inline-flex;
+        min-width: 28px;
+        min-height: 26px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d0d5dd;
+        border-radius: 7px;
+        color: #3730a3;
+        background: #ffffff;
+        font-size: 13px;
+        font-weight: 900;
+        text-decoration: none;
+    }
+
+    .apd-shoe-page-link.disabled {
+        color: #98a2b3;
+        background: #f2f4f7;
+        pointer-events: none;
     }
 
     .apd-table-wrap {
@@ -1030,6 +1267,10 @@
             grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
+        .apd-shoe-schedule-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .apd-ready-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -1045,6 +1286,32 @@
         .apd-header-actions,
         .apd-primary {
             width: 100%;
+        }
+
+        .apd-shoe-schedule {
+            margin-right: 12px;
+            margin-left: 12px;
+        }
+
+        .apd-shoe-schedule-head {
+            flex-direction: column;
+        }
+
+        .apd-shoe-schedule-filter {
+            grid-template-columns: 1fr;
+        }
+
+        .apd-shoe-schedule-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .apd-shoe-schedule-foot {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .apd-shoe-pagination {
+            justify-content: space-between;
         }
 
         .apd-toolbar,
@@ -1224,6 +1491,244 @@
                 <strong>{{ number_format($stats['diambil']) }}</strong>
             </div>
         </div>
+
+        <section class="apd-shoe-schedule" id="shoe-schedule">
+            <div class="apd-shoe-schedule-head">
+                <div>
+                    <h2 class="apd-shoe-schedule-title">
+                        Jadwal Pengajuan Sepatu Safety
+                    </h2>
+                    <p class="apd-shoe-schedule-copy">
+                        Data tanggal terbaru dari Google Sheets. Daftar
+                        diurutkan berdasarkan sisa hari paling dekat.
+                    </p>
+                </div>
+
+                <form
+                    method="GET"
+                    action="{{ route('apd.index') }}"
+                    class="apd-shoe-schedule-filter"
+                >
+                    <input type="hidden" name="bulan" value="{{ $bulan }}">
+                    <input type="hidden" name="search" value="{{ $search }}">
+                    <input type="hidden" name="status" value="{{ $status }}">
+
+                    <div class="apd-shoe-filter-field">
+                        <label for="shoeScheduleSearch">
+                            Cari NRP / Nama Karyawan
+                        </label>
+                        <input
+                            type="search"
+                            name="shoe_search"
+                            id="shoeScheduleSearch"
+                            class="apd-input"
+                            value="{{ $shoeSearch }}"
+                            placeholder="Ketik NRP atau nama"
+                        >
+                    </div>
+
+                    <div class="apd-shoe-filter-field">
+                        <label for="shoeScheduleYear">
+                            Tahun Bisa Diajukan
+                        </label>
+                        <select
+                            name="shoe_year"
+                            id="shoeScheduleYear"
+                            class="apd-select"
+                        >
+                            <option value="">Semua Tahun</option>
+                            @foreach ($shoeScheduleYears as $year)
+                                <option
+                                    value="{{ $year }}"
+                                    @selected($shoeYear === $year)
+                                >
+                                    {{ $year }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="apd-shoe-filter-button"
+                    >
+                        Cari
+                    </button>
+
+                    <a
+                        href="{{
+                            route(
+                                'apd.index',
+                                array_filter([
+                                    'bulan' => $bulan,
+                                    'search' => $search,
+                                    'status' => $status,
+                                ])
+                            )
+                        }}"
+                        class="apd-shoe-filter-reset"
+                    >
+                        Reset
+                    </a>
+                </form>
+            </div>
+
+            <div class="apd-shoe-schedule-stats">
+                <div class="apd-shoe-schedule-stat">
+                    <span>Bisa Diajukan Sekarang</span>
+                    <strong>
+                        {{ number_format($shoeScheduleStats['ready_now']) }}
+                    </strong>
+                </div>
+
+                <div class="apd-shoe-schedule-stat">
+                    <span>Dalam 30 Hari</span>
+                    <strong>
+                        {{ number_format($shoeScheduleStats['next_30_days']) }}
+                    </strong>
+                </div>
+
+                <div class="apd-shoe-schedule-stat">
+                    <span>Dalam 90 Hari</span>
+                    <strong>
+                        {{ number_format($shoeScheduleStats['next_90_days']) }}
+                    </strong>
+                </div>
+
+                <div class="apd-shoe-schedule-stat">
+                    <span>Total Masih Menunggu</span>
+                    <strong>
+                        {{ number_format($shoeScheduleStats['upcoming_total']) }}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="apd-shoe-schedule-table-wrap">
+                @if ($shoeUpcomingRows->count() > 0)
+                    <table class="apd-shoe-schedule-table">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>NRP</th>
+                                <th>Nama Karyawan</th>
+                                <th>Pengambilan Terakhir</th>
+                                <th>Bisa Diajukan</th>
+                                <th>Sisa Waktu</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($shoeUpcomingRows as $schedule)
+                                @php
+                                    $remainingDays = (int) (
+                                        $schedule['days_remaining'] ?? 0
+                                    );
+                                    $countdownClass = $remainingDays <= 30
+                                        ? 'urgent'
+                                        : ($remainingDays <= 90
+                                            ? 'soon'
+                                            : '');
+                                @endphp
+
+                                <tr>
+                                    <td>
+                                        {{
+                                            ($shoeUpcomingRows->firstItem() ?? 1)
+                                                + $loop->index
+                                        }}
+                                    </td>
+                                    <td>
+                                        <strong>
+                                            {{ $schedule['nrp'] ?? '-' }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        {{ $schedule['nama'] ?: '-' }}
+                                    </td>
+                                    <td>
+                                        {{ $schedule['tanggal'] ?? '-' }}
+                                    </td>
+                                    <td>
+                                        {{
+                                            $schedule['tanggal_bisa_ajukan']
+                                                ?? '-'
+                                        }}
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="apd-shoe-countdown {{ $countdownClass }}"
+                                        >
+                                            {{ number_format($remainingDays) }}
+                                            hari lagi
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <div class="apd-shoe-schedule-foot">
+                        <span>
+                            Menampilkan
+                            {{ $shoeUpcomingRows->firstItem() ?? 0 }}–{{
+                                $shoeUpcomingRows->lastItem() ?? 0
+                            }}
+                            dari
+                            {{ number_format($shoeUpcomingRows->total()) }}
+                            hasil pencarian.
+                        </span>
+
+                        @if ($shoeUpcomingRows->hasPages())
+                            <nav class="apd-shoe-pagination">
+                                <a
+                                    href="{{
+                                        $shoeUpcomingRows->previousPageUrl()
+                                            ? $shoeUpcomingRows->previousPageUrl()
+                                                .'#shoe-schedule'
+                                            : '#'
+                                    }}"
+                                    class="apd-shoe-page-link {{
+                                        $shoeUpcomingRows->onFirstPage()
+                                            ? 'disabled'
+                                            : ''
+                                    }}"
+                                >
+                                    ‹
+                                </a>
+
+                                <span>
+                                    Halaman
+                                    {{ $shoeUpcomingRows->currentPage() }}
+                                    dari
+                                    {{ $shoeUpcomingRows->lastPage() }}
+                                </span>
+
+                                <a
+                                    href="{{
+                                        $shoeUpcomingRows->nextPageUrl()
+                                            ? $shoeUpcomingRows->nextPageUrl()
+                                                .'#shoe-schedule'
+                                            : '#'
+                                    }}"
+                                    class="apd-shoe-page-link {{
+                                        $shoeUpcomingRows->hasMorePages()
+                                            ? ''
+                                            : 'disabled'
+                                    }}"
+                                >
+                                    ›
+                                </a>
+                            </nav>
+                        @endif
+                    </div>
+                @else
+                    <div class="apd-shoe-schedule-empty">
+                        Tidak ada jadwal yang sesuai dengan pencarian atau
+                        tahun yang dipilih.
+                    </div>
+                @endif
+            </div>
+        </section>
 
         <div class="apd-table-wrap">
             <table class="apd-table">

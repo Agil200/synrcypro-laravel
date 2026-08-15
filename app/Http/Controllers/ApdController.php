@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -170,6 +171,129 @@ class ApdController extends Controller
         $shoePickupHistoryForJs =
             $this->combinedShoeEligibilityMap($safetyShoes);
 
+        /*
+         * Ringkasan jadwal Sepatu Safety untuk dashboard MPE.
+         * Hanya NRP yang mempunyai riwayat pengambilan yang dihitung.
+         * Pencarian dan filter tahun dilakukan terhadap seluruh jadwal,
+         * kemudian hasilnya dibagi 12 baris per halaman.
+         */
+        $shoeEligibilityRows = collect($shoePickupHistoryForJs)
+            ->filter(fn (mixed $row): bool =>
+                is_array($row)
+                && ($row['available'] ?? false)
+                && ($row['has_history'] ?? false)
+            )
+            ->map(function (array $row, string|int $nrp): array {
+                return [
+                    'nrp' => (string) ($row['nrp'] ?? $nrp),
+                    'nama' => (string) ($row['nama'] ?? ''),
+                    'tanggal' => (string) ($row['tanggal'] ?? '-'),
+                    'tanggal_bisa_ajukan' => (string) (
+                        $row['tanggal_bisa_ajukan'] ?? '-'
+                    ),
+                    'eligible_at' => (string) (
+                        $row['eligible_at'] ?? ''
+                    ),
+                    'days_remaining' => max(
+                        0,
+                        (int) ($row['days_remaining'] ?? 0)
+                    ),
+                    'eligible' => (bool) ($row['eligible'] ?? false),
+                    'is_stale' => (bool) ($row['is_stale'] ?? false),
+                ];
+            })
+            ->values();
+
+        $shoeUpcomingAll = $shoeEligibilityRows
+            ->reject(fn (array $row): bool => $row['eligible'])
+            ->sortBy('days_remaining')
+            ->values();
+
+        $shoeScheduleStats = [
+            'ready_now' => $shoeEligibilityRows
+                ->where('eligible', true)
+                ->count(),
+            'next_30_days' => $shoeUpcomingAll
+                ->where('days_remaining', '<=', 30)
+                ->count(),
+            'next_90_days' => $shoeUpcomingAll
+                ->where('days_remaining', '<=', 90)
+                ->count(),
+            'upcoming_total' => $shoeUpcomingAll->count(),
+        ];
+
+        $shoeSearch = trim((string) $request->input(
+            'shoe_search',
+            ''
+        ));
+        $shoeYear = trim((string) $request->input(
+            'shoe_year',
+            ''
+        ));
+
+        if (! preg_match('/^\d{4}$/', $shoeYear)) {
+            $shoeYear = '';
+        }
+
+        $shoeScheduleYears = $shoeUpcomingAll
+            ->pluck('eligible_at')
+            ->filter()
+            ->map(fn (string $date): string => substr($date, 0, 4))
+            ->filter(fn (string $year): bool =>
+                (bool) preg_match('/^\d{4}$/', $year)
+            )
+            ->unique()
+            ->sort()
+            ->values();
+
+        $shoeUpcomingFiltered = $shoeUpcomingAll
+            ->when(
+                $shoeSearch !== '',
+                function ($rows) use ($shoeSearch) {
+                    $needle = Str::lower($shoeSearch);
+
+                    return $rows->filter(
+                        fn (array $row): bool => Str::contains(
+                            Str::lower(
+                                $row['nrp'].' '.$row['nama']
+                            ),
+                            $needle
+                        )
+                    );
+                }
+            )
+            ->when(
+                $shoeYear !== '',
+                fn ($rows) => $rows->filter(
+                    fn (array $row): bool =>
+                        substr($row['eligible_at'], 0, 4)
+                            === $shoeYear
+                )
+            )
+            ->values();
+
+        $shoePage = max(
+            1,
+            (int) $request->input('shoe_page', 1)
+        );
+        $shoePerPage = 12;
+
+        $shoeUpcomingRows = new LengthAwarePaginator(
+            $shoeUpcomingFiltered
+                ->forPage($shoePage, $shoePerPage)
+                ->values(),
+            $shoeUpcomingFiltered->count(),
+            $shoePerPage,
+            $shoePage,
+            [
+                'path' => $request->url(),
+                'pageName' => 'shoe_page',
+            ]
+        );
+        $shoeUpcomingRows->appends(
+            $request->except('shoe_page')
+        );
+
         $stats = [
             'bulan' => ApdRequest::query()
                 ->whereYear('tanggal_pengajuan', $tahun)
@@ -204,6 +328,11 @@ class ApdController extends Controller
             'openModal' => $request->input('open'),
             'shoePickupHistoryForJs' =>
                 $shoePickupHistoryForJs,
+            'shoeScheduleStats' => $shoeScheduleStats,
+            'shoeUpcomingRows' => $shoeUpcomingRows,
+            'shoeScheduleYears' => $shoeScheduleYears,
+            'shoeSearch' => $shoeSearch,
+            'shoeYear' => $shoeYear,
         ]);
     }
 
