@@ -49,6 +49,24 @@
             $birthdayAge = null;
         }
     }
+
+    $shoeEligibility = is_array($shoeEligibility ?? null)
+        ? $shoeEligibility
+        : [
+            'available' => false,
+            'has_history' => false,
+            'eligible' => false,
+            'tanggal' => null,
+            'tanggal_bisa_ajukan' => null,
+            'days_remaining' => null,
+            'is_stale' => false,
+        ];
+
+    $shoeStatusClass = !($shoeEligibility['available'] ?? false)
+        ? 'unavailable'
+        : (($shoeEligibility['eligible'] ?? false)
+            ? 'eligible'
+            : 'waiting');
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -210,6 +228,68 @@
             font-size: 12px;
             line-height: 1.45;
         }
+        .shoe-eligibility {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 14px;
+            padding: 16px 18px;
+            border: 1px solid #f0b765;
+            border-radius: 13px;
+            color: #713f12;
+            background: linear-gradient(135deg, #fff8e7, #ffedbd);
+            box-shadow: 0 8px 22px rgba(180,114,0,.10);
+        }
+        .shoe-eligibility.eligible {
+            border-color: #8ed4a6;
+            color: #14532d;
+            background: linear-gradient(135deg, #effdf4, #d5f6df);
+        }
+        .shoe-eligibility.unavailable {
+            border-color: #cbd5e1;
+            color: #475569;
+            background: #f8fafc;
+        }
+        .shoe-eligibility-icon {
+            display: grid;
+            width: 46px;
+            height: 46px;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(255,255,255,.72);
+            font-size: 25px;
+        }
+        .shoe-eligibility-copy {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+        .shoe-eligibility-copy strong {
+            font-size: 15px;
+            line-height: 1.3;
+        }
+        .shoe-eligibility-copy span,
+        .shoe-eligibility-copy small {
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .shoe-countdown {
+            min-width: 112px;
+            padding: 10px 13px;
+            border-radius: 10px;
+            text-align: center;
+            color: #fff;
+            background: #d97706;
+            font-size: 14px;
+            font-weight: 900;
+        }
+        .shoe-eligibility.eligible .shoe-countdown {
+            background: #16803c;
+        }
+        .shoe-eligibility.unavailable .shoe-countdown {
+            background: #64748b;
+        }
         .profile {
             display: grid;
             grid-template-columns: 190px 1fr;
@@ -354,6 +434,13 @@
                 padding: 13px 14px;
             }
             .birthday-notification-icon { font-size: 27px; }
+            .shoe-eligibility {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .shoe-countdown {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
         }
 
 
@@ -691,6 +778,62 @@
                 </div>
             </section>
         @endif
+
+        <section
+            class="shoe-eligibility {{ $shoeStatusClass }}"
+            role="status"
+            aria-live="polite"
+        >
+            <span class="shoe-eligibility-icon" aria-hidden="true">
+                👟
+            </span>
+
+            <div class="shoe-eligibility-copy">
+                @if (!($shoeEligibility['available'] ?? false))
+                    <strong>Status Sepatu Safety belum dapat diperiksa</strong>
+                    <span>
+                        Data monitoring Google Sheets sedang tidak tersedia.
+                        Silakan coba lagi beberapa saat.
+                    </span>
+                @elseif (!($shoeEligibility['has_history'] ?? false))
+                    <strong>Sepatu Safety dapat diajukan</strong>
+                    <span>
+                        Belum ada tanggal pengambilan Sepatu Safety untuk NRP ini.
+                    </span>
+                @elseif ($shoeEligibility['eligible'] ?? false)
+                    <strong>Sepatu Safety sudah dapat diajukan kembali</strong>
+                    <span>
+                        Pengambilan terakhir
+                        {{ $shoeEligibility['tanggal'] ?? '-' }};
+                        masa satu tahun telah terpenuhi.
+                    </span>
+                @else
+                    <strong>Menunggu masa pengajuan Sepatu Safety</strong>
+                    <span>
+                        Pengambilan terakhir
+                        {{ $shoeEligibility['tanggal'] ?? '-' }}.
+                        Dapat diajukan kembali pada
+                        {{ $shoeEligibility['tanggal_bisa_ajukan'] ?? '-' }}.
+                    </span>
+                @endif
+
+                @if ($shoeEligibility['is_stale'] ?? false)
+                    <small>
+                        Status ini memakai cache sinkronisasi terakhir.
+                    </small>
+                @endif
+            </div>
+
+            <div class="shoe-countdown">
+                @if (!($shoeEligibility['available'] ?? false))
+                    Belum tersedia
+                @elseif ($shoeEligibility['eligible'] ?? false)
+                    READY
+                @else
+                    {{ number_format((int) ($shoeEligibility['days_remaining'] ?? 0), 0, ',', '.') }} hari lagi
+                @endif
+            </div>
+        </section>
 
         <section class="profile">
             <aside class="profile-side">

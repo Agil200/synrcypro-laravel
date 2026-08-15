@@ -52,7 +52,9 @@
      * [
      *     '22002759' => [
      *         'tanggal' => '03/08/2026',
-     *         'nama' => 'Nama Karyawan',
+     *         'tanggal_bisa_ajukan' => '03/08/2027',
+     *         'days_remaining' => 353,
+     *         'eligible' => false,
      *     ],
      * ]
      *
@@ -83,15 +85,36 @@
                 $tanggal = $pickup->tanggal_pengambilan;
 
                 if ($tanggal instanceof \Carbon\CarbonInterface) {
-                    $tanggal = $tanggal->format('d/m/Y');
+                    $tanggalTerakhir = $tanggal->copy()->startOfDay();
                 } else {
-                    $tanggal = \Carbon\Carbon::parse($tanggal)
-                        ->format('d/m/Y');
+                    $tanggalTerakhir = \Carbon\Carbon::parse($tanggal)
+                        ->startOfDay();
                 }
+
+                $tanggalBisaAjukan = $tanggalTerakhir
+                    ->copy()
+                    ->addYearNoOverflow();
+                $hariIni = now('Asia/Jakarta')->startOfDay();
+                $sisaHari = $hariIni->lt($tanggalBisaAjukan)
+                    ? (int) ceil(
+                        $hariIni->diffInDays($tanggalBisaAjukan)
+                    )
+                    : 0;
 
                 return [
                     strtoupper(trim($pickup->apdRequest->nrp)) => [
-                        'tanggal' => $tanggal,
+                        'available' => true,
+                        'found' => true,
+                        'has_history' => true,
+                        'eligible' => $sisaHari === 0,
+                        'tanggal' => $tanggalTerakhir->format('d/m/Y'),
+                        'last_taken_date' =>
+                            $tanggalTerakhir->format('Y-m-d'),
+                        'tanggal_bisa_ajukan' =>
+                            $tanggalBisaAjukan->format('d/m/Y'),
+                        'eligible_at' =>
+                            $tanggalBisaAjukan->format('Y-m-d'),
+                        'days_remaining' => $sisaHari,
                         'nama' => $pickup->apdRequest->nama,
                     ],
                 ];
@@ -1941,8 +1964,8 @@
                         <p class="apd-calendar-help">
                             Setiap barang yang dipilih memiliki status
                             SHE, WAREHOUSE, LOGISTIK, READY, atau REJECT.
-                            Sepatu Safety yang sudah pernah diambil tidak
-                            dapat diajukan kembali dengan NRP yang sama.
+                            Sepatu Safety dapat diajukan kembali setelah
+                            satu tahun dari tanggal pengambilan terakhir.
                         </p>
                     </div>
 
@@ -3072,6 +3095,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     payload.employee?.jabatan || '';
             }
 
+            const employeeNrp = normalizeNrp(
+                payload.employee?.nrp || nrp
+            );
+
+            if (payload.shoe_eligibility) {
+                shoePickupHistory[employeeNrp] =
+                    payload.shoe_eligibility;
+            }
+
+            applyShoeHistoryGuard(container);
+
             showEmployeeLookupNotice(
                 container,
                 payload.stale
@@ -3123,6 +3157,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function normalizeNrp(value) {
         return String(value || '')
             .trim()
+            .replace(/\s+/g, '')
             .toUpperCase();
     }
 
@@ -3160,24 +3195,41 @@ document.addEventListener('DOMContentLoaded', function () {
             container === editModal
             && container.dataset.existingShoe === '1';
 
-        const shouldBlock = Boolean(history)
+        const shouldBlock = Boolean(
+            history?.has_history
+        )
+            && history?.eligible !== true
             && !editingExistingShoe;
 
         if (notice) {
-            if (history) {
-                const prefix = editingExistingShoe
-                    ? 'Riwayat ditemukan. Pengajuan yang sedang diedit tetap dapat diperbarui.'
-                    : 'Sepatu Safety tidak dapat diajukan kembali.';
+            if (history?.has_history) {
+                if (editingExistingShoe) {
+                    notice.textContent =
+                        'Riwayat ditemukan. Pengajuan yang sedang diedit tetap dapat diperbarui. '
+                        + `Pengambilan terakhir: ${history.tanggal || '-'}.`;
+                } else if (history.eligible === true) {
+                    notice.textContent =
+                        'Sepatu Safety sudah dapat diajukan kembali. '
+                        + `Pengambilan terakhir: ${history.tanggal || '-'}.`;
+                } else {
+                    notice.textContent =
+                        'Sepatu Safety belum dapat diajukan. '
+                        + `Pengambilan terakhir: ${history.tanggal || '-'}. `
+                        + `Dapat diajukan pada ${history.tanggal_bisa_ajukan || '-'} `
+                        + `(${Number(history.days_remaining || 0)} hari lagi).`;
+                }
 
-                notice.textContent =
-                    `${prefix} Pengambilan terakhir: `
-                    + `${history.tanggal || '-'} `
-                    + `oleh ${history.nama || 'karyawan terkait'}.`;
                 notice.hidden = false;
                 notice.classList.toggle(
                     'info',
                     editingExistingShoe
+                        || history.eligible === true
                 );
+            } else if (history?.available === true) {
+                notice.textContent =
+                    'Belum ada riwayat pengambilan Sepatu Safety. Pengajuan dapat dibuat.';
+                notice.hidden = false;
+                notice.classList.add('info');
             } else {
                 notice.textContent = '';
                 notice.hidden = true;
@@ -3192,7 +3244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 option?.classList.add('is-disabled');
                 option?.setAttribute(
                     'title',
-                    'Sepatu Safety sudah pernah diambil.'
+                    `Dapat diajukan pada ${history.tanggal_bisa_ajukan || '-'}.`
                 );
             } else {
                 toggle.disabled = false;
@@ -3514,11 +3566,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 '.js-safety-shoe-toggle'
             );
 
-            if (history && shoeToggle?.checked) {
+            if (
+                history?.has_history
+                && history?.eligible !== true
+                && shoeToggle?.checked
+            ) {
                 event.preventDefault();
                 alert(
                     'Pengajuan Sepatu Safety ditolak. '
-                    + `Pengambilan terakhir tercatat pada ${history.tanggal}.`
+                    + `Pengambilan terakhir ${history.tanggal || '-'}. `
+                    + `Dapat diajukan kembali pada ${history.tanggal_bisa_ajukan || '-'} `
+                    + `(${Number(history.days_remaining || 0)} hari lagi).`
                 );
             }
         });

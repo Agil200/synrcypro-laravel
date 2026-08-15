@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ApdPickup;
 use App\Models\ApdRequest;
 use App\Services\EmployeeMasterService;
+use App\Services\SafetyShoeService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -86,7 +87,10 @@ class ApdController extends Controller
      * Monitoring pengajuan APD, antrean sepatu READY,
      * dan riwayat pengambilan.
      */
-    public function index(Request $request): View
+    public function index(
+        Request $request,
+        SafetyShoeService $safetyShoes
+    ): View
     {
         $bulan = $this->validMonth(
             $request->input('bulan', now()->format('Y-m'))
@@ -163,34 +167,8 @@ class ApdController extends Controller
          * Data ini dipakai untuk notifikasi langsung pada form.
          * Validasi utama tetap dilakukan kembali di server pada store/update.
          */
-        $shoePickupHistoryForJs = ApdPickup::query()
-            ->with('apdRequest')
-            ->whereHas('apdRequest', function ($pickupQuery) {
-                $pickupQuery->where('item_sepatu_safety', true);
-            })
-            ->latest('tanggal_pengambilan')
-            ->latest('id')
-            ->get()
-            ->filter(fn (ApdPickup $pickup) =>
-                filled($pickup->apdRequest?->nrp)
-            )
-            ->unique(fn (ApdPickup $pickup) =>
-                strtoupper(trim($pickup->apdRequest->nrp))
-            )
-            ->mapWithKeys(function (ApdPickup $pickup) {
-                $nrp = strtoupper(
-                    trim($pickup->apdRequest->nrp)
-                );
-
-                return [
-                    $nrp => [
-                        'tanggal' => $pickup
-                            ->tanggal_pengambilan
-                            ?->format('d/m/Y'),
-                        'nama' => $pickup->apdRequest->nama,
-                    ],
-                ];
-            });
+        $shoePickupHistoryForJs =
+            $this->combinedShoeEligibilityMap($safetyShoes);
 
         $stats = [
             'bulan' => ApdRequest::query()
@@ -236,7 +214,8 @@ class ApdController extends Controller
      */
     public function employeeLookup(
         Request $request,
-        EmployeeMasterService $employeeMaster
+        EmployeeMasterService $employeeMaster,
+        SafetyShoeService $safetyShoes
     ): JsonResponse {
         $validated = $request->validate([
             'nrp' => ['required', 'string', 'max:50'],
@@ -276,6 +255,17 @@ class ApdController extends Controller
             ], 404);
         }
 
+        $shoeEligibility = null;
+
+        try {
+            $shoeEligibility = $this->eligibilityForNrp(
+                $needle,
+                $safetyShoes
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
         return response()->json([
             'found' => true,
             'employee' => [
@@ -288,6 +278,7 @@ class ApdController extends Controller
                 'meta.is_stale',
                 false
             ),
+            'shoe_eligibility' => $shoeEligibility,
         ]);
     }
 
@@ -454,13 +445,17 @@ class ApdController extends Controller
         );
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(
+        Request $request,
+        SafetyShoeService $safetyShoes
+    ): RedirectResponse
     {
         $validated = $this->validateRequest($request);
 
         $this->rejectRepeatedSafetyShoe(
             $request,
-            $validated['nrp']
+            $validated['nrp'],
+            $safetyShoes
         );
 
         $payload = $this->requestPayload(
@@ -482,7 +477,8 @@ class ApdController extends Controller
 
     public function update(
         Request $request,
-        ApdRequest $apdRequest
+        ApdRequest $apdRequest,
+        SafetyShoeService $safetyShoes
     ): RedirectResponse {
         $apdRequest->loadMissing('pickup');
 
@@ -506,7 +502,8 @@ class ApdController extends Controller
         $this->rejectRepeatedSafetyShoe(
             $request,
             $validated['nrp'],
-            $apdRequest->id
+            $safetyShoes,
+            $apdRequest
         );
 
         $payload = $this->requestPayload(
@@ -1101,27 +1098,90 @@ class ApdController extends Controller
     }
 
     /**
-     * Sepatu Safety yang sudah diambil tidak boleh diajukan lagi
-     * oleh NRP yang sama.
+     * Sepatu Safety dapat diajukan kembali tepat satu tahun setelah
+     * tanggal pengambilan terakhir pada spreadsheet atau database lokal.
      */
     private function rejectRepeatedSafetyShoe(
         Request $request,
         string $nrp,
-        ?int $ignoreRequestId = null
+        SafetyShoeService $safetyShoes,
+        ?ApdRequest $currentRequest = null
     ): void {
         if (! $request->boolean('item_sepatu_safety')) {
             return;
         }
 
-        $lastPickup = ApdPickup::query()
+        if (
+            $currentRequest?->item_sepatu_safety
+            && $this->normalizeEmployeeNrp(
+                (string) $currentRequest->nrp
+            ) === $this->normalizeEmployeeNrp($nrp)
+        ) {
+            return;
+        }
+
+        try {
+            $eligibility = $this->eligibilityForNrp(
+                $nrp,
+                $safetyShoes,
+                $currentRequest?->id
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'item_sepatu_safety' =>
+                    'Status pengambilan Sepatu Safety belum dapat diperiksa dari Google Sheets. Coba lagi setelah koneksi tersedia.',
+            ]);
+        }
+
+        if (
+            ! ($eligibility['has_history'] ?? false)
+            || ($eligibility['eligible'] ?? false)
+        ) {
+            return;
+        }
+
+        $tanggalTerakhir = (string) (
+            $eligibility['tanggal'] ?? '-'
+        );
+        $tanggalBisaAjukan = (string) (
+            $eligibility['tanggal_bisa_ajukan'] ?? '-'
+        );
+        $sisaHari = max(
+            0,
+            (int) ($eligibility['days_remaining'] ?? 0)
+        );
+
+        throw ValidationException::withMessages([
+            'item_sepatu_safety' =>
+                "Sepatu Safety belum dapat diajukan. Pengambilan terakhir {$tanggalTerakhir}; dapat diajukan kembali pada {$tanggalBisaAjukan} ({$sisaHari} hari lagi).",
+        ]);
+    }
+
+    /**
+     * Menggabungkan tanggal spreadsheet dan pengambilan dari aplikasi.
+     * Tanggal paling baru selalu menjadi dasar perhitungan satu tahun.
+     */
+    private function eligibilityForNrp(
+        string $nrp,
+        SafetyShoeService $safetyShoes,
+        ?int $ignoreRequestId = null
+    ): array {
+        $normalizedNrp = $this->normalizeEmployeeNrp($nrp);
+        $sheetEligibility = $safetyShoes->eligibilityFor(
+            $normalizedNrp
+        );
+
+        $localPickup = ApdPickup::query()
             ->with('apdRequest')
             ->whereHas(
                 'apdRequest',
-                function ($query) use ($nrp) {
+                function ($query) use ($normalizedNrp) {
                     $query
                         ->whereRaw(
-                            'UPPER(TRIM(nrp)) = ?',
-                            [strtoupper(trim($nrp))]
+                            "UPPER(REPLACE(TRIM(nrp), ' ', '')) = ?",
+                            [$normalizedNrp]
                         )
                         ->where('item_sepatu_safety', true);
                 }
@@ -1139,19 +1199,93 @@ class ApdController extends Controller
             ->latest('id')
             ->first();
 
-        if (! $lastPickup) {
-            return;
+        if (! $localPickup?->tanggal_pengambilan) {
+            return $sheetEligibility;
         }
 
-        $tanggal = $lastPickup
-            ->tanggal_pengambilan
-            ?->format('d/m/Y')
-            ?? '-';
+        $localEligibility = array_merge(
+            $safetyShoes->eligibilityFromDate(
+                $localPickup->tanggal_pengambilan,
+                (string) ($localPickup->apdRequest?->nama ?? '')
+            ),
+            [
+                'nrp' => $normalizedNrp,
+                'source' => 'apd_pickups',
+            ]
+        );
 
-        throw ValidationException::withMessages([
-            'item_sepatu_safety' =>
-                "Sepatu Safety tidak dapat diajukan kembali. Pengambilan terakhir tercatat pada {$tanggal}.",
-        ]);
+        $sheetDate = $sheetEligibility['last_taken_date'] ?? null;
+
+        if (
+            ! $sheetDate
+            || Carbon::parse($localEligibility['last_taken_date'])
+                ->gt(Carbon::parse($sheetDate))
+        ) {
+            return $localEligibility;
+        }
+
+        return $sheetEligibility;
+    }
+
+    /**
+     * Data notifikasi form. Jika Google sementara gagal dibaca, riwayat
+     * lokal tetap ditampilkan; validasi penyimpanan tetap memeriksa ulang.
+     */
+    private function combinedShoeEligibilityMap(
+        SafetyShoeService $safetyShoes
+    ): array {
+        try {
+            $eligibilityMap = $safetyShoes->eligibilityMap();
+        } catch (Throwable $exception) {
+            report($exception);
+            $eligibilityMap = [];
+        }
+
+        $localPickups = ApdPickup::query()
+            ->with('apdRequest')
+            ->whereHas('apdRequest', function ($query) {
+                $query->where('item_sepatu_safety', true);
+            })
+            ->latest('tanggal_pengambilan')
+            ->latest('id')
+            ->get()
+            ->filter(fn (ApdPickup $pickup): bool =>
+                filled($pickup->apdRequest?->nrp)
+                && filled($pickup->tanggal_pengambilan)
+            )
+            ->unique(fn (ApdPickup $pickup): string =>
+                $this->normalizeEmployeeNrp(
+                    (string) $pickup->apdRequest->nrp
+                )
+            );
+
+        foreach ($localPickups as $pickup) {
+            $normalizedNrp = $this->normalizeEmployeeNrp(
+                (string) $pickup->apdRequest->nrp
+            );
+            $localEligibility = array_merge(
+                $safetyShoes->eligibilityFromDate(
+                    $pickup->tanggal_pengambilan,
+                    (string) $pickup->apdRequest->nama
+                ),
+                [
+                    'nrp' => $normalizedNrp,
+                    'source' => 'apd_pickups',
+                ]
+            );
+            $sheetDate = $eligibilityMap[$normalizedNrp]
+                ['last_taken_date'] ?? null;
+
+            if (
+                ! $sheetDate
+                || Carbon::parse($localEligibility['last_taken_date'])
+                    ->gt(Carbon::parse($sheetDate))
+            ) {
+                $eligibilityMap[$normalizedNrp] = $localEligibility;
+            }
+        }
+
+        return $eligibilityMap;
     }
 
     /**

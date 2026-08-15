@@ -9,6 +9,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        /*
+         * Data lokal lama tetap dipertahankan untuk kompatibilitas.
+         * Akses produksi menggunakan akun Google yang dipromosikan melalui
+         * AdminAccessSeeder dan SYNRGYPRO_SUPER_ADMIN_EMAILS.
+         */
         User::query()->firstOrCreate(
             ['email' => 'admin@synrcypro.local'],
             [
@@ -18,5 +23,9 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        $this->call([
+            AdminAccessSeeder::class,
+        ]);
     }
 }

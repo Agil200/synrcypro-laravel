@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,8 +32,8 @@ class AuthController extends Controller
     public function redirectToGoogle(): RedirectResponse
     {
         if (
-            ! config('services.google.client_id') ||
-            ! config('services.google.client_secret')
+            ! config('services.google.client_id')
+            || ! config('services.google.client_secret')
         ) {
             return redirect()
                 ->route('login')
@@ -58,41 +59,42 @@ class AuthController extends Controller
                 trim((string) $googleUser->getEmail())
             );
 
-$allowedEmails = array_map(
-    'trim',
-    explode(
-        ',',
-        strtolower(
-            (string) env(
-                'GOOGLE_SHEETS_ALLOWED_EMAIL',
-                ''
-            )
-        )
-    )
-);
+            $existingUser = $email !== ''
+                ? User::query()->where('email', $email)->first()
+                : null;
+
+            $allowedEmails = config('access.login_allowed_emails', []);
 
             /*
-             * Email kosong atau tidak terdapat dalam daftar akses.
+             * Email dapat login apabila sudah didaftarkan di User Management
+             * atau masih berada pada allowlist legacy di .env.
              */
-            if (
-                $email === '' ||
-                ! in_array($email, $allowedEmails, true)
-            ) {
+            $isAllowed =
+                $email !== ''
+                && (
+                    $existingUser !== null
+                    || in_array($email, $allowedEmails, true)
+                );
+
+            if (! $isAllowed) {
                 return redirect()
                     ->route('login')
                     ->with(
                         'error',
-                        'Email Anda tidak terdaftar sebagai pengguna SYNRGYPRO. Silakan menghubungi call center Manpower.'
+                        'Email Anda belum terdaftar sebagai pengguna SYNRGYPRO. Silakan menghubungi Administrator.'
                     );
             }
 
-            /*
-             * Cari akun berdasarkan email.
-             *
-             * Menggunakan firstOrNew agar role pengguna lama
-             * tidak selalu ditimpa menjadi Operator.
-             */
-            $user = User::query()->firstOrNew([
+            if ($existingUser && ! $existingUser->isActive()) {
+                return redirect()
+                    ->route('login')
+                    ->with(
+                        'error',
+                        'Akun SYNRGYPRO Anda sedang nonaktif. Hubungi Administrator.'
+                    );
+            }
+
+            $user = $existingUser ?: new User([
                 'email' => $email,
             ]);
 
@@ -103,32 +105,35 @@ $allowedEmails = array_map(
                 ?: $user->name
                 ?: 'Pengguna SYNRGYPRO';
 
-            $user->google_id =
-                $googleUser->getId();
-
-            $user->avatar =
-                $googleUser->getAvatar();
-
+            $user->google_id = $googleUser->getId();
+            $user->avatar = $googleUser->getAvatar();
             $user->email_verified_at = now();
 
             /*
-             * Role Operator hanya diberikan saat akun baru dibuat
-             * atau jika role sebelumnya masih kosong.
+             * Kolom legacy role tetap dipertahankan untuk module lama.
+             * Role database baru hanya diberikan otomatis pada user baru.
              */
             if ($isNewUser || empty($user->role)) {
                 $user->role = 'Operator';
             }
 
-            /*
-             * Password acak hanya digunakan agar kolom password
-             * tetap aman apabila tidak nullable.
-             */
+            if ($isNewUser && empty($user->role_id)) {
+                $user->role_id = Role::query()
+                    ->where('slug', 'operator')
+                    ->value('id');
+            }
+
+            if ($isNewUser) {
+                $user->is_active = true;
+            }
+
             if ($isNewUser && empty($user->password)) {
                 $user->password = Hash::make(
                     Str::random(40)
                 );
             }
 
+            $user->last_login_at = now();
             $user->save();
 
             Auth::login(
@@ -138,10 +143,6 @@ $allowedEmails = array_map(
 
             $request->session()->regenerate();
 
-            /*
-             * Menandai bahwa pengguna login melalui
-             * akun Google yang terdaftar.
-             */
             $request->session()->put(
                 'access_mode',
                 'member'
@@ -168,10 +169,6 @@ $allowedEmails = array_map(
     public function loginAsGuest(
         Request $request
     ): RedirectResponse {
-        /*
-         * Menggunakan satu akun Guest bersama agar database
-         * tidak membuat akun Guest baru pada setiap login.
-         */
         $user = User::query()->firstOrCreate(
             [
                 'email' => 'guest@synrgypro.local',
@@ -183,24 +180,20 @@ $allowedEmails = array_map(
                     Str::random(40)
                 ),
                 'email_verified_at' => now(),
+                'is_active' => true,
             ]
         );
 
-        /*
-         * Memastikan akun tersebut selalu menjadi Guest.
-         */
         $user->forceFill([
             'name' => 'Guest Operator',
             'role' => 'Guest',
+            'is_active' => true,
         ])->save();
 
         Auth::login($user);
 
         $request->session()->regenerate();
 
-        /*
-         * Penanda untuk membatasi tombol CRUD.
-         */
         $request->session()->put(
             'access_mode',
             'guest'

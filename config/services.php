@@ -428,6 +428,43 @@ return [
             )
         ),
 
+        /*
+        |--------------------------------------------------------------------------
+        | Spreadsheet Monitoring Sepatu Safety
+        |--------------------------------------------------------------------------
+        |
+        | Menggunakan koneksi OAuth yang sama dengan GoogleSheetsService.
+        | GID mengacu pada tab DATABASE di spreadsheet monitoring sepatu.
+        |
+        */
+
+        'safety_shoe_spreadsheet_id' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_SAFETY_SHOE_SPREADSHEET_ID',
+                '1cn4kiRslpyK7BxtHk5blqfzn7U1xXznixH4fculPIJM'
+            )
+        ),
+
+        'safety_shoe_sheet_gid' => (int) env(
+            'GOOGLE_SHEETS_SAFETY_SHOE_SHEET_GID',
+            65848559
+        ),
+
+        'safety_shoe_columns' => trim(
+            (string) env(
+                'GOOGLE_SHEETS_SAFETY_SHOE_COLUMNS',
+                'A:K'
+            )
+        ),
+
+        'safety_shoe_cache_ttl_seconds' => max(
+            60,
+            (int) env(
+                'GOOGLE_SHEETS_SAFETY_SHOE_CACHE_TTL_SECONDS',
+                60
+            )
+        ),
+
     ],
 
 ];

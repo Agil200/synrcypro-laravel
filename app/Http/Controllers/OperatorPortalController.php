@@ -6,6 +6,7 @@ use App\Models\ApdRequest;
 use App\Models\CoachingCounselling;
 use App\Models\StSpRecord;
 use App\Services\EmployeeMasterService;
+use App\Services\SafetyShoeService;
 use Carbon\Carbon;
 use DateTimeImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -143,7 +144,8 @@ class OperatorPortalController extends Controller
      */
     public function dashboard(
         Request $request,
-        EmployeeMasterService $employeeMaster
+        EmployeeMasterService $employeeMaster,
+        SafetyShoeService $safetyShoes
     ): View|RedirectResponse {
         $nrp = $this->verifiedNrp($request);
 
@@ -243,6 +245,61 @@ class OperatorPortalController extends Controller
             'peringatan' => $peringatanRecords->count(),
         ];
 
+        $shoeEligibility = [
+            'available' => false,
+            'found' => false,
+            'has_history' => false,
+            'eligible' => false,
+            'last_taken_date' => null,
+            'tanggal' => null,
+            'eligible_at' => null,
+            'tanggal_bisa_ajukan' => null,
+            'days_remaining' => null,
+            'source' => null,
+            'is_stale' => false,
+        ];
+
+        try {
+            $shoeEligibility = $safetyShoes->eligibilityFor(
+                $nrp
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        $localLastShoe = $apdRequests
+            ->filter(fn (ApdRequest $apd): bool =>
+                (bool) $apd->item_sepatu_safety
+                && filled($apd->pickup?->tanggal_pengambilan)
+            )
+            ->sortByDesc(fn (ApdRequest $apd): int =>
+                $apd->pickup->tanggal_pengambilan->timestamp
+            )
+            ->first();
+
+        if ($localLastShoe?->pickup?->tanggal_pengambilan) {
+            $localEligibility = array_merge(
+                $safetyShoes->eligibilityFromDate(
+                    $localLastShoe->pickup->tanggal_pengambilan,
+                    (string) ($employee['nama'] ?? '')
+                ),
+                [
+                    'nrp' => $nrp,
+                    'source' => 'apd_pickups',
+                ]
+            );
+
+            $sheetDate = $shoeEligibility['last_taken_date'] ?? null;
+
+            if (
+                ! $sheetDate
+                || Carbon::parse($localEligibility['last_taken_date'])
+                    ->gt(Carbon::parse($sheetDate))
+            ) {
+                $shoeEligibility = $localEligibility;
+            }
+        }
+
         return view('operator.dashboard', [
             'employee' => $employee,
             'apdRequests' => $apdRequests,
@@ -250,6 +307,7 @@ class OperatorPortalController extends Controller
             'teguranRecords' => $teguranRecords,
             'peringatanRecords' => $peringatanRecords,
             'summary' => $summary,
+            'shoeEligibility' => $shoeEligibility,
             'snapshotStale' => (bool) data_get(
                 $snapshot,
                 'meta.is_stale',

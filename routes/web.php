@@ -20,6 +20,7 @@ use App\Http\Controllers\SuratKeluarController;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
+use App\Http\Controllers\DriveFileController;
 
 
 
@@ -70,6 +71,12 @@ Route::middleware('auth')->group(function(){
             'unreadCount'
         ]
     );
+
+
+    Route::get(
+    '/database/files',
+    [DriveFileController::class, 'index']
+)->name('database.files');
 
 
     Route::post(
@@ -580,11 +587,47 @@ Route::prefix('database/employees')
     | Menu Admin All
     |--------------------------------------------------------------------------
     */
-
-    Route::view(
+    Route::get(
         '/admin-all',
-        'admin-all'
-    )->name('admin-all');
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'index']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all');
+
+    Route::prefix('admin-all')
+        ->name('admin-all.')
+        ->middleware('can:admin-all.view')
+        ->controller(\App\Http\Controllers\Admin\UserManagementController::class)
+        ->group(function (): void {
+            Route::get(
+                '/users',
+                'index'
+            )->middleware('can:users.view')
+                ->name('users.index');
+
+            Route::post(
+                '/users',
+                'store'
+            )->middleware([
+                'can:users.create',
+                'throttle:10,1',
+            ])->name('users.store');
+
+            Route::patch(
+                '/users/{user}/role',
+                'updateRole'
+            )->middleware([
+                'can:users.assign-role',
+                'throttle:20,1',
+            ])->name('users.role');
+
+            Route::patch(
+                '/users/{user}/status',
+                'updateStatus'
+            )->middleware([
+                'can:users.change-status',
+                'throttle:20,1',
+            ])->name('users.status');
+        });
 
     /*
     |--------------------------------------------------------------------------

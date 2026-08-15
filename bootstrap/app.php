@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserIsNotGuest;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,9 +17,14 @@ return Application::configure(
     ->withMiddleware(function (Middleware $middleware): void {
         /*
         |--------------------------------------------------------------------------
-        | Alias Middleware
+        | Middleware Web
         |--------------------------------------------------------------------------
+        | User nonaktif dikeluarkan dari session pada request berikutnya. Portal
+        | operator tetap aman karena session portal tidak memakai Auth::login().
         */
+        $middleware->web(append: [
+            EnsureUserIsActive::class,
+        ]);
 
         $middleware->alias([
             'not.guest' => EnsureUserIsNotGuest::class,
