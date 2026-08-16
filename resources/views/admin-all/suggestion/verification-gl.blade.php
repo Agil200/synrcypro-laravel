@@ -27,10 +27,10 @@
         $status = strtoupper(trim((string) $status));
 
         return match ($status) {
-            'SUBMITTED' => 'Menunggu Verifikasi',
-            'REVISION_GL_QCC' => 'Perlu Revisi',
-            'VERIFIED_GL_QCC' => 'Verified GL / QCC',
-            'REJECTED_GL_QCC' => 'Ditolak GL / QCC',
+            'SUBMITTED' => 'WAITING',
+            'REVISION_GL_QCC' => 'REVISION',
+            'VERIFIED_GL_QCC' => 'VERIFIED',
+            'REJECTED_GL_QCC' => 'REJECT',
             default => ucwords(
                 strtolower(
                     str_replace('_', ' ', $status)
@@ -411,16 +411,75 @@
             flex-direction: column;
         }
     }
+
+/* ==========================================================
+       FIXED INNER SHELL — VERIFIKASI GL / QCC
+       Header, akses, statistik, queue header tetap.
+       Hanya baris queue yang scroll.
+       ========================================================== */
+    #adminAllShell .aa-main {
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #adminAllShell .aa-content {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .glv-page {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    .glv-head,
+    .glv-flash,
+    .glv-access,
+    .glv-stats {
+        flex: 0 0 auto;
+    }
+
+    .glv-card {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .glv-card-head {
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 5;
+        background: #fff;
+    }
+
+    .glv-table-wrap {
+        flex: 1 1 auto;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .glv-table th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #f7f9fb;
+    }
+
 </style>
 
 <div class="glv-page">
 <div class="glv-head">
     <div>
         <h1>Verifikasi GL / QCC</h1>
-        <p>
-            Queue workflow Suggestion System.
-            STEP 6A memvalidasi hak akses berdasarkan email login + ACCESS_ATASAN.
-        </p>
     </div>
 
     <div class="aa-title-actions">
@@ -498,28 +557,28 @@
 <div class="glv-stats">
     <div class="glv-stat pending">
         <span class="glv-stat-icon">!</span>
-        <small>Menunggu</small>
+        <small>WAITING</small>
         <strong>{{ number_format($summary['pending'] ?? 0) }}</strong>
         <span>Submitted menunggu GL / QCC</span>
     </div>
 
     <div class="glv-stat revision">
         <span class="glv-stat-icon">R</span>
-        <small>Perlu Revisi</small>
+        <small>REVISION</small>
         <strong>{{ number_format($summary['revision'] ?? 0) }}</strong>
         <span>Masuk kembali ke tahap GL / QCC</span>
     </div>
 
     <div class="glv-stat verified">
         <span class="glv-stat-icon">✓</span>
-        <small>Verified</small>
+        <small>VERIFIED</small>
         <strong>{{ number_format($summary['verified'] ?? 0) }}</strong>
         <span>Sudah diverifikasi GL / QCC</span>
     </div>
 
     <div class="glv-stat rejected">
         <span class="glv-stat-icon">×</span>
-        <small>Ditolak</small>
+        <small>REJECT</small>
         <strong>{{ number_format($summary['rejected'] ?? 0) }}</strong>
         <span>Ditolak pada tahap GL / QCC</span>
     </div>
@@ -535,7 +594,7 @@
         </div>
 
         <span class="aa-status {{ $canReviewGl ? 'active' : '' }}">
-            {{ $canReviewGl ? 'Akses Aktif' : 'View Only' }}
+            {{ $canReviewGl ? 'ACTIVE ACCESS' : 'VIEW ONLY' }}
         </span>
     </div>
 

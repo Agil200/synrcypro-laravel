@@ -32,47 +32,142 @@
         'selesai' => 0,
     ];
 
+    /*
+     * FINAL STATUS COLOR STANDARD
+     * - SUBMITTED                       = ORANGE
+     * - VERIFIED GL/QCC / SH / DH-PM   = BLUE
+     * - APPROVED DH/PM / SELESAI       = GREEN
+     * - REJECTED ANY STAGE             = RED
+     *
+     * Nilai backend TIDAK diubah. Ini hanya mapping visual.
+     */
     $statusClass = static function (?string $status): string {
         $status = strtoupper(trim((string) $status));
 
-        if ($status === 'SUBMITTED') {
-            return 'submitted';
-        }
+        return match ($status) {
+            'SUBMITTED' => 'submitted',
 
-        if (str_contains($status, 'VERIFIED')) {
-            return 'verified';
-        }
+            'VERIFIED_GL_QCC',
+            'VERIFIED_SH',
+            'APPROVED_SH',
+            'VERIFIED_DH_PM' => 'verified',
 
-        if (
-            str_contains($status, 'APPROVED')
-            || in_array($status, ['SELESAI', 'DONE', 'COMPLETED'], true)
-        ) {
-            return 'approved';
-        }
+            'APPROVED_DH_PM',
+            'SELESAI',
+            'DONE',
+            'COMPLETED' => 'approved',
 
-        if (str_contains($status, 'REJECTED')) {
-            return 'rejected';
-        }
+            'REJECTED_GL_QCC',
+            'REJECTED_SH',
+            'REJECTED_DH_PM' => 'rejected',
 
-        return '';
+            'REVISION_GL_QCC' => 'revision',
+
+            default => '',
+        };
     };
 
     $statusLabel = static function (?string $status): string {
         $status = strtoupper(trim((string) $status));
 
         if ($status === '') {
-            return 'Tanpa Status';
+            return 'No Status';
         }
 
         return match ($status) {
+            'SUBMITTED' => 'Submitted',
+
             'VERIFIED_GL_QCC' => 'Verified GL / QCC',
-            'APPROVED_SH' => 'Approved SH',
+            'VERIFIED_SH',
+            'APPROVED_SH' => 'Verified SH',
+            'VERIFIED_DH_PM' => 'Verified DH / PM',
+
+            'APPROVED_DH_PM',
+            'SELESAI',
+            'DONE',
+            'COMPLETED' => 'Approved DH / PM',
+
+            'REJECTED_GL_QCC' => 'Rejected GL / QCC',
+            'REJECTED_SH' => 'Rejected SH',
+            'REJECTED_DH_PM' => 'Rejected DH / PM',
+
+            'REVISION_GL_QCC' => 'Revision GL / QCC',
+
             default => ucwords(
                 strtolower(
                     str_replace('_', ' ', $status)
                 )
             ),
         };
+    };
+
+    /*
+     * Badge per tahap workflow di kolom GL/QCC, SH, dan DH/PM.
+     */
+    $stageStatusClass = static function (
+        ?string $status,
+        string $stage
+    ): string {
+        $status = strtoupper(trim((string) $status));
+        $stage = strtoupper(trim($stage));
+
+        if (in_array($status, ['', '-', 'PENDING', 'WAITING'], true)) {
+            return 'waiting';
+        }
+
+        if ($status === 'REJECTED') {
+            return 'rejected';
+        }
+
+        if ($status === 'REVISION') {
+            return 'revision';
+        }
+
+        if ($stage === 'DH_PM' && $status === 'APPROVED') {
+            return 'approved';
+        }
+
+        if (
+            in_array($status, ['VERIFIED', 'APPROVED'], true)
+        ) {
+            return 'verified';
+        }
+
+        return '';
+    };
+
+    $stageStatusLabel = static function (
+        ?string $status,
+        string $stage
+    ): string {
+        $status = strtoupper(trim((string) $status));
+        $stage = strtoupper(trim($stage));
+
+        if (in_array($status, ['', '-', 'PENDING', 'WAITING'], true)) {
+            return 'WAITING';
+        }
+
+        if ($status === 'REJECTED') {
+            return 'REJECT';
+        }
+
+        if ($status === 'REVISION') {
+            return 'REVISION';
+        }
+
+        if ($stage === 'DH_PM' && $status === 'APPROVED') {
+            return 'APPROVE';
+        }
+
+        if ($status === 'VERIFIED') {
+            return 'VERIFIED';
+        }
+
+        if ($stage === 'SH' && $status === 'APPROVED') {
+            return 'VERIFIED';
+        }
+
+        return $status;
     };
 @endphp
 
@@ -267,17 +362,17 @@
     }
 
     .ssm-stage-card.sh {
+        --stage-color: #0f78ef;
+        --stage-border: #b7d9ff;
+        --stage-bg: #f2f8ff;
+        --stage-text: #0d63b7;
+    }
+
+    .ssm-stage-card.dh-pm {
         --stage-color: #0aa768;
         --stage-border: #b8ead2;
         --stage-bg: #f0fff7;
         --stage-text: #087847;
-    }
-
-    .ssm-stage-card.dh-pm {
-        --stage-color: #7548c8;
-        --stage-border: #d8c8f6;
-        --stage-bg: #f8f4ff;
-        --stage-text: #5d36a5;
     }
 
     .ssm-stage-card.selesai {
@@ -376,19 +471,34 @@
         background: #fff0d8;
     }
 
+    /* VERIFIED GL/QCC / SH / DH-PM = BLUE */
     .ssm-status.verified {
-        color: #0b7044;
-        background: #ddf5e8;
-    }
-
-    .ssm-status.approved {
         color: #0d63b7;
         background: #e5f2ff;
     }
 
+    /* APPROVED DH/PM / SELESAI = GREEN */
+    .ssm-status.approved {
+        color: #087847;
+        background: #ddf5e8;
+    }
+
+    /* REJECTED ANY STAGE = RED */
     .ssm-status.rejected {
         color: #a52a35;
         background: #ffe8eb;
+    }
+
+    /* WAITING = ORANGE SOFT */
+    .ssm-status.waiting {
+        color: #9b5700;
+        background: #fff0d8;
+    }
+
+    /* REVISION = AMBER */
+    .ssm-status.revision {
+        color: #8a6200;
+        background: #fff4c7;
     }
 
     .ssm-no-ss-link {
@@ -490,15 +600,89 @@
             grid-template-columns: 1fr;
         }
     }
+
+/* ==========================================================
+       FIXED INNER SHELL — MONITORING DATA
+       Judul, connection strip, filter, summary, card head tetap.
+       Hanya rows tabel yang scroll.
+       ========================================================== */
+    #adminAllShell .aa-main {
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #adminAllShell .aa-content {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .ssm-page {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .ssm-head,
+    .ssm-info,
+    .ssm-filter,
+    .ssm-summary {
+        flex: 0 0 auto;
+    }
+
+    .ssm-table-card {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .ssm-table-head,
+    .ssm-pagination {
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 5;
+        background: #fff;
+    }
+
+    .ssm-table-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .ssm-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #f7f9fb;
+    }
+
+    @media (max-height: 760px) and (min-width: 701px) {
+        .ssm-stage-card {
+            min-height: 62px;
+            padding-top: 8px;
+            padding-bottom: 7px;
+        }
+
+        .ssm-summary {
+            gap: 5px;
+            margin-bottom: 6px;
+        }
+    }
+
 </style>
 
+<div class="ssm-page">
 <div class="ssm-head">
     <div>
         <h1>Monitoring Data Suggestion System</h1>
-        <p>
-            Monitoring database Suggestion System Produksi Site BA.
-            Pencarian dan filter ini masih READ ONLY.
-        </p>
     </div>
 
     <div class="ssm-actions">
@@ -685,37 +869,37 @@
     <div class="ssm-stage-card gl-qcc">
         <span class="ssm-stage-icon">2</span>
 
-        <small>Verifikasi GL / QCC</small>
+        <small>Verified GL / QCC</small>
 
         <strong>
             {{ number_format($stageCounts['gl_qcc'] ?? 0) }}
         </strong>
 
-        <span>Sudah lolos GL / Tim QCC</span>
+        <span>Verified oleh GL / Tim QCC</span>
     </div>
 
     <div class="ssm-stage-card sh">
         <span class="ssm-stage-icon">3</span>
 
-        <small>Persetujuan SH</small>
+        <small>Verified SH</small>
 
         <strong>
             {{ number_format($stageCounts['sh'] ?? 0) }}
         </strong>
 
-        <span>Sudah disetujui Section Head</span>
+        <span>Verified oleh Section Head</span>
     </div>
 
     <div class="ssm-stage-card dh-pm">
         <span class="ssm-stage-icon">4</span>
 
-        <small>Persetujuan DH / PM</small>
+        <small>Approved DH / PM</small>
 
         <strong>
             {{ number_format($stageCounts['dh_pm'] ?? 0) }}
         </strong>
 
-        <span>Sudah disetujui DH / PM</span>
+        <span>Final approval DH / PM</span>
     </div>
 
     <div class="ssm-stage-card selesai">
@@ -774,6 +958,7 @@
                     <th>Status</th>
                     <th>GL / QCC</th>
                     <th>SH</th>
+                    <th>DH / PM</th>
                     <th>Print</th>
                     <th>Dokumen</th>
                 </tr>
@@ -831,11 +1016,27 @@
                         </td>
 
                         <td>
-                            {{ $row['STATUS_GL_QCC'] ?? '-' }}
+                            <span
+                                class="ssm-status {{ $stageStatusClass($row['STATUS_GL_QCC'] ?? '', 'GL_QCC') }}"
+                            >
+                                {{ $stageStatusLabel($row['STATUS_GL_QCC'] ?? '', 'GL_QCC') }}
+                            </span>
                         </td>
 
                         <td>
-                            {{ $row['STATUS_SH'] ?? '-' }}
+                            <span
+                                class="ssm-status {{ $stageStatusClass($row['STATUS_SH'] ?? '', 'SH') }}"
+                            >
+                                {{ $stageStatusLabel($row['STATUS_SH'] ?? '', 'SH') }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span
+                                class="ssm-status {{ $stageStatusClass($row['STATUS_DH_PM'] ?? '', 'DH_PM') }}"
+                            >
+                                {{ $stageStatusLabel($row['STATUS_DH_PM'] ?? '', 'DH_PM') }}
+                            </span>
                         </td>
 
                         <td>
@@ -876,7 +1077,7 @@
                 @empty
                     <tr>
                         <td
-                            colspan="12"
+                            colspan="13"
                             class="ssm-empty"
                         >
                             Tidak ada data Suggestion System
@@ -913,4 +1114,6 @@
         </div>
     </div>
 </div>
+</div>
+
 @endsection

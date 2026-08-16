@@ -709,6 +709,12 @@
                 ? route('admin-all.suggestion.approval-sh')
                 : '#';
 
+            // STEP 8A — Persetujuan DH / PM.
+            // Route::has() menjaga layout tetap aman bila route belum terdaftar.
+            $suggestionApprovalDhPmUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.approval-dh-pm')
+                ? route('admin-all.suggestion.approval-dh-pm')
+                : '#';
+
             $detailFromSh = request()->routeIs('admin-all.suggestion.detail')
                 && request()->query('from') === 'sh';
 
@@ -722,6 +728,7 @@
                         ['icon' => 'table', 'label' => 'Monitoring Data SS', 'url' => $suggestionMonitoringUrl, 'active' => request()->routeIs('admin-all.suggestion.monitoring') || (request()->routeIs('admin-all.suggestion.detail') && !$detailFromSh)],
                         ['icon' => 'check', 'label' => 'Verifikasi GL', 'url' => $suggestionVerificationGlUrl, 'active' => request()->routeIs('admin-all.suggestion.verification-gl')],
                         ['icon' => 'shield', 'label' => 'Persetujuan SH', 'url' => $suggestionApprovalShUrl, 'active' => request()->routeIs('admin-all.suggestion.approval-sh') || $detailFromSh],
+                        ['icon' => 'shield', 'label' => 'Persetujuan DH / PM', 'url' => $suggestionApprovalDhPmUrl, 'active' => request()->routeIs('admin-all.suggestion.approval-dh-pm')],
                     ],
                 ],
                 [

@@ -649,6 +649,26 @@ Route::prefix('database/employees')
         ->name('admin-all.suggestion.approval-sh.action');
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 8A — Persetujuan DH / PM (READ ONLY)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/admin-all/suggestion-system/persetujuan-dh-pm',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionApprovalDhPm']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.approval-dh-pm');
+
+
+    Route::post(
+        '/admin-all/suggestion-system/persetujuan-dh-pm/{noSs}/action',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionApprovalDhPmAction']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.approval-dh-pm.action');
+
+
     Route::get(
         '/admin-all/suggestion-system/detail/{noSs}',
         [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionDetail']

@@ -176,16 +176,24 @@ class SuggestionSystemService
                 return $result;
             }
 
-            if (!in_array(
-                $access,
-                ['ADMIN', 'GL', 'SH'],
-                true
-            )) {
-                $result['message'] =
-                    'Nilai AKSES tidak dikenali.';
+if (!in_array(
+    $access,
+    [
+        'ADMIN',
+        'GL',
+        'SH',
+        'DH',
+        'PM',
+        'DH_PM',
+        'DH-PM',
+    ],
+    true
+)) {
+    $result['message'] =
+        'Nilai AKSES tidak dikenali.';
 
-                return $result;
-            }
+    return $result;
+}
 
             $result['allowed'] = true;
             $result['message'] = 'Akses aktif.';
@@ -543,6 +551,38 @@ class SuggestionSystemService
                 ['ADMIN', 'SH'],
                 true
             );
+        }
+
+        if ($stage === 'DH_PM') {
+            $roleNormalized = trim(
+                preg_replace(
+                    '/[^A-Z0-9]+/',
+                    ' ',
+                    $role
+                ) ?? ''
+            );
+
+            return $role === 'ADMIN'
+                || preg_match(
+                    '/(^| )DH( |$)/',
+                    $roleNormalized
+                ) === 1
+                || preg_match(
+                    '/(^| )PM( |$)/',
+                    $roleNormalized
+                ) === 1
+                || str_contains(
+                    $roleNormalized,
+                    'DEPARTMENT HEAD'
+                )
+                || str_contains(
+                    $roleNormalized,
+                    'DEPT HEAD'
+                )
+                || str_contains(
+                    $roleNormalized,
+                    'PROJECT MANAGER'
+                );
         }
 
         return $role === 'ADMIN';

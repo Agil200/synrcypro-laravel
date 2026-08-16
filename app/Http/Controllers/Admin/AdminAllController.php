@@ -796,6 +796,449 @@ class AdminAllController extends Controller
     }
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 8B — Persetujuan DH / PM
+    |--------------------------------------------------------------------------
+    |
+    | Queue tetap membaca DATABASE_SS. Aksi APPROVE / REJECT hanya dilakukan
+    | melalui signed Laravel Bridge -> Apps Script existing.
+    |
+    */
+    public function suggestionApprovalDhPm(
+        SuggestionSystemService $suggestionService
+    ): View {
+        $suggestion = config(
+            'admin_all.suggestion_system',
+            []
+        );
+
+        $suggestionIntegration = [
+            'connected' => false,
+            'message' => null,
+        ];
+
+        $suggestionAccess = [
+            'allowed' => false,
+            'access' => null,
+            'name' => null,
+            'nrp' => null,
+            'position' => null,
+            'department' => null,
+            'email' => auth()->user()?->email,
+            'status' => null,
+            'source' => 'ACCESS_ATASAN',
+            'message' => 'View only.',
+        ];
+
+        $dhPmQueue = [
+            'summary' => [
+                'pending' => 0,
+                'approved' => 0,
+                'rejected' => 0,
+                'total' => 0,
+            ],
+            'rows' => [],
+        ];
+
+        $canReviewDhPm = false;
+
+        try {
+            $suggestionData =
+                $suggestionService->getData();
+
+            $suggestionAccess =
+                $suggestionService->resolveAccess(
+                    $suggestionData['access_atasan']['active_rows'] ?? [],
+                    auth()->user()?->email
+                );
+
+            /*
+             * STEP 8B: hak akses halaman DH/PM.
+             * Nilai AKSES yang diterima:
+             * ADMIN, DH, DH_PM, DH-PM, PM, DEPARTMENT HEAD, PROJECT MANAGER.
+             */
+            $accessText = strtoupper(
+                trim(
+                    (string) (
+                        $suggestionAccess['access']
+                        ?? ''
+                    )
+                )
+            );
+
+            $accessNormalized = preg_replace(
+                '/[^A-Z0-9]+/',
+                ' ',
+                $accessText
+            );
+
+            $accessNormalized = trim(
+                preg_replace(
+                    '/\s+/',
+                    ' ',
+                    (string) $accessNormalized
+                )
+            );
+
+            $isAdmin =
+                str_contains(
+                    $accessNormalized,
+                    'ADMIN'
+                );
+
+            $isDhPm =
+                preg_match(
+                    '/(^| )DH( |$)/',
+                    $accessNormalized
+                ) === 1
+                || preg_match(
+                    '/(^| )PM( |$)/',
+                    $accessNormalized
+                ) === 1
+                || str_contains(
+                    $accessNormalized,
+                    'DEPARTMENT HEAD'
+                )
+                || str_contains(
+                    $accessNormalized,
+                    'DEPT HEAD'
+                )
+                || str_contains(
+                    $accessNormalized,
+                    'PROJECT MANAGER'
+                );
+
+            $canReviewDhPm =
+                (bool) (
+                    $suggestionAccess['allowed']
+                    ?? false
+                )
+                && ($isAdmin || $isDhPm);
+
+            $rows =
+                $suggestionData['database']['rows'] ?? [];
+
+            /*
+             * DH/PM non-ADMIN hanya melihat Suggestion departemen yang sama.
+             * ADMIN tetap dapat melihat seluruh queue.
+             */
+            $reviewerDepartment = strtoupper(
+                trim(
+                    (string) (
+                        $suggestionAccess['department']
+                        ?? ''
+                    )
+                )
+            );
+
+            if (
+                !$isAdmin
+                && $isDhPm
+                && $reviewerDepartment !== ''
+            ) {
+                $rows = array_values(
+                    array_filter(
+                        $rows,
+                        static function (mixed $row) use (
+                            $reviewerDepartment
+                        ): bool {
+                            if (!is_array($row)) {
+                                return false;
+                            }
+
+                            return strtoupper(
+                                trim(
+                                    (string) (
+                                        $row['DEPARTEMEN']
+                                        ?? ''
+                                    )
+                                )
+                            ) === $reviewerDepartment;
+                        }
+                    )
+                );
+            }
+
+            $queueRows = collect($rows)
+                ->filter(
+                    function (mixed $row): bool {
+                        if (!is_array($row)) {
+                            return false;
+                        }
+
+                        $status =
+                            $this->normalizeWorkflowStatus(
+                                $row['STATUS'] ?? ''
+                            );
+
+                        $statusDhPm = strtoupper(
+                            trim(
+                                (string) (
+                                    $row['STATUS_DH_PM']
+                                    ?? ''
+                                )
+                            )
+                        );
+
+                        return in_array(
+                            $status,
+                            [
+                                'APPROVED_SH',
+                                'APPROVED_DH_PM',
+                                'REJECTED_DH_PM',
+                            ],
+                            true
+                        )
+                        || in_array(
+                            $statusDhPm,
+                            [
+                                'PENDING',
+                                'APPROVED',
+                                'REJECTED',
+                            ],
+                            true
+                        );
+                    }
+                )
+                ->values();
+
+            $pending = $queueRows
+                ->filter(
+                    fn (array $row): bool =>
+                        $this->normalizeWorkflowStatus(
+                            $row['STATUS'] ?? ''
+                        ) === 'APPROVED_SH'
+                )
+                ->count();
+
+            $approved = $queueRows
+                ->filter(
+                    fn (array $row): bool =>
+                        $this->normalizeWorkflowStatus(
+                            $row['STATUS'] ?? ''
+                        ) === 'APPROVED_DH_PM'
+                )
+                ->count();
+
+            $rejected = $queueRows
+                ->filter(
+                    fn (array $row): bool =>
+                        $this->normalizeWorkflowStatus(
+                            $row['STATUS'] ?? ''
+                        ) === 'REJECTED_DH_PM'
+                )
+                ->count();
+
+            $dhPmQueue = [
+                'summary' => [
+                    'pending' => $pending,
+                    'approved' => $approved,
+                    'rejected' => $rejected,
+                    'total' => $queueRows->count(),
+                ],
+                'rows' => $queueRows->all(),
+            ];
+
+            $suggestionIntegration = [
+                'connected' => true,
+                'message' => null,
+            ];
+        } catch (Throwable $e) {
+            report($e);
+
+            $suggestionIntegration = [
+                'connected' => false,
+                'message' => app()->isLocal()
+                    ? $e->getMessage()
+                    : 'Integrasi Suggestion System sedang tidak tersedia.',
+            ];
+        }
+
+        return view(
+            'admin-all.suggestion.approval-dh-pm',
+            compact(
+                'suggestion',
+                'suggestionIntegration',
+                'suggestionAccess',
+                'canReviewDhPm',
+                'dhPmQueue'
+            )
+        );
+    }
+
+
+    public function suggestionApprovalDhPmAction(
+        Request $request,
+        string $noSs,
+        SuggestionSystemService $suggestionService,
+        SuggestionWorkflowBridgeService $bridgeService
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'decision' => [
+                'required',
+                Rule::in([
+                    'APPROVED',
+                    'REJECTED',
+                ]),
+            ],
+
+            'note' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ]);
+
+        $decision = strtoupper(
+            trim(
+                (string) $validated['decision']
+            )
+        );
+
+        $note = trim(
+            (string) (
+                $validated['note']
+                ?? ''
+            )
+        );
+
+        /*
+         * REJECT wajib alasan audit.
+         * APPROVE boleh tanpa catatan.
+         */
+        if (
+            $decision === 'REJECTED'
+            && mb_strlen($note) < 5
+        ) {
+            return back()
+                ->withErrors([
+                    'note' =>
+                        'Catatan / alasan minimal 5 karakter '
+                        .'untuk REJECT.',
+                ])
+                ->withInput();
+        }
+
+        try {
+            /*
+             * SECURITY CHECK #1 — LARAVEL.
+             * Email login wajib AKTIF di ACCESS_ATASAN
+             * dan berhak pada stage DH_PM.
+             */
+            $suggestionData =
+                $suggestionService->getData();
+
+            $email = (string) (
+                auth()->user()?->email
+                ?? ''
+            );
+
+            $suggestionAccess =
+                $suggestionService->resolveAccess(
+                    $suggestionData['access_atasan']['active_rows'] ?? [],
+                    $email
+                );
+
+            if (
+                !$suggestionService->canAccessWorkflowStage(
+                    $suggestionAccess,
+                    'DH_PM'
+                )
+            ) {
+                abort(
+                    403,
+                    'Akun tidak memiliki akses Persetujuan DH / PM.'
+                );
+            }
+
+            $row =
+                $suggestionService->findByNoSs(
+                    $suggestionData['database']['rows'] ?? [],
+                    $noSs
+                );
+
+            if ($row === null) {
+                abort(
+                    404,
+                    'Suggestion System tidak ditemukan.'
+                );
+            }
+
+            /*
+             * DH/PM hanya boleh memproses Suggestion
+             * yang sudah APPROVED oleh SH.
+             */
+            $currentStatus =
+                $this->normalizeWorkflowStatus(
+                    $row['STATUS'] ?? ''
+                );
+
+            if ($currentStatus !== 'APPROVED_SH') {
+                return back()->with(
+                    'error',
+                    'Suggestion ini tidak lagi berada '
+                    .'pada tahap Persetujuan DH / PM. Refresh data.'
+                );
+            }
+
+            /*
+             * SECURITY CHECK #2 + WRITE — APPS SCRIPT.
+             * HMAC -> Apps Script -> ACCESS_ATASAN ->
+             * reviewerCanStage_(DH_PM) ->
+             * validateWorkflowTransition_() ->
+             * updateWorkflowStatus() existing.
+             */
+            $result =
+                $bridgeService->updateDhPm(
+                    $email,
+                    $noSs,
+                    $decision,
+                    $note
+                );
+
+            if (($result['success'] ?? false) !== true) {
+                return back()->withInput()->with(
+                    'error',
+                    (string) (
+                        $result['message']
+                        ?? 'Workflow Apps Script menolak request DH / PM.'
+                    )
+                );
+            }
+
+            return redirect()
+                ->route(
+                    'admin-all.suggestion.detail',
+                    [
+                        'noSs' => $noSs,
+                        'from' => 'dh-pm',
+                    ]
+                )
+                ->with(
+                    'success',
+                    (string) (
+                        $result['message']
+                        ?? 'Persetujuan DH / PM berhasil diperbarui.'
+                    )
+                );
+        } catch (
+            \Symfony\Component\HttpKernel\Exception\HttpException $e
+        ) {
+            throw $e;
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->withInput()->with(
+                'error',
+                app()->isLocal()
+                    ? $e->getMessage()
+                    : 'Proses Persetujuan DH / PM gagal dijalankan.'
+            );
+        }
+    }
+
+
     public function suggestionDetail(
         string $noSs,
         SuggestionSystemService $suggestionService
@@ -864,6 +1307,12 @@ class AdminAllController extends Controller
                     'SH'
                 );
 
+            $canReviewDhPm =
+                $suggestionService->canAccessWorkflowStage(
+                    $suggestionAccess,
+                    'DH_PM'
+                );
+
             $detailStatus =
                 $this->normalizeWorkflowStatus(
                     $suggestionRow['STATUS'] ?? ''
@@ -888,6 +1337,14 @@ class AdminAllController extends Controller
                 $canReviewSh
                 && $detailStatus === 'VERIFIED_GL_QCC';
 
+            /*
+             * STEP 8B: DH/PM/ADMIN hanya dapat melakukan aksi
+             * ketika status utama tepat berada pada APPROVED_SH.
+             */
+            $canActDhPm =
+                $canReviewDhPm
+                && $detailStatus === 'APPROVED_SH';
+
             $suggestionIntegration = [
                 'connected' => true,
                 'message' => null,
@@ -903,7 +1360,9 @@ class AdminAllController extends Controller
                     'canReviewGl',
                     'canActGl',
                     'canReviewSh',
-                    'canActSh'
+                    'canActSh',
+                    'canReviewDhPm',
+                    'canActDhPm'
                 )
             );
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {

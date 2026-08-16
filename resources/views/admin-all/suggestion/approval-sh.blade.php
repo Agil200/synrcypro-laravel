@@ -26,9 +26,9 @@
         $status = strtoupper(trim((string) $status));
 
         return match ($status) {
-            'VERIFIED_GL_QCC' => 'Menunggu Persetujuan SH',
-            'APPROVED_SH' => 'Disetujui SH',
-            'REJECTED_SH' => 'Ditolak SH',
+            'VERIFIED_GL_QCC' => 'WAITING',
+            'APPROVED_SH' => 'APPROVE',
+            'REJECTED_SH' => 'REJECT',
             default => ucwords(
                 strtolower(
                     str_replace('_', ' ', $status)
@@ -409,32 +409,75 @@
             flex-direction: column;
         }
     }
+
+/* ==========================================================
+       FIXED INNER SHELL — PERSETUJUAN SH
+       Header, statistik dan queue header tetap.
+       Hanya baris queue yang scroll.
+       ========================================================== */
+    #adminAllShell .aa-main {
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #adminAllShell .aa-content {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .glv-page {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    .glv-head,
+    .glv-flash,
+    .glv-access,
+    .glv-stats {
+        flex: 0 0 auto;
+    }
+
+    .glv-card {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .glv-card-head {
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 5;
+        background: #fff;
+    }
+
+    .glv-table-wrap {
+        flex: 1 1 auto;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .glv-table th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #f7f9fb;
+    }
+
 </style>
 
 <div class="glv-page">
 <div class="glv-head">
     <div>
         <h1>Persetujuan SH</h1>
-        <p>
-            Queue workflow Suggestion System.
-            STEP 7C menampilkan queue Persetujuan SH berdasarkan email login + ACCESS_ATASAN.
-        </p>
-    </div>
-
-    <div class="aa-title-actions">
-        <a
-            href="{{ route('admin-all.suggestion.monitoring') }}"
-            class="aa-action-button"
-        >
-            Monitoring Data
-        </a>
-
-        <a
-            href="{{ route('admin-all.suggestion.index') }}"
-            class="aa-action-button"
-        >
-            Dashboard Suggestion
-        </a>
     </div>
 </div>
 
@@ -449,37 +492,10 @@
         {{ session('error') }}
     </div>
 @endif
-
-<div class="glv-access {{ $canReviewSh ? 'allowed' : 'view-only' }}">
-    <div>
-        <strong>
-            Login:
-            {{ auth()->user()?->email ?? '-' }}
-            •
-            ACCESS_ATASAN:
-            {{ $accessRole ?: 'TIDAK TERDAFTAR' }}
-        </strong>
-
-        <small>
-            @if($canReviewSh)
-                STATUS AKTIF dan AKSES {{ $accessRole }}.
-                Akun ini berhak melakukan Persetujuan SH.
-            @else
-                Akun ini tetap dapat melihat data, tetapi tidak memiliki hak
-                Persetujuan SH. User lain tetap VIEW ONLY.
-            @endif
-        </small>
-    </div>
-
-    <span class="glv-access-badge">
-        {{ $canReviewSh ? 'SH ACCESS' : 'VIEW ONLY' }}
-    </span>
-</div>
-
 <div class="glv-stats">
     <div class="glv-stat pending">
         <span class="glv-stat-icon">!</span>
-        <small>Menunggu</small>
+        <small>WAITING</small>
         <strong>{{ number_format($summary['pending'] ?? 0) }}</strong>
         <span>Sudah Verified GL/QCC, menunggu SH</span>
     </div>
@@ -493,14 +509,14 @@
 
     <div class="glv-stat verified">
         <span class="glv-stat-icon">✓</span>
-        <small>Disetujui</small>
+        <small>APPROVE</small>
         <strong>{{ number_format($summary['approved'] ?? 0) }}</strong>
         <span>Sudah disetujui Section Head</span>
     </div>
 
     <div class="glv-stat rejected">
         <span class="glv-stat-icon">×</span>
-        <small>Ditolak</small>
+        <small>REJECT</small>
         <strong>{{ number_format($summary['rejected'] ?? 0) }}</strong>
         <span>Ditolak pada tahap Section Head</span>
     </div>
@@ -516,7 +532,7 @@
         </div>
 
         <span class="aa-status {{ $canReviewSh ? 'active' : '' }}">
-            {{ $canReviewSh ? 'Akses Aktif' : 'View Only' }}
+            {{ $canReviewSh ? 'SH ACCESS' : 'VIEW ONLY' }}
         </span>
     </div>
 

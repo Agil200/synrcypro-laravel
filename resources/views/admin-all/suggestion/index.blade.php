@@ -464,9 +464,28 @@
         color: #aa5c00;
     }
 
+    /* VERIFIED GL/QCC / SH / DH-PM = BLUE */
     .ss-status.verified {
-        background: #e8f7ef;
-        color: #14754a;
+        background: #e5f2ff;
+        color: #0d63b7;
+    }
+
+    /* APPROVED DH/PM / SELESAI = GREEN */
+    .ss-status.approved {
+        background: #ddf5e8;
+        color: #087847;
+    }
+
+    /* REJECTED ANY STAGE = RED */
+    .ss-status.rejected {
+        background: #ffe8eb;
+        color: #a72632;
+    }
+
+    /* REVISION = AMBER */
+    .ss-status.revision {
+        background: #fff4c7;
+        color: #856000;
     }
 
     .ss-link {
@@ -527,16 +546,92 @@
             min-height: 180px;
         }
     }
+
+/* ==========================================================
+       FIXED INNER SHELL — DASHBOARD SUGGESTION
+       Area atas + table header tetap.
+       Hanya isi data tabel yang scroll.
+       ========================================================== */
+    #adminAllShell .aa-main {
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #adminAllShell .aa-content {
+        height: 100% !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .ss-page {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding-bottom: 0 !important;
+    }
+
+    .ss-head,
+    .ss-alert,
+    .ss-filter-card,
+    .ss-grid {
+        flex: 0 0 auto;
+    }
+
+    .ss-table-panel {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .ss-table-head {
+        flex: 0 0 auto;
+        position: relative;
+        z-index: 5;
+        background: #fff;
+    }
+
+    .ss-table-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto !important;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .ss-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #f7f9fc;
+    }
+
+    @media (max-height: 760px) and (min-width: 721px) {
+        .ss-total-card,
+        .ss-panel {
+            min-height: 220px;
+        }
+
+        .ss-chart-wrap,
+        .ss-chart-empty {
+            height: 160px;
+        }
+
+        .ss-total-number {
+            margin-top: 12px;
+            font-size: 46px;
+        }
+    }
+
 </style>
 
 <div class="ss-page">
     <div class="ss-head">
         <div>
             <h1 class="ss-title">Suggestion System</h1>
-            <p class="ss-subtitle">
-                Dashboard monitoring Suggestion System Produksi Site BA.
-                Filter, chart, dan tabel di bawah masih READ ONLY.
-            </p>
         </div>
 
         <div class="ss-head-actions">
@@ -807,17 +902,55 @@
                                 trim((string) ($row['STATUS'] ?? ''))
                             );
 
-                            $statusClass =
-                                $statusKey === 'SUBMITTED'
-                                    ? 'submitted'
-                                    : (
-                                        str_contains(
-                                            $statusKey,
-                                            'VERIFIED'
+                            $statusClass = match ($statusKey) {
+                                'SUBMITTED' => 'submitted',
+
+                                'VERIFIED_GL_QCC',
+                                'APPROVED_SH',
+                                'VERIFIED_SH',
+                                'VERIFIED_DH_PM' => 'verified',
+
+                                'APPROVED_DH_PM',
+                                'SELESAI',
+                                'DONE',
+                                'COMPLETED' => 'approved',
+
+                                'REJECTED_GL_QCC',
+                                'REJECTED_SH',
+                                'REJECTED_DH_PM' => 'rejected',
+
+                                'REVISION_GL_QCC' => 'revision',
+
+                                default => '',
+                            };
+
+                            $statusLabel = match ($statusKey) {
+                                'SUBMITTED' => 'Submitted',
+
+                                'VERIFIED_GL_QCC' => 'Verified GL / QCC',
+                                'APPROVED_SH',
+                                'VERIFIED_SH' => 'Verified SH',
+                                'VERIFIED_DH_PM' => 'Verified DH / PM',
+
+                                'APPROVED_DH_PM',
+                                'SELESAI',
+                                'DONE',
+                                'COMPLETED' => 'Approved DH / PM',
+
+                                'REJECTED_GL_QCC' => 'Rejected GL / QCC',
+                                'REJECTED_SH' => 'Rejected SH',
+                                'REJECTED_DH_PM' => 'Rejected DH / PM',
+
+                                'REVISION_GL_QCC' => 'Revision GL / QCC',
+
+                                default => $statusKey !== ''
+                                    ? ucwords(
+                                        strtolower(
+                                            str_replace('_', ' ', $statusKey)
                                         )
-                                            ? 'verified'
-                                            : ''
-                                    );
+                                    )
+                                    : 'No Status',
+                            };
                         @endphp
 
                         <tr>
@@ -859,19 +992,7 @@
 
                             <td>
                                 <span class="ss-status {{ $statusClass }}">
-                                    {{
-                                        $statusKey !== ''
-                                            ? ucwords(
-                                                strtolower(
-                                                    str_replace(
-                                                        '_',
-                                                        ' ',
-                                                        $statusKey
-                                                    )
-                                                )
-                                            )
-                                            : 'Tanpa Status'
-                                    }}
+                                    {{ $statusLabel }}
                                 </span>
                             </td>
 
@@ -984,25 +1105,67 @@
         const statusRows =
             @json($statusRows);
 
-        const statusLabels =
-            statusRows.map(item => item.label);
-
         const statusValues =
             statusRows.map(item => item.count);
 
         const statusKeys =
-            statusRows.map(item => item.key);
+            statusRows.map(
+                item => String(item.key || '').trim().toUpperCase()
+            );
 
-        const statusColors = [
-            '#ef7d00',
-            '#1479ef',
-            '#0aa768',
-            '#ef3340',
-            '#5946b8',
-            '#0b8793',
-            '#8b5e34',
-            '#64748b'
-        ];
+        const statusLabelMap = {
+            SUBMITTED: 'Submitted',
+
+            VERIFIED_GL_QCC: 'Verified GL / QCC',
+            APPROVED_SH: 'Verified SH',
+            VERIFIED_SH: 'Verified SH',
+            VERIFIED_DH_PM: 'Verified DH / PM',
+
+            APPROVED_DH_PM: 'Approved DH / PM',
+            SELESAI: 'Approved DH / PM',
+            DONE: 'Approved DH / PM',
+            COMPLETED: 'Approved DH / PM',
+
+            REJECTED_GL_QCC: 'Rejected GL / QCC',
+            REJECTED_SH: 'Rejected SH',
+            REJECTED_DH_PM: 'Rejected DH / PM',
+
+            REVISION_GL_QCC: 'Revision GL / QCC'
+        };
+
+        const statusColorMap = {
+            SUBMITTED: '#ef7d00',
+
+            VERIFIED_GL_QCC: '#1479ef',
+            APPROVED_SH: '#1479ef',
+            VERIFIED_SH: '#1479ef',
+            VERIFIED_DH_PM: '#1479ef',
+
+            APPROVED_DH_PM: '#0aa768',
+            SELESAI: '#0aa768',
+            DONE: '#0aa768',
+            COMPLETED: '#0aa768',
+
+            REJECTED_GL_QCC: '#ef3340',
+            REJECTED_SH: '#ef3340',
+            REJECTED_DH_PM: '#ef3340',
+
+            REVISION_GL_QCC: '#d6a100'
+        };
+
+        const statusLabels =
+            statusKeys.map(
+                (key, index) =>
+                    statusLabelMap[key]
+                    || statusRows[index]?.label
+                    || key
+                    || 'No Status'
+            );
+
+        const statusColors =
+            statusKeys.map(
+                key => statusColorMap[key] || '#64748b'
+            );
 
         const statusChart =
             new Chart(
@@ -1015,14 +1178,7 @@
 
                         datasets: [{
                             data: statusValues,
-                            backgroundColor:
-                                statusLabels.map(
-                                    (_, index) =>
-                                        statusColors[
-                                            index
-                                            % statusColors.length
-                                        ]
-                                ),
+                            backgroundColor: statusColors,
                             borderWidth: 2,
                             borderColor: '#ffffff',
                             hoverOffset: 7

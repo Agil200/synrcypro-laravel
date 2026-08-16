@@ -16,7 +16,7 @@
         return match ($status) {
             'VERIFIED_GL_QCC' => 'Verified GL / QCC',
             'APPROVED_SH' => 'Approved SH',
-            'APPROVED_DH_PM' => 'Approved DH / PM',
+            'APPROVED_DH_PM' => 'SELESAI',
             default => ucwords(
                 strtolower(
                     str_replace('_', ' ', $status)
@@ -56,7 +56,7 @@
 
     $isFinished = in_array(
         $mainStatus,
-        ['SELESAI', 'DONE', 'COMPLETED'],
+        ['APPROVED_DH_PM', 'SELESAI', 'DONE', 'COMPLETED'],
         true
     );
 
@@ -782,6 +782,16 @@
     filter:brightness(.96);
 }
 
+.ssd-workflow-btn.dhpm-approve {
+    background:#7048d8;
+    border-color:#7048d8;
+    color:#fff;
+}
+
+.ssd-workflow-btn.dhpm-approve:hover {
+    filter:brightness(.96);
+}
+
 </style>
 
 <div class="ssd-head">
@@ -1058,7 +1068,7 @@
         <section class="ssd-card">
             <div class="ssd-card-head">
                 <h2>Akses Workflow</h2>
-                <p>STEP 5A hanya menampilkan hak akses login.</p>
+                <p>Workflow action mengikuti ACCESS_ATASAN dan status Suggestion.</p>
             </div>
 
             <div class="ssd-card-body">
@@ -1216,6 +1226,68 @@
                             Laravel tidak menulis status workflow langsung ke Google Sheets.
                         </div>
                     </form>
+                @elseif(($canActDhPm ?? false) === true)
+                    <form
+                        method="POST"
+                        action="{{ route('admin-all.suggestion.approval-dh-pm.action', ['noSs' => $row['NO_SS']]) }}"
+                        class="ssd-action-form"
+                        id="dhPmWorkflowForm"
+                    >
+                        @csrf
+
+                        <input
+                            type="hidden"
+                            name="decision"
+                            id="dhPmWorkflowDecision"
+                            value="{{ old('decision') }}"
+                        >
+
+                        <label for="dhPmWorkflowNote">
+                            Catatan Persetujuan DH / PM
+                        </label>
+
+                        <textarea
+                            id="dhPmWorkflowNote"
+                            name="note"
+                            maxlength="1000"
+                            placeholder="Optional untuk APPROVE. Wajib minimal 5 karakter untuk REJECT."
+                        >{{ old('note') }}</textarea>
+
+                        @error('note')
+                            <span class="ssd-note-error">
+                                {{ $message }}
+                            </span>
+                        @enderror
+
+                        @error('decision')
+                            <span class="ssd-note-error">
+                                {{ $message }}
+                            </span>
+                        @enderror
+
+                        <div class="ssd-workflow-buttons">
+                            <button
+                                type="submit"
+                                class="ssd-workflow-btn dhpm-approve"
+                                data-decision="APPROVED"
+                            >
+                                ✓ APPROVE
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="ssd-workflow-btn reject"
+                                data-decision="REJECTED"
+                            >
+                                × REJECT
+                            </button>
+                        </div>
+
+                        <div class="ssd-readonly">
+                            Action DH/PM diteruskan ke Apps Script existing.
+                            Laravel tidak menulis status workflow langsung ke Google Sheets.
+                        </div>
+                    </form>
                 @elseif(($canReviewGl ?? false) === true)
                     <div class="ssd-readonly" style="margin-top:8px">
                         @if(strtoupper(trim((string) ($row['STATUS'] ?? ''))) === 'VERIFIED_GL_QCC')
@@ -1245,6 +1317,23 @@
                         @else
                             Akun memiliki akses Persetujuan SH, tetapi Suggestion ini belum atau tidak lagi
                             berada pada tahap yang dapat diproses SH.
+                        @endif
+                    </div>
+                @elseif(($canReviewDhPm ?? false) === true)
+                    <div class="ssd-readonly" style="margin-top:8px">
+                        @php
+                            $statusForDhPmMessage = strtoupper(trim((string) ($row['STATUS'] ?? '')));
+                        @endphp
+
+                        @if($statusForDhPmMessage === 'APPROVED_DH_PM')
+                            <strong>Persetujuan DH/PM telah selesai.</strong><br>
+                            Suggestion berstatus SELESAI.
+                        @elseif($statusForDhPmMessage === 'REJECTED_DH_PM')
+                            <strong>Suggestion telah di-REJECT pada tahap DH/PM.</strong><br>
+                            Lihat Catatan Proses untuk alasan penolakan.
+                        @else
+                            Akun memiliki akses DH/PM, tetapi Suggestion ini belum atau tidak lagi
+                            berada pada tahap yang dapat diproses DH/PM.
                         @endif
                     </div>
                 @else
@@ -1521,6 +1610,19 @@ document.addEventListener('DOMContentLoaded', function () {
         labels: {
             APPROVED: 'SETUJUI SH',
             REJECTED: 'TOLAK SH'
+        }
+    });
+
+    bindWorkflowForm({
+        formId: 'dhPmWorkflowForm',
+        noteId: 'dhPmWorkflowNote',
+        decisionId: 'dhPmWorkflowDecision',
+        noteRequiredDecisions: ['REJECTED'],
+        noteRequiredMessage:
+            'Catatan / alasan wajib minimal 5 karakter untuk REJECT.',
+        labels: {
+            APPROVED: 'APPROVE DH/PM',
+            REJECTED: 'REJECT DH/PM'
         }
     });
 });

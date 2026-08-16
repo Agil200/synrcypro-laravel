@@ -4,16 +4,44 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use JsonException;
 use RuntimeException;
 
 class SuggestionWorkflowBridgeService
 {
-    public function ping(
-        string $email
-    ): array {
+    private const STAGE_GL_QCC = 'GL_QCC';
+    private const STAGE_SH = 'SH';
+    private const STAGE_DH_PM = 'DH_PM';
+
+    private const ALLOWED_DECISIONS = [
+        self::STAGE_GL_QCC => [
+            'VERIFIED',
+            'REVISION',
+            'REJECTED',
+        ],
+        self::STAGE_SH => [
+            'APPROVED',
+            'REJECTED',
+        ],
+        self::STAGE_DH_PM => [
+            'APPROVED',
+            'REJECTED',
+        ],
+    ];
+
+    public function ping(string $email): array
+    {
+        $email = $this->normalizeEmail($email);
+
+        if ($email === '') {
+            throw new RuntimeException(
+                'Email login tidak ditemukan.'
+            );
+        }
+
         return $this->send([
             'op' => 'ping',
-            'email' => $this->normalizeEmail($email),
+            'email' => $email,
         ]);
     }
 
@@ -23,16 +51,14 @@ class SuggestionWorkflowBridgeService
         string $decision,
         ?string $note = null
     ): array {
-        return $this->send([
-            'op' => 'workflow',
-            'email' => $this->normalizeEmail($email),
-            'noSS' => trim($noSs),
-            'stage' => 'GL_QCC',
-            'decision' => strtoupper(trim($decision)),
-            'note' => trim((string) $note),
-        ]);
+        return $this->updateWorkflow(
+            $email,
+            $noSs,
+            self::STAGE_GL_QCC,
+            $decision,
+            $note
+        );
     }
-
 
     public function updateSh(
         string $email,
@@ -40,19 +66,99 @@ class SuggestionWorkflowBridgeService
         string $decision,
         ?string $note = null
     ): array {
+        return $this->updateWorkflow(
+            $email,
+            $noSs,
+            self::STAGE_SH,
+            $decision,
+            $note
+        );
+    }
+
+    public function updateDhPm(
+        string $email,
+        string $noSs,
+        string $decision,
+        ?string $note = null
+    ): array {
+        return $this->updateWorkflow(
+            $email,
+            $noSs,
+            self::STAGE_DH_PM,
+            $decision,
+            $note
+        );
+    }
+
+    private function updateWorkflow(
+        string $email,
+        string $noSs,
+        string $stage,
+        string $decision,
+        ?string $note = null
+    ): array {
+        $email = $this->normalizeEmail($email);
+        $noSs = trim($noSs);
+        $stage = strtoupper(trim($stage));
+        $decision = strtoupper(trim($decision));
+        $note = trim((string) $note);
+
+        if ($email === '') {
+            throw new RuntimeException(
+                'Email login tidak ditemukan.'
+            );
+        }
+
+        if ($noSs === '') {
+            throw new RuntimeException(
+                'NO SS wajib diisi.'
+            );
+        }
+
+        if (!array_key_exists($stage, self::ALLOWED_DECISIONS)) {
+            throw new RuntimeException(
+                'Stage workflow Laravel tidak valid.'
+            );
+        }
+
+        if (
+            !in_array(
+                $decision,
+                self::ALLOWED_DECISIONS[$stage],
+                true
+            )
+        ) {
+            throw new RuntimeException(
+                'Decision '.$stage.' tidak valid.'
+            );
+        }
+
+        if (
+            in_array(
+                $decision,
+                ['REVISION', 'REJECTED'],
+                true
+            )
+            && mb_strlen($note) < 5
+        ) {
+            throw new RuntimeException(
+                'Catatan / alasan minimal 5 karakter '
+                .'untuk REVISI atau REJECT.'
+            );
+        }
+
         return $this->send([
             'op' => 'workflow',
-            'email' => $this->normalizeEmail($email),
-            'noSS' => trim($noSs),
-            'stage' => 'SH',
-            'decision' => strtoupper(trim($decision)),
-            'note' => trim((string) $note),
+            'email' => $email,
+            'noSS' => $noSs,
+            'stage' => $stage,
+            'decision' => $decision,
+            'note' => $note,
         ]);
     }
 
-    private function send(
-        array $payload
-    ): array {
+    private function send(array $payload): array
+    {
         $url = trim(
             (string) config(
                 'suggestion_bridge.url',
@@ -84,17 +190,19 @@ class SuggestionWorkflowBridgeService
         $payload['iat'] = now()->timestamp;
         $payload['nonce'] = (string) Str::uuid();
 
-        /*
-         * JSON key order di sini sengaja tidak perlu disamakan
-         * dengan Apps Script karena signature dihitung terhadap
-         * payload Base64URL yang dikirim apa adanya.
-         */
-        $json = json_encode(
-            $payload,
-            JSON_UNESCAPED_UNICODE
-            | JSON_UNESCAPED_SLASHES
-            | JSON_THROW_ON_ERROR
-        );
+        try {
+            $json = json_encode(
+                $payload,
+                JSON_UNESCAPED_UNICODE
+                | JSON_UNESCAPED_SLASHES
+                | JSON_THROW_ON_ERROR
+            );
+        } catch (JsonException $e) {
+            throw new RuntimeException(
+                'Payload workflow gagal dibuat.',
+                previous: $e
+            );
+        }
 
         $encoded = rtrim(
             strtr(
@@ -113,6 +221,15 @@ class SuggestionWorkflowBridgeService
 
         $response = Http::asForm()
             ->acceptJson()
+            ->connectTimeout(
+                max(
+                    3,
+                    (int) config(
+                        'suggestion_bridge.connect_timeout',
+                        10
+                    )
+                )
+            )
             ->timeout(
                 max(
                     5,
@@ -141,22 +258,39 @@ class SuggestionWorkflowBridgeService
             );
         }
 
-        $data = $response->json();
+        $body = trim((string) $response->body());
+
+        if ($body === '') {
+            throw new RuntimeException(
+                'Apps Script Bridge mengembalikan respons kosong.'
+            );
+        }
+
+        try {
+            $data = json_decode(
+                $body,
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+        } catch (JsonException $e) {
+            throw new RuntimeException(
+                'Respons Apps Script bukan JSON valid.',
+                previous: $e
+            );
+        }
 
         if (!is_array($data)) {
             throw new RuntimeException(
-                'Respons Apps Script bukan JSON valid.'
+                'Respons Apps Script bukan object JSON yang valid.'
             );
         }
 
         return $data;
     }
 
-    private function normalizeEmail(
-        string $email
-    ): string {
-        return strtolower(
-            trim($email)
-        );
+    private function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
     }
 }
