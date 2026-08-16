@@ -117,6 +117,7 @@ class SuggestionSystemService
             'email' => $email,
             'status' => null,
             'source' => 'ACCESS_ATASAN',
+            'signature_file_id' => null,
             'message' => 'User tidak terdaftar pada ACCESS_ATASAN.',
         ];
 
@@ -162,6 +163,9 @@ class SuggestionSystemService
                 'email' => $rowEmail,
                 'status' => $status,
                 'source' => 'ACCESS_ATASAN',
+                'signature_file_id' => trim(
+                    (string) ($row['TTD_FILE_ID'] ?? '')
+                ),
                 'message' => null,
             ];
 
@@ -445,6 +449,277 @@ class SuggestionSystemService
             'rows' => $detailRows,
 
             'data_total' => count($detailRows),
+        ];
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Detail Suggestion System berdasarkan NO_SS
+    |--------------------------------------------------------------------------
+    |
+    | READ ONLY.
+    | Pencarian dibuat case-insensitive dan trim agar aman terhadap
+    | spasi pada Google Sheets.
+    |
+    */
+
+    public function findByNoSs(
+        array $rows,
+        string $noSs
+    ): ?array {
+        $needle = strtoupper(
+            trim($noSs)
+        );
+
+        if ($needle === '') {
+            return null;
+        }
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rowNoSs = strtoupper(
+                trim(
+                    (string) ($row['NO_SS'] ?? '')
+                )
+            );
+
+            if ($rowNoSs === $needle) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hak akses workflow per tahap
+    |--------------------------------------------------------------------------
+    |
+    | Sumber hak akses HARUS ACCESS_ATASAN melalui resolveAccess().
+    | JABATAN tidak menentukan kewenangan.
+    |
+    */
+
+    public function canAccessWorkflowStage(
+        array $access,
+        string $stage
+    ): bool {
+        if (($access['allowed'] ?? false) !== true) {
+            return false;
+        }
+
+        if (
+            strtoupper(
+                trim((string) ($access['status'] ?? ''))
+            ) !== 'AKTIF'
+        ) {
+            return false;
+        }
+
+        $role = strtoupper(
+            trim((string) ($access['access'] ?? ''))
+        );
+
+        $stage = strtoupper(
+            trim($stage)
+        );
+
+        if ($stage === 'GL_QCC') {
+            return in_array(
+                $role,
+                ['ADMIN', 'GL'],
+                true
+            );
+        }
+
+        if ($stage === 'SH') {
+            return in_array(
+                $role,
+                ['ADMIN', 'SH'],
+                true
+            );
+        }
+
+        return $role === 'ADMIN';
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Verifikasi GL / QCC
+    |--------------------------------------------------------------------------
+    |
+    | READ ONLY pada STEP 6A.
+    | Write masih tetap di Apps Script existing.
+    |
+    */
+
+    public function buildGlVerificationQueue(
+        array $rows
+    ): array {
+        $allowedStatuses = [
+            'SUBMITTED',
+            'REVISION_GL_QCC',
+            'VERIFIED_GL_QCC',
+            'REJECTED_GL_QCC',
+        ];
+
+        $queue = [];
+
+        $summary = [
+            'pending' => 0,
+            'revision' => 0,
+            'verified' => 0,
+            'rejected' => 0,
+            'total' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $noSs = trim(
+                (string) ($row['NO_SS'] ?? '')
+            );
+
+            if ($noSs === '') {
+                continue;
+            }
+
+            $status = strtoupper(
+                trim((string) ($row['STATUS'] ?? ''))
+            );
+
+            if (!in_array(
+                $status,
+                $allowedStatuses,
+                true
+            )) {
+                continue;
+            }
+
+            if ($status === 'SUBMITTED') {
+                $summary['pending']++;
+            }
+
+            if ($status === 'REVISION_GL_QCC') {
+                $summary['revision']++;
+            }
+
+            if ($status === 'VERIFIED_GL_QCC') {
+                $summary['verified']++;
+            }
+
+            if ($status === 'REJECTED_GL_QCC') {
+                $summary['rejected']++;
+            }
+
+            $queue[] = $row;
+        }
+
+        usort(
+            $queue,
+            function (array $a, array $b): int {
+                return $this->submitTimestamp($b)
+                    <=> $this->submitTimestamp($a);
+            }
+        );
+
+        $summary['total'] = count($queue);
+
+        return [
+            'summary' => $summary,
+            'rows' => $queue,
+        ];
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Persetujuan SH — STEP 7B
+    |--------------------------------------------------------------------------
+    |
+    | READ ONLY. Tombol approval SH belum diaktifkan pada STEP 7B.
+    |
+    */
+
+    public function buildShApprovalQueue(
+        array $rows
+    ): array {
+        $allowedStatuses = [
+            'VERIFIED_GL_QCC',
+            'APPROVED_SH',
+            'REJECTED_SH',
+        ];
+
+        $queue = [];
+
+        $summary = [
+            'pending' => 0,
+            'approved' => 0,
+            'rejected' => 0,
+            'total' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $noSs = trim(
+                (string) ($row['NO_SS'] ?? '')
+            );
+
+            if ($noSs === '') {
+                continue;
+            }
+
+            $status = strtoupper(
+                trim((string) ($row['STATUS'] ?? ''))
+            );
+
+            if (!in_array(
+                $status,
+                $allowedStatuses,
+                true
+            )) {
+                continue;
+            }
+
+            if ($status === 'VERIFIED_GL_QCC') {
+                $summary['pending']++;
+            }
+
+            if ($status === 'APPROVED_SH') {
+                $summary['approved']++;
+            }
+
+            if ($status === 'REJECTED_SH') {
+                $summary['rejected']++;
+            }
+
+            $queue[] = $row;
+        }
+
+        usort(
+            $queue,
+            function (array $a, array $b): int {
+                return $this->submitTimestamp($b)
+                    <=> $this->submitTimestamp($a);
+            }
+        );
+
+        $summary['total'] = count($queue);
+
+        return [
+            'summary' => $summary,
+            'rows' => $queue,
         ];
     }
 

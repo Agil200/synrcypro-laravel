@@ -587,23 +587,73 @@ Route::prefix('database/employees')
     | Menu Admin All
     |--------------------------------------------------------------------------
     */
+
     Route::get(
         '/admin-all',
         [\App\Http\Controllers\Admin\AdminAllController::class, 'index']
     )->middleware('can:admin-all.view')
         ->name('admin-all');
 
-         Route::get(
+
+    /*
+    |--------------------------------------------------------------------------
+    | Suggestion System
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
         '/admin-all/suggestion-system',
         [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestion']
     )->middleware('can:admin-all.view')
-        ->name('admin-all.suggestion.index');   
+        ->name('admin-all.suggestion.index');
 
-         Route::get(
+
+    Route::get(
         '/admin-all/suggestion-system/monitoring',
-         [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionMonitoring']
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionMonitoring']
     )->middleware('can:admin-all.view')
-         ->name('admin-all.suggestion.monitoring');
+        ->name('admin-all.suggestion.monitoring');
+
+
+    Route::get(
+        '/admin-all/suggestion-system/verifikasi-gl',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionVerificationGl']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.verification-gl');
+
+
+    Route::post(
+        '/admin-all/suggestion-system/verifikasi-gl/bridge-check',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionVerificationGlBridgeCheck']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.verification-gl.bridge-check');
+
+
+    Route::post(
+        '/admin-all/suggestion-system/verifikasi-gl/{noSs}/action',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionVerificationGlAction']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.verification-gl.action');
+
+    Route::get(
+        '/admin-all/suggestion-system/persetujuan-sh',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionApprovalSh']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.approval-sh');
+
+
+    Route::post(
+        '/admin-all/suggestion-system/persetujuan-sh/{noSs}/action',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionApprovalShAction']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.approval-sh.action');
+
+
+    Route::get(
+        '/admin-all/suggestion-system/detail/{noSs}',
+        [\App\Http\Controllers\Admin\AdminAllController::class, 'suggestionDetail']
+    )->middleware('can:admin-all.view')
+        ->name('admin-all.suggestion.detail');
 
 
     /*

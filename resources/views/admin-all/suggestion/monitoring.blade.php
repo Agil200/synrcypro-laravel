@@ -391,6 +391,18 @@
         background: #ffe8eb;
     }
 
+    .ssm-no-ss-link {
+        color: #0f78ef;
+        font-size: 8px;
+        font-weight: 900;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .ssm-no-ss-link:hover {
+        text-decoration: underline;
+    }
+
     .ssm-docs {
         display: flex;
         gap: 6px;
@@ -482,9 +494,9 @@
 
 <div class="ssm-head">
     <div>
-        <h1>Monitoring Data SS</h1>
+        <h1>Monitoring Data Suggestion System</h1>
         <p>
-            Database Suggestion System Produksi Site BA.
+            Monitoring database Suggestion System Produksi Site BA.
             Pencarian dan filter ini masih READ ONLY.
         </p>
     </div>
@@ -771,9 +783,17 @@
                 @forelse($monitoringRows as $row)
                     <tr>
                         <td>
-                            <strong>
-                                {{ $row['NO_SS'] ?? '-' }}
-                            </strong>
+                            @if(!empty($row['NO_SS']))
+                                <a
+                                    href="{{ route('admin-all.suggestion.detail', ['noSs' => $row['NO_SS']]) }}"
+                                    class="ssm-no-ss-link"
+                                    title="Buka detail {{ $row['NO_SS'] }}"
+                                >
+                                    {{ $row['NO_SS'] }}
+                                </a>
+                            @else
+                                -
+                            @endif
                         </td>
 
                         <td>

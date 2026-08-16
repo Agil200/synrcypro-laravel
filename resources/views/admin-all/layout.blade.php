@@ -21,8 +21,19 @@
 
     * { box-sizing: border-box; }
 
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+
     body.aa-app-body {
         margin: 0;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        overflow: hidden;
         color: var(--aa-text);
         background: var(--aa-bg);
         font-family: Arial, Helvetica, sans-serif;
@@ -32,14 +43,26 @@
     button { cursor: pointer; }
 
     .aa-shell {
+        position: fixed;
+        inset: 0;
         display: grid;
-        min-height: 100vh;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
         grid-template-columns: var(--aa-side) minmax(0, 1fr);
         grid-template-rows: var(--aa-top) minmax(0, 1fr) var(--aa-footer);
+        background: var(--aa-bg);
     }
 
     .aa-sidebar {
+        position: relative;
+        z-index: 40;
         display: grid;
+        min-height: 0;
+        overflow: hidden;
+        grid-column: 1;
         grid-row: 1 / 4;
         grid-template-rows: var(--aa-top) minmax(0, 1fr) auto;
         border-right: 1px solid #c4cad0;
@@ -91,8 +114,12 @@
     }
 
     .aa-navigation {
+        min-height: 0;
         padding: 10px 7px;
+        overflow-x: hidden;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
     }
 
     .aa-menu-link,
@@ -234,8 +261,12 @@
 
     .aa-header {
         position: relative;
+        z-index: 30;
         display: flex;
         min-width: 0;
+        min-height: 0;
+        grid-column: 2;
+        grid-row: 1;
         align-items: center;
         justify-content: flex-end;
         border-bottom: 1px solid #171717;
@@ -284,14 +315,27 @@
 
     .aa-main {
         min-width: 0;
+        min-height: 0;
+        grid-column: 2;
+        grid-row: 2;
         padding: 10px;
-        overflow: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        -webkit-overflow-scrolling: touch;
     }
 
     .aa-content { width: 100%; max-width: none; margin: 0; }
 
     .aa-footer {
+        position: relative;
+        z-index: 30;
         display: grid;
+        min-width: 0;
+        min-height: 0;
+        grid-column: 2;
+        grid-row: 3;
         place-items: center;
         color: #fff;
         background: #111;
@@ -657,6 +701,17 @@
                 ? route('admin-all.suggestion.monitoring')
                 : '#';
 
+            $suggestionVerificationGlUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.verification-gl')
+                ? route('admin-all.suggestion.verification-gl')
+                : '#';
+
+            $suggestionApprovalShUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.approval-sh')
+                ? route('admin-all.suggestion.approval-sh')
+                : '#';
+
+            $detailFromSh = request()->routeIs('admin-all.suggestion.detail')
+                && request()->query('from') === 'sh';
+
             $adminMenus = [
                 [
                     'icon' => 'suggestion',
@@ -664,9 +719,9 @@
                     'active' => request()->routeIs('admin-all.suggestion.*'),
                     'items' => [
                         ['icon' => 'chart', 'label' => 'Dashboard Suggestion', 'url' => $suggestionUrl, 'active' => request()->routeIs('admin-all.suggestion.index')],
-                        ['icon' => 'table', 'label' => 'Monitoring Data SS', 'url' => $suggestionMonitoringUrl, 'active' => request()->routeIs('admin-all.suggestion.monitoring')],
-                        ['icon' => 'check', 'label' => 'Verifikasi GL', 'planned' => true],
-                        ['icon' => 'shield', 'label' => 'Persetujuan SH', 'planned' => true],
+                        ['icon' => 'table', 'label' => 'Monitoring Data SS', 'url' => $suggestionMonitoringUrl, 'active' => request()->routeIs('admin-all.suggestion.monitoring') || (request()->routeIs('admin-all.suggestion.detail') && !$detailFromSh)],
+                        ['icon' => 'check', 'label' => 'Verifikasi GL', 'url' => $suggestionVerificationGlUrl, 'active' => request()->routeIs('admin-all.suggestion.verification-gl')],
+                        ['icon' => 'shield', 'label' => 'Persetujuan SH', 'url' => $suggestionApprovalShUrl, 'active' => request()->routeIs('admin-all.suggestion.approval-sh') || $detailFromSh],
                     ],
                 ],
                 [

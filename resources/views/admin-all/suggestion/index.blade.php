@@ -822,9 +822,17 @@
 
                         <tr>
                             <td>
-                                <strong>
-                                    {{ $row['NO_SS'] ?? '-' }}
-                                </strong>
+                                @if(!empty($row['NO_SS']))
+                                    <a
+                                        href="{{ route('admin-all.suggestion.detail', ['noSs' => $row['NO_SS']]) }}"
+                                        class="ss-link"
+                                        title="Buka detail {{ $row['NO_SS'] }}"
+                                    >
+                                        {{ $row['NO_SS'] }}
+                                    </a>
+                                @else
+                                    -
+                                @endif
                             </td>
 
                             <td>
