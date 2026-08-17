@@ -749,17 +749,28 @@
                 ? route('barang.index')
                 : '#';
 
+            $barangFormUrl = \Illuminate\Support\Facades\Route::has('barang.form')
+                ? route('barang.form')
+                : '#';
+
             $adminMenus = [
                 [
-                    'icon' => 'suggestion',
-                    'title' => 'Suggestion System',
-                    'active' => request()->routeIs('admin-all.suggestion.*'),
+                    'icon' => 'box',
+                    'title' => 'Stock Opname Gudang',
+                    'active' => request()->routeIs('barang.*'),
                     'items' => [
-                        ['icon' => 'chart', 'label' => 'Dashboard Suggestion', 'url' => $suggestionUrl, 'active' => request()->routeIs('admin-all.suggestion.index')],
-                        ['icon' => 'table', 'label' => 'Monitoring Data SS', 'url' => $suggestionMonitoringUrl, 'active' => request()->routeIs('admin-all.suggestion.monitoring') || (request()->routeIs('admin-all.suggestion.detail') && !$detailFromSh)],
-                        ['icon' => 'check', 'label' => 'Verifikasi GL', 'url' => $suggestionVerificationGlUrl, 'active' => request()->routeIs('admin-all.suggestion.verification-gl')],
-                        ['icon' => 'shield', 'label' => 'Persetujuan SH', 'url' => $suggestionApprovalShUrl, 'active' => request()->routeIs('admin-all.suggestion.approval-sh') || $detailFromSh],
-                        ['icon' => 'shield', 'label' => 'Persetujuan DH / PM', 'url' => $suggestionApprovalDhPmUrl, 'active' => request()->routeIs('admin-all.suggestion.approval-dh-pm')],
+                        [
+                            'icon' => 'chart', 
+                            'label' => 'Dashboard Stock', 
+                            'url' => $barangUrl, 
+                            'active' => request()->routeIs('barang.index')
+                        ],
+                        [
+                            'icon' => 'clipboard', 
+                            'label' => 'Form Pengambilan', 
+                            'url' => $barangFormUrl, 
+                            'active' => request()->routeIs('barang.form')
+                        ],
                     ],
                 ],
                 [
@@ -818,19 +829,6 @@
                             'label' => 'Riwayat Update',
                             'url' => $mcuFuInternalHistoryUrl,
                             'active' => request()->routeIs('admin-all.mcu-fu.history'),
-                        ],
-                    ],
-                ],
-                [
-                    'icon' => 'box',
-                    'title' => 'Stock Opname Gudang',
-                    'active' => request()->routeIs('barang.*'),
-                    'items' => [
-                        [
-                            'icon' => 'chart', 
-                            'label' => 'Dashboard Stock', 
-                            'url' => $barangUrl, 
-                            'active' => request()->routeIs('barang.index')
                         ],
                     ],
                 ],
@@ -900,10 +898,10 @@
             </div>
         </nav>
 
-        <div class="aa-sidebar-bottom">
-            <a href="{{ route('profile.settings') }}" class="aa-bottom-link">{{ $adminAllIcon('settings', 'aa-submenu-mini-icon') }} <span>Pengaturan</span></a>
-            <a href="{{ $supportUrl }}" target="_blank" rel="noopener noreferrer" class="aa-bottom-link help">{{ $adminAllIcon('help', 'aa-submenu-mini-icon') }} <span>Bantuan</span></a>
-        </div>
+                <div class="aa-sidebar-bottom">
+                <a href="{{ route('profile.settings') }}" class="aa-bottom-link">{{ $adminAllIcon('settings', 'aa-submenu-mini-icon') }} <span>Pengaturan</span></a>
+                <a href="{{ $supportUrl }}" target="_blank" rel="noopener noreferrer" class="aa-bottom-link help">{{ $adminAllIcon('help', 'aa-submenu-mini-icon') }} <span>Bantuan</span></a>
+                </div>
     </aside>
 
     <header class="aa-header">

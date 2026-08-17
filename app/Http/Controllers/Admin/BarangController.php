@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -12,12 +13,19 @@ use Throwable;
 class BarangController extends Controller
 {
     /**
-     * Menampilkan halaman utama Form Pengambilan Barang.
+     * Menampilkan halaman utama Dashboard Stock Opname.
      */
-   public function index()
+    public function index()
     {
-        // Ubah path view-nya ke folder admin-all/stock-opname
         return view('admin-all.stock-opname.index');
+    }
+
+    /**
+     * Menampilkan halaman Form Pengambilan Barang (UI Publik/Input).
+     */
+    public function form()
+    {
+        return view('admin-all.stock-opname.form');
     }
 
     /**
@@ -43,10 +51,14 @@ class BarangController extends Controller
             $karyawanRows = DB::table('employees')->get();
             $karyawan = [];
             foreach ($karyawanRows as $emp) {
-                $karyawan[trim($emp->nrp)] = [
-                    'nama' => $emp->nama,
-                    'jabatan' => $emp->jabatan ?? '-'
-                ];
+                // Normalisasi NRP menjadi huruf besar tanpa spasi berlebih
+                $nrpKey = strtoupper(trim($emp->nrp ?? $emp->NRP ?? ''));
+                if (!empty($nrpKey)) {
+                    $karyawan[$nrpKey] = [
+                        'nama' => $emp->nama ?? $emp->NAMA ?? '-',
+                        'jabatan' => $emp->jabatan ?? $emp->JABATAN ?? '-'
+                    ];
+                }
             }
 
             return response()->json([
@@ -445,7 +457,7 @@ class BarangController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Barang berhasil diperbarui.']);
         } catch (Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
     }
 

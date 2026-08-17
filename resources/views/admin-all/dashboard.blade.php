@@ -3,18 +3,13 @@
 @section('admin-content')
 @php
     $ss = $controlCenter['suggestion'] ?? [];
-    $stock = $controlCenter['stock'] ?? []; // Tambahan untuk memanggil data stock dari Controller
     $integrations = $controlCenter['integrations'] ?? [];
 
     $suggestionUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.index')
         ? route('admin-all.suggestion.index')
         : '#';
 
-    // Rute menuju dashboard modul stock opname gudang (barang)
-    $stockUrl = \Illuminate\Support\Facades\Route::has('barang.index')
-        ? route('barang.index')
-        : '#';
-
+    // Kartu modul utama (Stock Opname dihapus dari tampilan grid atas sesuai permintaan)
     $moduleCards = [
         [
             'key' => 'suggestion',
@@ -51,18 +46,6 @@
             'color' => '#0aa768',
             'url' => '#module-mcu',
             'live' => false,
-        ],
-        [
-            'key' => 'stock',
-            'letter' => 'S',
-            'name' => 'Stock Opname',
-            'value' => $stock['total'] ?? 0, // Mengambil jumlah total data barang keluar dari DB
-            'metric' => 'Gudang Produksi',
-            'note' => 'Backend Laravel Aktif',
-            'status' => ($stock['connected'] ?? false) ? 'LIVE' : 'OFFLINE',
-            'color' => '#1778da',
-            'url' => $stockUrl, // Tautan ke halaman dashboard barang
-            'live' => ($stock['connected'] ?? false),
         ],
         [
             'key' => 'archive',
@@ -163,9 +146,10 @@
         background: #ef7d00;
     }
 
+    /* Diubah menjadi 4 kolom karena card stock opname di atas arsip dihapus */
     .cc-module-grid {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
         margin-bottom: 10px;
     }
@@ -403,56 +387,6 @@
         background: #ddf5e7;
     }
 
-    .cc-quick-list {
-        display: grid;
-        gap: 7px;
-    }
-
-    .cc-quick-link {
-        display: grid;
-        grid-template-columns: 31px minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 8px;
-        padding: 9px;
-        border: 1px solid #e0e6eb;
-        border-radius: 8px;
-        color: inherit;
-        background: #fff;
-        text-decoration: none;
-    }
-
-    .cc-quick-link:hover {
-        border-color: #b8c5d1;
-        text-decoration: none;
-    }
-
-    .cc-quick-icon {
-        display: grid;
-        width: 30px;
-        height: 30px;
-        place-items: center;
-        border-radius: 8px;
-        background: #fff3df;
-        font-size: 16px;
-    }
-
-    .cc-quick-link strong {
-        display: block;
-        font-size: 8px;
-    }
-
-    .cc-quick-link small {
-        display: block;
-        margin-top: 2px;
-        color: #68778a;
-        font-size: 7px;
-    }
-
-    .cc-quick-arrow {
-        color: #607084;
-        font-size: 15px;
-    }
-
     .cc-activity-row {
         display: grid;
         grid-template-columns: 58px minmax(0, 1fr) auto;
@@ -506,7 +440,7 @@
 
     @media (max-width: 1200px) {
         .cc-module-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .cc-main-grid {
@@ -545,7 +479,7 @@
         <h1>Dashboard Admin All</h1>
         <p>
             Control Center administrasi internal Departemen Produksi — Site BA.
-            Satu pintu untuk 5 module utama.
+            Satu pintu untuk module utama.
         </p>
     </div>
 
@@ -727,7 +661,7 @@
         <section class="cc-panel">
             <div class="cc-panel-head">
                 <div>
-                    <h2>Ringkasan Operasional 5 Module</h2>
+                    <h2>Ringkasan Operasional Module</h2>
                     <p>
                         Status kesiapan control center tanpa membuat data palsu untuk module yang belum terintegrasi.
                     </p>
@@ -775,28 +709,11 @@
                         <strong>MCU & FU Internal</strong>
 
                         <div class="cc-op-bar">
-                            <span style="--bar-color:#0aa768;width:4%"></span>
+                            <span style="--bar-color:#0aa768;width:4%">`</span>
                         </div>
 
                         <span class="cc-op-state">
                             Menunggu Integrasi
-                        </span>
-                    </div>
-
-                    <div
-                        class="cc-op-row"
-                        id="module-stock"
-                    >
-                        <strong>Stock Opname Gudang</strong>
-
-                        <!-- Progress Bar Lebar Dinamis -->
-                        <div class="cc-op-bar">
-                            <span style="--bar-color:#1778da; width:{{ ($stock['total'] ?? 0) > 0 ? '100%' : '4%' }}"></span>
-                        </div>
-
-                        <!-- Status Label (Live / Menunggu Integrasi) -->
-                        <span class="cc-op-state {{ isset($stock['connected']) && $stock['connected'] ? 'live' : '' }}">
-                            {{ isset($stock['connected']) && $stock['connected'] ? ($stock['total'] ?? 0) . ' Data Ready' : 'Menunggu Integrasi' }}
                         </span>
                     </div>
 
@@ -828,7 +745,7 @@
                     href="{{ $suggestionUrl }}"
                     class="cc-action-button"
                 >
-                    Lihat Semua
+                    Lihat Scientific
                 </a>
             </div>
 

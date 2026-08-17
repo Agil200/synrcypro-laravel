@@ -23,7 +23,7 @@ use App\Http\Controllers\SuratKeluarController;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
-use App\Http\Controllers\BarangController;
+use App\Http\Controllers\Admin\BarangController;
 
 Schedule::call(function (): void {
     app(BNNController::class)->generateNotification();
@@ -621,15 +621,22 @@ Route::prefix('database/employees')
         ->name('admin-all.suggestion.detail');
 
 
-
-
-    Route::prefix('manpower/barang')
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Opname Gudang (Barang)
+    |--------------------------------------------------------------------------
+    */
+    
+    // UBAH PREFIX DI SINI: dari manpower/barang menjadi admin-all/stock-opname
+    
+Route::prefix('admin-all/stock-opname')
     ->name('barang.')
     ->controller(BarangController::class)
     ->middleware('auth')
     ->group(function () {
-        // Halaman Utama & Form Publik
+        // Halaman Utama & Form
         Route::get('/', 'index')->name('index');
+        Route::get('/form', 'form')->name('form');
         Route::get('/public-config', 'getPublicConfig')->name('config');
         Route::post('/pickup/store', 'storePickup')->name('pickup.store');
 
@@ -646,7 +653,8 @@ Route::prefix('database/employees')
         Route::get('/admin/items', 'getAllAdminItems')->name('admin.items');
         Route::post('/admin/item/store', 'addAdminItem')->name('admin.item.store');
         Route::put('/admin/item/{code}', 'editAdminItem')->name('admin.item.edit');
-    });
+    }); // <--- PASTIKAN BARIS PENUTUP INI ADA
+
 
     
 
