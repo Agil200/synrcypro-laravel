@@ -697,6 +697,34 @@
                 ? route('admin-all.suggestion.index')
                 : '#';
 
+            $ifutsUrl = \Illuminate\Support\Facades\Route::has('admin-all.ifuts.index')
+                ? route('admin-all.ifuts.index')
+                : '#';
+
+            $ifutsMonitoringUrl = \Illuminate\Support\Facades\Route::has('admin-all.ifuts.monitoring')
+                ? route('admin-all.ifuts.monitoring')
+                : '#';
+
+            $ifutsInputUrl = \Illuminate\Support\Facades\Route::has('admin-all.ifuts.input')
+                ? route('admin-all.ifuts.input')
+                : '#';
+
+            $mcuFuInternalUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.index')
+                ? route('admin-all.mcu-fu.index')
+                : '#';
+
+            $mcuFuInternalMcuUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.mcu')
+                ? route('admin-all.mcu-fu.mcu')
+                : '#';
+
+            $mcuFuInternalFollowUpUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.follow-up')
+                ? route('admin-all.mcu-fu.follow-up')
+                : '#';
+
+            $mcuFuInternalHistoryUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.history')
+                ? route('admin-all.mcu-fu.history')
+                : '#';
+
             $suggestionMonitoringUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.monitoring')
                 ? route('admin-all.suggestion.monitoring')
                 : '#';
@@ -710,13 +738,16 @@
                 : '#';
 
             // STEP 8A — Persetujuan DH / PM.
-            // Route::has() menjaga layout tetap aman bila route belum terdaftar.
             $suggestionApprovalDhPmUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.approval-dh-pm')
                 ? route('admin-all.suggestion.approval-dh-pm')
                 : '#';
 
             $detailFromSh = request()->routeIs('admin-all.suggestion.detail')
                 && request()->query('from') === 'sh';
+
+            $barangUrl = \Illuminate\Support\Facades\Route::has('barang.index')
+                ? route('barang.index')
+                : '#';
 
             $adminMenus = [
                 [
@@ -734,32 +765,73 @@
                 [
                     'icon' => 'plane',
                     'title' => 'IFUTS TICKETING',
-                    'active' => false,
+                    'active' => request()->routeIs('admin-all.ifuts.*'),
                     'items' => [
-                        ['icon' => 'chart', 'label' => 'Dashboard IFUTS', 'planned' => true],
-                        ['icon' => 'ticket', 'label' => 'Monitoring Tiket', 'planned' => true],
-                        ['icon' => 'edit', 'label' => 'Input / Update Tiket', 'planned' => true],
+                        [
+                            'icon' => 'chart',
+                            'label' => 'Dashboard IFUTS',
+                            'url' => $ifutsUrl,
+                            'active' => request()->routeIs('admin-all.ifuts.index'),
+                        ],
+                        [
+                            'icon' => 'ticket',
+                            'label' => 'Monitoring Tiket',
+                            'url' => $ifutsMonitoringUrl,
+                            'active' => request()->routeIs('admin-all.ifuts.monitoring'),
+                        ],
+                        [
+                            'icon' => 'edit',
+                            'label' => 'Input Ticket',
+                            'url' => $ifutsInputUrl,
+                            'active' => request()->routeIs('admin-all.ifuts.input')
+                                || request()->routeIs('admin-all.ifuts.input.validate'),
+                        ],
                     ],
                 ],
                 [
                     'icon' => 'heart',
                     'title' => 'MCU & FU Internal',
-                    'active' => false,
+                    'active' => request()->routeIs('admin-all.mcu-fu.*'),
                     'items' => [
-                        ['icon' => 'chart', 'label' => 'Dashboard MCU & FU', 'planned' => true],
-                        ['icon' => 'calendar', 'label' => 'Input / Update MCU', 'planned' => true],
-                        ['icon' => 'repeat', 'label' => 'Input Follow Up', 'planned' => true],
-                        ['icon' => 'history', 'label' => 'Riwayat Update', 'planned' => true],
+                        [
+                            'icon' => 'chart',
+                            'label' => 'Dashboard MCU & FU',
+                            'url' => $mcuFuInternalUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.index'),
+                        ],
+                        [
+                            'icon' => 'calendar',
+                            'label' => 'Input / Update MCU',
+                            'url' => $mcuFuInternalMcuUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.mcu')
+                                || request()->routeIs('admin-all.mcu-fu.mcu.update'),
+                        ],
+                        [
+                            'icon' => 'repeat',
+                            'label' => 'Input Follow Up',
+                            'url' => $mcuFuInternalFollowUpUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.follow-up')
+                                || request()->routeIs('admin-all.mcu-fu.follow-up.update'),
+                        ],
+                        [
+                            'icon' => 'history',
+                            'label' => 'Riwayat Update',
+                            'url' => $mcuFuInternalHistoryUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.history'),
+                        ],
                     ],
                 ],
                 [
                     'icon' => 'box',
                     'title' => 'Stock Opname Gudang',
-                    'active' => false,
+                    'active' => request()->routeIs('barang.*'),
                     'items' => [
-                        ['icon' => 'chart', 'label' => 'Dashboard Stock', 'planned' => true],
-                        ['icon' => 'clipboard', 'label' => 'Input Stock Opname', 'planned' => true],
-                        ['icon' => 'history', 'label' => 'Riwayat Stock', 'planned' => true],
+                        [
+                            'icon' => 'chart', 
+                            'label' => 'Dashboard Stock', 
+                            'url' => $barangUrl, 
+                            'active' => request()->routeIs('barang.index')
+                        ],
                     ],
                 ],
             ];

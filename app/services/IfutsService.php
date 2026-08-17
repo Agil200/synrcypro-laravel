@@ -1,0 +1,1467 @@
+<?php
+
+namespace App\Services;
+
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use RuntimeException;
+use Throwable;
+
+class IfutsService
+{
+    private const DEFAULT_SPREADSHEET_ID =
+        '110H1XSrSOyj_PjphSlruUv3B5EVHVXNgOSoP0ZVVO84';
+
+    private const DEFAULT_SHEET_GID = 2129255501;
+
+    private const DEFAULT_COLUMNS = 'A:AJ';
+
+    private const SPREADSHEET_URL =
+        'https://docs.google.com/spreadsheets/d/110H1XSrSOyj_PjphSlruUv3B5EVHVXNgOSoP0ZVVO84/edit?pli=1&gid=2129255501#gid=2129255501';
+
+    public function __construct(
+        private readonly GoogleSheetsService $googleSheets
+    ) {
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ambil data IFUTS — READ ONLY
+    |--------------------------------------------------------------------------
+    |
+    | Tidak melakukan append / update ke Google Sheets.
+    | GID dipakai agar Laravel tidak bergantung pada nama tab.
+    |
+    */
+    public function getData(): array
+    {
+        $spreadsheetId = trim(
+            (string) config(
+                'admin_all.ifuts.spreadsheet_id',
+                self::DEFAULT_SPREADSHEET_ID
+            )
+        );
+
+        $sheetGid = trim(
+            (string) config(
+                'admin_all.ifuts.sheet_gid',
+                self::DEFAULT_SHEET_GID
+            )
+        );
+
+        $columns = strtoupper(
+            trim(
+                (string) config(
+                    'admin_all.ifuts.columns',
+                    self::DEFAULT_COLUMNS
+                )
+            )
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cache READ ONLY IFUTS
+        |--------------------------------------------------------------------------
+        |
+        | Filter/search dashboard tidak perlu memanggil Google Sheets lagi pada
+        | setiap klik. Default 120 detik, dapat diubah melalui:
+        |
+        | config('admin_all.ifuts.cache_seconds')
+        |
+        | Ini tidak mengubah data Google Sheet dan tidak menyentuh Suggestion.
+        |
+        */
+        $cacheSeconds = max(
+            0,
+            (int) config(
+                'admin_all.ifuts.cache_seconds',
+                120
+            )
+        );
+
+        if ($spreadsheetId === '') {
+            throw new RuntimeException(
+                'Spreadsheet ID IFUTS belum diatur.'
+            );
+        }
+
+        if ($sheetGid === '' || !ctype_digit($sheetGid)) {
+            throw new RuntimeException(
+                'GID sheet IFUTS belum valid.'
+            );
+        }
+
+        $loader = function () use (
+            $spreadsheetId,
+            $sheetGid,
+            $columns,
+            $cacheSeconds
+        ): array {
+            $values = $this->googleSheets->getValuesBySheetId(
+                $spreadsheetId,
+                $sheetGid,
+                $columns
+            );
+
+            if ($values === []) {
+                return [
+                    'rows' => [],
+                    'total' => 0,
+                    'source' => [
+                        'spreadsheet_id' => $spreadsheetId,
+                        'sheet_gid' => (int) $sheetGid,
+                        'columns' => $columns,
+                        'spreadsheet_url' => self::SPREADSHEET_URL,
+                        'header_row' => null,
+                        'column_map' => [],
+                        'cache_seconds' => $cacheSeconds,
+                    ],
+                ];
+            }
+
+            $headerIndex = $this->findHeaderRowIndex($values);
+
+            if ($headerIndex === null) {
+                throw new RuntimeException(
+                    'Header utama IFUTS tidak ditemukan. '
+                    .'Pastikan sheet yang dibaca adalah sheet data IFUTS.'
+                );
+            }
+
+            $headerRow = is_array($values[$headerIndex] ?? null)
+                ? $values[$headerIndex]
+                : [];
+
+            $dataRows = array_slice(
+                $values,
+                $headerIndex + 1
+            );
+
+            $columnMap = $this->resolveColumnMap(
+                $headerRow,
+                $dataRows
+            );
+
+            $rows = $this->mapRows(
+                $dataRows,
+                $columnMap,
+                $headerIndex + 2
+            );
+
+            return [
+                'rows' => $rows,
+                'total' => count($rows),
+                'source' => [
+                    'spreadsheet_id' => $spreadsheetId,
+                    'sheet_gid' => (int) $sheetGid,
+                    'columns' => $columns,
+                    'spreadsheet_url' => self::SPREADSHEET_URL,
+                    'header_row' => $headerIndex + 1,
+                    'column_map' => $this->columnMapForDebug($columnMap),
+                    'cache_seconds' => $cacheSeconds,
+                ],
+            ];
+        };
+
+        if ($cacheSeconds <= 0) {
+            return $loader();
+        }
+
+        $cacheKey = implode(
+            ':',
+            [
+                'ifuts',
+                'read-only',
+                sha1($spreadsheetId),
+                (int) $sheetGid,
+                strtolower($columns),
+                'v3-flight-detail',
+            ]
+        );
+
+        return Cache::remember(
+            $cacheKey,
+            now()->addSeconds($cacheSeconds),
+            $loader
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Analytics Dashboard IFUTS
+    |--------------------------------------------------------------------------
+    |
+    | Filter bulan/tahun dibaca dari TGL_OUT.
+    | POH dashboard/monitoring memakai POH_LOKASI asli dari spreadsheet
+    | (contoh: SURABAYA, BALIKPAPAN, dll).
+    |
+    | POH_STATUS (LOKAL / NON LOKAL) tetap dipetakan secara internal untuk
+    | kebutuhan Input Ticket pada tahap berikutnya, tetapi BUKAN filter POH.
+    |
+    */
+    public function buildDashboard(
+        array $rows,
+        array $filters = []
+    ): array {
+        $month = $this->validMonth(
+            $filters['month'] ?? null
+        );
+
+        $year = $this->validYear(
+            $filters['year'] ?? null
+        );
+
+        $category = $this->normalizeText(
+            $filters['category'] ?? ''
+        );
+
+        $position = $this->normalizeText(
+            $filters['position'] ?? ''
+        );
+
+        if ($this->isFamilyPosition($position)) {
+            $position = '';
+        }
+
+        $poh = $this->normalizeText(
+            $filters['poh'] ?? ''
+        );
+
+        $search = trim(
+            (string) ($filters['search'] ?? '')
+        );
+
+        $availableYears = [];
+        $availableCategories = [];
+        $availablePositions = [];
+        $availablePoh = [];
+        $availableLocalities = [];
+
+        /*
+         * Tahun tetap dideteksi dari seluruh sumber agar user dapat pindah
+         * ke tahun lain. Opsi Kategori/Jabatan/POH lokasi hanya diambil dari
+         * tahun yang sedang aktif supaya dropdown lebih ringan dan relevan.
+         */
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $outDate = $this->parseDate(
+                (string) ($row['TGL_OUT'] ?? '')
+            );
+
+            if ($outDate !== null) {
+                $availableYears[] = (int) $outDate->year;
+            }
+
+            if (
+                $year !== null
+                && (
+                    $outDate === null
+                    || (int) $outDate->year !== $year
+                )
+            ) {
+                continue;
+            }
+
+            $this->pushUniqueOption(
+                $availableCategories,
+                $row['KATEGORI'] ?? ''
+            );
+
+            if (! $this->isFamilyPosition($row['JABATAN'] ?? '')) {
+                $this->pushUniqueOption(
+                    $availablePositions,
+                    $row['JABATAN'] ?? ''
+                );
+            }
+
+            $this->pushUniqueOption(
+                $availablePoh,
+                $row['POH_LOKASI'] ?? ''
+            );
+
+            // Tetap disediakan untuk kebutuhan internal / input tahap berikut.
+            $this->pushUniqueOption(
+                $availableLocalities,
+                $row['POH_STATUS'] ?? ''
+            );
+        }
+
+        $availableYears = array_values(
+            array_unique($availableYears)
+        );
+        rsort($availableYears);
+
+        natcasesort($availableCategories);
+        natcasesort($availablePositions);
+        natcasesort($availablePoh);
+        natcasesort($availableLocalities);
+
+        $availableCategories = array_values($availableCategories);
+        $availablePositions = array_values($availablePositions);
+        $availablePoh = array_values($availablePoh);
+        $availableLocalities = array_values($availableLocalities);
+
+        $filteredRows = array_values(
+            array_filter(
+                $rows,
+                function (mixed $row) use (
+                    $month,
+                    $year,
+                    $category,
+                    $position,
+                    $poh,
+                    $search
+                ): bool {
+                    if (!is_array($row)) {
+                        return false;
+                    }
+
+                    $outDate = $this->parseDate(
+                        (string) ($row['TGL_OUT'] ?? '')
+                    );
+
+                    if ($month !== null) {
+                        if (
+                            $outDate === null
+                            || (int) $outDate->month !== $month
+                        ) {
+                            return false;
+                        }
+                    }
+
+                    if ($year !== null) {
+                        if (
+                            $outDate === null
+                            || (int) $outDate->year !== $year
+                        ) {
+                            return false;
+                        }
+                    }
+
+                    if (
+                        $category !== ''
+                        && $this->normalizeText(
+                            $row['KATEGORI'] ?? ''
+                        ) !== $category
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $position !== ''
+                        && $this->normalizeText(
+                            $row['JABATAN'] ?? ''
+                        ) !== $position
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $poh !== ''
+                        && $this->normalizeText(
+                            $row['POH_LOKASI'] ?? ''
+                        ) !== $poh
+                    ) {
+                        return false;
+                    }
+
+                    if ($search !== '') {
+                        $haystack = implode(
+                            ' ',
+                            [
+                                (string) ($row['NRP'] ?? ''),
+                                (string) ($row['NAMA'] ?? ''),
+                                (string) ($row['KATEGORI'] ?? ''),
+                                (string) ($row['DEPARTEMEN'] ?? ''),
+                                (string) ($row['JABATAN'] ?? ''),
+                                (string) ($row['POH_LOKASI'] ?? ''),
+                                (string) ($row['POH_STATUS'] ?? ''),
+                                (string) ($row['RUTE_OUT'] ?? ''),
+                                (string) ($row['RUTE_IN'] ?? ''),
+                            ]
+                        );
+
+                        if (
+                            stripos($haystack, $search) === false
+                        ) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            )
+        );
+
+        usort(
+            $filteredRows,
+            fn (array $a, array $b): int =>
+                $this->dateTimestamp($b['TGL_OUT'] ?? '')
+                <=>
+                $this->dateTimestamp($a['TGL_OUT'] ?? '')
+        );
+
+        return [
+            'filters' => [
+                'month' => $month,
+                'year' => $year,
+                'category' => $category !== ''
+                    ? $category
+                    : null,
+                'position' => $position !== ''
+                    ? $position
+                    : null,
+                'poh' => $poh !== ''
+                    ? $poh
+                    : null,
+                'search' => $search !== ''
+                    ? $search
+                    : null,
+            ],
+
+            'available_years' => $availableYears,
+            'available_categories' => $availableCategories,
+            'available_positions' => $availablePositions,
+            'available_poh' => $availablePoh,
+            'available_localities' => $availableLocalities,
+
+            'summary' => $this->buildSummary($filteredRows),
+
+            'category_chart' => $this->countBy(
+                $filteredRows,
+                'KATEGORI'
+            ),
+
+            'position_chart' => $this->countBy(
+                array_values(
+                    array_filter(
+                        $filteredRows,
+                        fn (array $row): bool =>
+                            ! $this->isFamilyPosition(
+                                $row['JABATAN'] ?? ''
+                            )
+                    )
+                ),
+                'JABATAN'
+            ),
+
+            'poh_chart' => array_slice(
+                $this->countBy(
+                    $filteredRows,
+                    'POH_LOKASI'
+                ),
+                0,
+                10
+            ),
+
+            // Dipertahankan sebagai data internal untuk tahap Input Ticket.
+            'locality_chart' => $this->countBy(
+                $filteredRows,
+                'POH_STATUS',
+                normalizer: fn (mixed $value): string =>
+                    $this->normalizeLocality($value)
+            ),
+
+            'month_chart' => $this->buildMonthChart(
+                $filteredRows
+            ),
+
+            'year_chart' => $this->buildYearChart(
+                $filteredRows
+            ),
+
+            'route_out_chart' => array_slice(
+                $this->countBy($filteredRows, 'RUTE_OUT'),
+                0,
+                10
+            ),
+
+            'route_in_chart' => array_slice(
+                $this->countBy($filteredRows, 'RUTE_IN'),
+                0,
+                10
+            ),
+
+            'rows' => $filteredRows,
+            'data_total' => count($filteredRows),
+            'all_total' => count($rows),
+        ];
+    }
+
+    public function emptyDashboard(): array
+    {
+        return [
+            'filters' => [
+                'month' => null,
+                'year' => null,
+                'category' => null,
+                'position' => null,
+                'poh' => null,
+                'search' => null,
+            ],
+            'available_years' => [],
+            'available_categories' => [],
+            'available_positions' => [],
+            'available_poh' => [],
+            'available_localities' => [],
+            'summary' => [
+                'total' => 0,
+                'local' => 0,
+                'non_local' => 0,
+                'out_scheduled' => 0,
+                'in_scheduled' => 0,
+                'regular_out' => 0,
+                'additional_out' => 0,
+                'regular_in' => 0,
+                'additional_in' => 0,
+            ],
+            'category_chart' => [],
+            'position_chart' => [],
+            'poh_chart' => [],
+            'locality_chart' => [],
+            'month_chart' => [],
+            'year_chart' => [],
+            'route_out_chart' => [],
+            'route_in_chart' => [],
+            'rows' => [],
+            'data_total' => 0,
+            'all_total' => 0,
+        ];
+    }
+
+    public function spreadsheetUrl(): string
+    {
+        return self::SPREADSHEET_URL;
+    }
+
+    private function findHeaderRowIndex(array $values): ?int
+    {
+        $maxScan = min(20, count($values));
+
+        for ($index = 0; $index < $maxScan; $index++) {
+            $row = $values[$index] ?? null;
+
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $headers = array_map(
+                fn (mixed $value): string =>
+                    $this->normalizeHeader((string) $value),
+                $row
+            );
+
+            $markers = [
+                'KATEGORI',
+                'NAMA',
+                'DEPARTEMEN',
+                'JABATAN',
+                'TGL_OUT',
+                'RUTE',
+            ];
+
+            $found = 0;
+
+            foreach ($markers as $marker) {
+                if (in_array($marker, $headers, true)) {
+                    $found++;
+                }
+            }
+
+            if ($found >= 5) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveColumnMap(
+        array $headerRow,
+        array $dataRows
+    ): array {
+        $headers = array_map(
+            fn (mixed $value): string =>
+                $this->normalizeHeader((string) $value),
+            $headerRow
+        );
+
+        $tglOut = $this->findFirstIndex(
+            $headers,
+            ['TGL_OUT', 'TANGGAL_OUT']
+        );
+
+        $tglIn = $this->findFirstIndex(
+            $headers,
+            ['TGL_IN', 'TANGGAL_IN']
+        );
+
+        $lokasiIn = $this->findFirstIndex(
+            $headers,
+            ['LOKASI_IN', 'LOKASIIN']
+        );
+
+        $routeIndexes = $this->findAllIndexes(
+            $headers,
+            ['RUTE', 'ROUTE']
+        );
+
+        $ticketTypeIndexes = $this->findAllIndexes(
+            $headers,
+            [
+                'KET_TIKET',
+                'KET_TKT',
+                'KPT_TIKET',
+                'KPT_TKT',
+            ]
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Detail operasional tiket — kolom GA
+        |--------------------------------------------------------------------------
+        |
+        | Header TIME TAKE OFF, TIME LANDING, ESTIMASI BIAYA, dan MASKAPAI
+        | muncul dua kali: blok OUT dan blok IN. Posisi dibedakan berdasarkan
+        | TGL OUT / TGL IN, sehingga kita tidak hardcode huruf kolom.
+        |
+        */
+        $takeOffIndexes = $this->findAllIndexes(
+            $headers,
+            [
+                'TIME_TAKE_OFF',
+                'TAKE_OFF',
+                'TIME_TAKEOFF',
+            ]
+        );
+
+        $landingIndexes = $this->findAllIndexes(
+            $headers,
+            [
+                'TIME_LANDING',
+                'LANDING',
+            ]
+        );
+
+        $costIndexes = $this->findAllIndexes(
+            $headers,
+            [
+                'ESTIMASI_BIAYA',
+                'ESTIMATE_BIAYA',
+                'ESTIMATED_COST',
+            ]
+        );
+
+        $airlineIndexes = $this->findAllIndexes(
+            $headers,
+            [
+                'MASKAPAI',
+                'AIRLINE',
+            ]
+        );
+
+        $pohIndex = $this->findFirstIndex(
+            $headers,
+            ['POH']
+        );
+
+        return [
+            'tanggal_input' => $this->findFirstIndex(
+                $headers,
+                ['TANGGAL_INPUT', 'TGL_INPUT']
+            ),
+            'category' => $this->requiredIndex(
+                $headers,
+                ['KATEGORI'],
+                'KATEGORI'
+            ),
+            'nrp' => $this->requiredIndex(
+                $headers,
+                ['NRP', 'NIK'],
+                'NRP / NIK'
+            ),
+            'name' => $this->requiredIndex(
+                $headers,
+                ['NAMA', 'NAMA_KARYAWAN'],
+                'NAMA'
+            ),
+            'department' => $this->requiredIndex(
+                $headers,
+                ['DEPARTEMEN', 'DEPARTMENT'],
+                'DEPARTEMEN'
+            ),
+            'position' => $this->requiredIndex(
+                $headers,
+                ['JABATAN', 'POSITION'],
+                'JABATAN'
+            ),
+            'poh_location' => $pohIndex,
+            'poh_status' => $this->resolvePohStatusIndex(
+                $pohIndex,
+                $dataRows
+            ),
+            'phone' => $this->findFirstIndex(
+                $headers,
+                ['NO_HP_AKTIF', 'NO_HP', 'HP_AKTIF']
+            ),
+            'nik_ktp' => $this->findFirstIndex(
+                $headers,
+                ['NIK_KTP']
+            ),
+            'birth_date' => $this->findFirstIndex(
+                $headers,
+                ['TGL_LAHIR', 'TANGGAL_LAHIR']
+            ),
+            'tgl_out' => $this->requiredNullableIndex(
+                $tglOut,
+                'TGL OUT'
+            ),
+            'route_out' => $this->firstIndexBetween(
+                $routeIndexes,
+                $tglOut,
+                $tglIn
+            ),
+            'time_take_off_out' => $this->firstIndexBetween(
+                $takeOffIndexes,
+                $tglOut,
+                $tglIn
+            ),
+            'time_landing_out' => $this->firstIndexBetween(
+                $landingIndexes,
+                $tglOut,
+                $tglIn
+            ),
+            'estimated_cost_out' => $this->firstIndexBetween(
+                $costIndexes,
+                $tglOut,
+                $tglIn
+            ),
+            'airline_out' => $this->firstIndexBetween(
+                $airlineIndexes,
+                $tglOut,
+                $tglIn
+            ),
+            'ticket_type_out' => $this->firstIndexBetween(
+                $ticketTypeIndexes,
+                $tglOut,
+                $lokasiIn ?? $tglIn
+            ),
+            'lokasi_in' => $lokasiIn,
+            'tgl_in' => $tglIn,
+            'route_in' => $this->firstIndexAfter(
+                $routeIndexes,
+                $tglIn
+            ),
+            'time_take_off_in' => $this->firstIndexAfter(
+                $takeOffIndexes,
+                $tglIn
+            ),
+            'time_landing_in' => $this->firstIndexAfter(
+                $landingIndexes,
+                $tglIn
+            ),
+            'estimated_cost_in' => $this->firstIndexAfter(
+                $costIndexes,
+                $tglIn
+            ),
+            'airline_in' => $this->firstIndexAfter(
+                $airlineIndexes,
+                $tglIn
+            ),
+            'ticket_type_in' => $this->firstIndexAfter(
+                $ticketTypeIndexes,
+                $tglIn
+            ),
+            'note' => $this->findFirstIndex(
+                $headers,
+                ['NOTE', 'NOTES', 'CATATAN']
+            ),
+        ];
+    }
+
+    private function mapRows(
+        array $dataRows,
+        array $map,
+        int $firstSheetRowNumber
+    ): array {
+        $rows = [];
+
+        foreach ($dataRows as $offset => $rawRow) {
+            if (!is_array($rawRow)) {
+                continue;
+            }
+
+            $row = [
+                '_SHEET_ROW' => $firstSheetRowNumber + $offset,
+                'TANGGAL_INPUT' => $this->cell($rawRow, $map['tanggal_input']),
+                'KATEGORI' => $this->cell($rawRow, $map['category']),
+                'NRP' => $this->cell($rawRow, $map['nrp']),
+                'NAMA' => $this->cell($rawRow, $map['name']),
+                'DEPARTEMEN' => $this->cell($rawRow, $map['department']),
+                'JABATAN' => $this->cell($rawRow, $map['position']),
+                'POH_LOKASI' => $this->cell($rawRow, $map['poh_location']),
+                'POH_STATUS' => $this->normalizeLocality(
+                    $this->cell($rawRow, $map['poh_status'])
+                ),
+                'NO_HP_AKTIF' => $this->cell($rawRow, $map['phone']),
+                'NIK_KTP' => $this->cell($rawRow, $map['nik_ktp']),
+                'TGL_LAHIR' => $this->cell($rawRow, $map['birth_date']),
+                'TGL_OUT' => $this->cell($rawRow, $map['tgl_out']),
+                'RUTE_OUT' => $this->cell($rawRow, $map['route_out']),
+                'TIME_TAKE_OFF_OUT' => $this->cell(
+                    $rawRow,
+                    $map['time_take_off_out']
+                ),
+                'TIME_LANDING_OUT' => $this->cell(
+                    $rawRow,
+                    $map['time_landing_out']
+                ),
+                'ESTIMASI_BIAYA_OUT' => $this->cell(
+                    $rawRow,
+                    $map['estimated_cost_out']
+                ),
+                'MASKAPAI_OUT' => $this->cell(
+                    $rawRow,
+                    $map['airline_out']
+                ),
+                'KET_TIKET_OUT' => $this->normalizeTicketType(
+                    $this->cell($rawRow, $map['ticket_type_out'])
+                ),
+                'LOKASI_IN' => $this->cell($rawRow, $map['lokasi_in']),
+                'TGL_IN' => $this->cell($rawRow, $map['tgl_in']),
+                'RUTE_IN' => $this->cell($rawRow, $map['route_in']),
+                'TIME_TAKE_OFF_IN' => $this->cell(
+                    $rawRow,
+                    $map['time_take_off_in']
+                ),
+                'TIME_LANDING_IN' => $this->cell(
+                    $rawRow,
+                    $map['time_landing_in']
+                ),
+                'ESTIMASI_BIAYA_IN' => $this->cell(
+                    $rawRow,
+                    $map['estimated_cost_in']
+                ),
+                'MASKAPAI_IN' => $this->cell(
+                    $rawRow,
+                    $map['airline_in']
+                ),
+                'KET_TIKET_IN' => $this->normalizeTicketType(
+                    $this->cell($rawRow, $map['ticket_type_in'])
+                ),
+                'NOTE' => $this->cell($rawRow, $map['note']),
+            ];
+
+            if (!$this->isMeaningfulDataRow($row)) {
+                continue;
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    private function buildSummary(array $rows): array
+    {
+        $summary = [
+            'total' => count($rows),
+            'local' => 0,
+            'non_local' => 0,
+            'out_scheduled' => 0,
+            'in_scheduled' => 0,
+            'regular_out' => 0,
+            'additional_out' => 0,
+            'regular_in' => 0,
+            'additional_in' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            $locality = $this->normalizeLocality(
+                $row['POH_STATUS'] ?? ''
+            );
+
+            if ($locality === 'LOKAL') {
+                $summary['local']++;
+            } elseif ($locality === 'NON LOKAL') {
+                $summary['non_local']++;
+            }
+
+            if (trim((string) ($row['TGL_OUT'] ?? '')) !== '') {
+                $summary['out_scheduled']++;
+            }
+
+            if (trim((string) ($row['TGL_IN'] ?? '')) !== '') {
+                $summary['in_scheduled']++;
+            }
+
+            $outType = $this->normalizeTicketType(
+                $row['KET_TIKET_OUT'] ?? ''
+            );
+
+            if ($outType === 'REGULER') {
+                $summary['regular_out']++;
+            } elseif ($outType === 'TAMBAHAN') {
+                $summary['additional_out']++;
+            }
+
+            $inType = $this->normalizeTicketType(
+                $row['KET_TIKET_IN'] ?? ''
+            );
+
+            if ($inType === 'REGULER') {
+                $summary['regular_in']++;
+            } elseif ($inType === 'TAMBAHAN') {
+                $summary['additional_in']++;
+            }
+        }
+
+        return $summary;
+    }
+
+    private function buildMonthChart(array $rows): array
+    {
+        $labels = [
+            1 => 'Jan',
+            2 => 'Feb',
+            3 => 'Mar',
+            4 => 'Apr',
+            5 => 'Mei',
+            6 => 'Jun',
+            7 => 'Jul',
+            8 => 'Agu',
+            9 => 'Sep',
+            10 => 'Okt',
+            11 => 'Nov',
+            12 => 'Des',
+        ];
+
+        $counts = array_fill(1, 12, 0);
+
+        foreach ($rows as $row) {
+            $date = $this->parseDate(
+                (string) ($row['TGL_OUT'] ?? '')
+            );
+
+            if ($date !== null) {
+                $counts[(int) $date->month]++;
+            }
+        }
+
+        $result = [];
+
+        foreach ($labels as $month => $label) {
+            $result[] = [
+                'key' => $month,
+                'label' => $label,
+                'count' => $counts[$month],
+            ];
+        }
+
+        return $result;
+    }
+
+    private function buildYearChart(array $rows): array
+    {
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $date = $this->parseDate(
+                (string) ($row['TGL_OUT'] ?? '')
+            );
+
+            if ($date === null) {
+                continue;
+            }
+
+            $year = (string) $date->year;
+            $counts[$year] = ($counts[$year] ?? 0) + 1;
+        }
+
+        krsort($counts, SORT_NATURAL);
+
+        return array_map(
+            static fn (string $year, int $count): array => [
+                'key' => $year,
+                'label' => $year,
+                'count' => $count,
+            ],
+            array_keys($counts),
+            array_values($counts)
+        );
+    }
+
+    private function countBy(
+        array $rows,
+        string $key,
+        ?callable $normalizer = null
+    ): array {
+        $counts = [];
+        $labels = [];
+
+        foreach ($rows as $row) {
+            $raw = $row[$key] ?? '';
+
+            $value = $normalizer !== null
+                ? (string) $normalizer($raw)
+                : trim((string) $raw);
+
+            if ($value === '') {
+                continue;
+            }
+
+            $normalizedKey = $this->normalizeText($value);
+
+            if ($normalizedKey === '') {
+                continue;
+            }
+
+            $counts[$normalizedKey] =
+                ($counts[$normalizedKey] ?? 0) + 1;
+
+            if (!isset($labels[$normalizedKey])) {
+                $labels[$normalizedKey] = $value;
+            }
+        }
+
+        $result = [];
+
+        foreach ($counts as $normalizedKey => $count) {
+            $result[] = [
+                'key' => $normalizedKey,
+                'label' => $labels[$normalizedKey],
+                'count' => $count,
+            ];
+        }
+
+        usort(
+            $result,
+            function (array $a, array $b): int {
+                $countCompare = $b['count'] <=> $a['count'];
+
+                if ($countCompare !== 0) {
+                    return $countCompare;
+                }
+
+                return strcasecmp($a['label'], $b['label']);
+            }
+        );
+
+        return $result;
+    }
+
+    private function resolvePohStatusIndex(
+        ?int $pohIndex,
+        array $dataRows
+    ): ?int {
+        if ($pohIndex === null) {
+            return null;
+        }
+
+        $candidates = [
+            $pohIndex,
+            $pohIndex + 1,
+        ];
+
+        $bestIndex = $pohIndex;
+        $bestScore = -1;
+
+        foreach ($candidates as $candidate) {
+            $score = 0;
+
+            foreach (array_slice($dataRows, 0, 200) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $value = $this->normalizeLocality(
+                    $row[$candidate] ?? ''
+                );
+
+                if (in_array(
+                    $value,
+                    ['LOKAL', 'NON LOKAL'],
+                    true
+                )) {
+                    $score++;
+                }
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestIndex = $candidate;
+            }
+        }
+
+        return $bestIndex;
+    }
+
+    private function requiredIndex(
+        array $headers,
+        array $candidates,
+        string $label
+    ): int {
+        $index = $this->findFirstIndex(
+            $headers,
+            $candidates
+        );
+
+        return $this->requiredNullableIndex(
+            $index,
+            $label
+        );
+    }
+
+    private function requiredNullableIndex(
+        ?int $index,
+        string $label
+    ): int {
+        if ($index === null) {
+            throw new RuntimeException(
+                'Kolom '.$label.' IFUTS tidak ditemukan.'
+            );
+        }
+
+        return $index;
+    }
+
+    private function findFirstIndex(
+        array $headers,
+        array $candidates
+    ): ?int {
+        foreach ($headers as $index => $header) {
+            if (in_array($header, $candidates, true)) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function findAllIndexes(
+        array $headers,
+        array $candidates
+    ): array {
+        $indexes = [];
+
+        foreach ($headers as $index => $header) {
+            if (in_array($header, $candidates, true)) {
+                $indexes[] = $index;
+            }
+        }
+
+        return $indexes;
+    }
+
+    private function firstIndexBetween(
+        array $indexes,
+        ?int $after,
+        ?int $before
+    ): ?int {
+        foreach ($indexes as $index) {
+            if ($after !== null && $index <= $after) {
+                continue;
+            }
+
+            if ($before !== null && $index >= $before) {
+                continue;
+            }
+
+            return $index;
+        }
+
+        return null;
+    }
+
+    private function firstIndexAfter(
+        array $indexes,
+        ?int $after
+    ): ?int {
+        if ($after === null) {
+            return null;
+        }
+
+        foreach ($indexes as $index) {
+            if ($index > $after) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function cell(
+        array $row,
+        ?int $index
+    ): string {
+        if ($index === null) {
+            return '';
+        }
+
+        return trim(
+            (string) ($row[$index] ?? '')
+        );
+    }
+
+    private function isMeaningfulDataRow(array $row): bool
+    {
+        foreach (
+            [
+                'NRP',
+                'NAMA',
+                'KATEGORI',
+                'TGL_OUT',
+                'RUTE_OUT',
+            ] as $key
+        ) {
+            if (trim((string) ($row[$key] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeHeader(string $value): string
+    {
+        $value = strtoupper(trim($value));
+
+        $value = preg_replace(
+            '/[^A-Z0-9]+/',
+            '_',
+            $value
+        ) ?? '';
+
+        return trim($value, '_');
+    }
+
+    private function normalizeText(mixed $value): string
+    {
+        $value = strtoupper(
+            trim((string) $value)
+        );
+
+        return preg_replace('/\s+/', ' ', $value) ?? $value;
+    }
+
+    private function isFamilyPosition(mixed $value): bool
+    {
+        $position = $this->normalizeText($value);
+
+        if ($position === '') {
+            return false;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Relasi keluarga — bukan jabatan karyawan
+        |--------------------------------------------------------------------------
+        | Hanya label keluarga yang dibuang dari dropdown/chart Jabatan.
+        | Jabatan karyawan seperti PLDP, PLDP PRODUKSI, ACT.GROUP LEADER,
+        | GROUP LEADER, GL PRODUKSI, OPERATOR, dst tetap dipertahankan.
+        */
+        $familyPrefixes = [
+            'ISTRI',
+            'SUAMI',
+            'ANAK',
+            'ORANG TUA',
+            'AYAH',
+            'BAPAK',
+            'IBU',
+            'MERTUA',
+            'KELUARGA',
+        ];
+
+        foreach ($familyPrefixes as $prefix) {
+            if (
+                $position === $prefix
+                || str_starts_with($position, $prefix.' ')
+                || str_starts_with($position, $prefix.'-')
+                || str_starts_with($position, $prefix.'/')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeLocality(mixed $value): string
+    {
+        $value = $this->normalizeText($value);
+        $compact = str_replace(
+            ['-', '_'],
+            ' ',
+            $value
+        );
+        $compact = preg_replace('/\s+/', ' ', $compact) ?? $compact;
+        $compact = trim($compact);
+
+        if (in_array(
+            $compact,
+            ['LOCAL', 'LOKAL'],
+            true
+        )) {
+            return 'LOKAL';
+        }
+
+        if (in_array(
+            $compact,
+            ['NON LOCAL', 'NON LOKAL', 'NONLOCAL', 'NONLOKAL'],
+            true
+        )) {
+            return 'NON LOKAL';
+        }
+
+        return $compact;
+    }
+
+    private function normalizeTicketType(mixed $value): string
+    {
+        $value = $this->normalizeText($value);
+
+        if ($value === 'REGULAR') {
+            return 'REGULER';
+        }
+
+        if (in_array(
+            $value,
+            ['ADDITIONAL', 'EXTRA'],
+            true
+        )) {
+            return 'TAMBAHAN';
+        }
+
+        return $value;
+    }
+
+    private function parseDate(string $value): ?Carbon
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $formats = [
+            'd/m/Y',
+            'j/n/Y',
+            'd-m-Y',
+            'j-n-Y',
+            'Y-m-d',
+            'd/m/y',
+            'j/n/y',
+            'd-m-y',
+            'j-n-y',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat(
+                    $format,
+                    $value
+                );
+
+                if (
+                    $date !== false
+                    && $date->format($format) === $value
+                ) {
+                    return $date;
+                }
+            } catch (Throwable) {
+                // Coba format berikutnya.
+            }
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function dateTimestamp(mixed $value): int
+    {
+        return $this->parseDate(
+            (string) $value
+        )?->timestamp ?? 0;
+    }
+
+    private function validMonth(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $month = (int) $value;
+
+        return $month >= 1 && $month <= 12
+            ? $month
+            : null;
+    }
+
+    private function validYear(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $year = (int) $value;
+
+        return $year >= 2000 && $year <= 2100
+            ? $year
+            : null;
+    }
+
+    private function pushUniqueOption(
+        array &$options,
+        mixed $value
+    ): void {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return;
+        }
+
+        foreach ($options as $existing) {
+            if (strcasecmp($existing, $value) === 0) {
+                return;
+            }
+        }
+
+        $options[] = $value;
+    }
+
+    private function columnMapForDebug(array $map): array
+    {
+        $result = [];
+
+        foreach ($map as $key => $index) {
+            $result[$key] = $index === null
+                ? null
+                : [
+                    'index' => $index,
+                    'column' => $this->columnLetter($index),
+                ];
+        }
+
+        return $result;
+    }
+
+    private function columnLetter(int $zeroBasedIndex): string
+    {
+        $number = $zeroBasedIndex + 1;
+        $letters = '';
+
+        while ($number > 0) {
+            $number--;
+            $letters = chr(65 + ($number % 26)).$letters;
+            $number = intdiv($number, 26);
+        }
+
+        return $letters;
+    }
+}

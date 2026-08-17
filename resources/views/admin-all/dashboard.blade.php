@@ -3,10 +3,16 @@
 @section('admin-content')
 @php
     $ss = $controlCenter['suggestion'] ?? [];
+    $stock = $controlCenter['stock'] ?? []; // Tambahan untuk memanggil data stock dari Controller
     $integrations = $controlCenter['integrations'] ?? [];
 
     $suggestionUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.index')
         ? route('admin-all.suggestion.index')
+        : '#';
+
+    // Rute menuju dashboard modul stock opname gudang (barang)
+    $stockUrl = \Illuminate\Support\Facades\Route::has('barang.index')
+        ? route('barang.index')
         : '#';
 
     $moduleCards = [
@@ -50,13 +56,13 @@
             'key' => 'stock',
             'letter' => 'S',
             'name' => 'Stock Opname',
-            'value' => '—',
+            'value' => $stock['total'] ?? 0, // Mengambil jumlah total data barang keluar dari DB
             'metric' => 'Gudang Produksi',
-            'note' => 'Backend tahap berikut',
-            'status' => 'NEXT',
+            'note' => 'Backend Laravel Aktif',
+            'status' => ($stock['connected'] ?? false) ? 'LIVE' : 'OFFLINE',
             'color' => '#1778da',
-            'url' => '#module-stock',
-            'live' => false,
+            'url' => $stockUrl, // Tautan ke halaman dashboard barang
+            'live' => ($stock['connected'] ?? false),
         ],
         [
             'key' => 'archive',
@@ -783,12 +789,14 @@
                     >
                         <strong>Stock Opname Gudang</strong>
 
+                        <!-- Progress Bar Lebar Dinamis -->
                         <div class="cc-op-bar">
-                            <span style="--bar-color:#1778da;width:4%"></span>
+                            <span style="--bar-color:#1778da; width:{{ ($stock['total'] ?? 0) > 0 ? '100%' : '4%' }}"></span>
                         </div>
 
-                        <span class="cc-op-state">
-                            Menunggu Integrasi
+                        <!-- Status Label (Live / Menunggu Integrasi) -->
+                        <span class="cc-op-state {{ isset($stock['connected']) && $stock['connected'] ? 'live' : '' }}">
+                            {{ isset($stock['connected']) && $stock['connected'] ? ($stock['total'] ?? 0) . ' Data Ready' : 'Menunggu Integrasi' }}
                         </span>
                     </div>
 

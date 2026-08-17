@@ -1,14 +1,17 @@
 <?php
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\IfutsController;
+use App\Http\Controllers\Admin\McuFuInternalController;
 use App\Http\Controllers\ApdController;
 use App\Http\Controllers\AtrController;
 use App\Http\Controllers\AtrPicRosterController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BastAssetController;
 use App\Http\Controllers\BNNController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CoachingCounsellingController;
 use App\Http\Controllers\DatabaseUiController;
+use App\Http\Controllers\DriveFileController;
 use App\Http\Controllers\GoogleOAuthController;
 use App\Http\Controllers\ManpowerDashboardController;
 use App\Http\Controllers\McuFuController;
@@ -20,20 +23,15 @@ use App\Http\Controllers\SuratKeluarController;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule;
-use App\Http\Controllers\DriveFileController;
+use App\Http\Controllers\BarangController;
 
-
-
-Schedule::call(function(){
-
-app(
-\App\Http\Controllers\BNNController::class
-)
-->generateNotification();
-
-
+Schedule::call(function (): void {
+    app(BNNController::class)->generateNotification();
 })
-->dailyAt('00:05');
+    ->name('bnn.generate-notification')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('00:05')
+    ->withoutOverlapping();
 
 /*
 |--------------------------------------------------------------------------
@@ -52,43 +50,18 @@ Schedule::call(function (): void {
     ->withoutOverlapping();
 
 
-Route::middleware('auth')->group(function(){
-
-
-    Route::get(
-        '/notifications',
-        [
-            NotificationController::class,
-            'index'
-        ]
-    );
-
-
+Route::middleware('auth')->group(function (): void {
     Route::get(
         '/notifications/count',
-        [
-            NotificationController::class,
-            'unreadCount'
-        ]
+        [NotificationController::class, 'unreadCount']
     );
-
 
     Route::get(
-    '/database/files',
-    [DriveFileController::class, 'index']
-)->name('database.files');
-
-
-    Route::post(
-        '/notifications/read/{id}',
-        [
-            NotificationController::class,
-            'read'
-        ]
-    );
-
-
+        '/database/files',
+        [DriveFileController::class, 'index']
+    )->name('database.files');
 });
+
 
 /*
 |--------------------------------------------------------------------------
@@ -138,7 +111,6 @@ Route::get(
     '/google/oauth/callback',
     [GoogleOAuthController::class, 'callback']
 )->name('google.oauth.callback');
-
 
 
 /*
@@ -194,13 +166,13 @@ Route::post(
     '/operator/chatbot',
     [ChatbotController::class, 'chat']
 )->middleware('throttle:20,1')
-  ->name('operator.chatbot');
+    ->name('operator.chatbot');
 
 Route::post(
     '/operator/chatbot/reset',
     [ChatbotController::class, 'reset']
 )->middleware('throttle:20,1')
-  ->name('operator.chatbot.reset');
+    ->name('operator.chatbot.reset');
 
 /*
 |--------------------------------------------------------------------------
@@ -212,20 +184,44 @@ Route::middleware('auth')->group(function () {
 
 
     Route::prefix('manpower/bnn')
-    ->name('bnn.')
-    ->controller(\App\Http\Controllers\BNNController::class)
-    ->group(function (): void {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
+        ->name('bnn.')
+        ->controller(BNNController::class)
+        ->group(function (): void {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
 
-        Route::get('/dashboard', 'dashboard')->name('dashboard');
+            Route::post(
+                '/',
+                'store'
+            )->name('store');
 
-        Route::get('/monitoring', 'monitoring')->name('monitoring');
-        Route::post('/monitoring/refresh', 'refresh')->name('refresh');
-        Route::get('/monitoring/data', 'data')->name('data');
+            Route::get(
+                '/dashboard',
+                'dashboard'
+            )->name('dashboard');
 
-        Route::get('/cari/{nrp}', 'cariNRP')->name('cari');
-    });
+            Route::get(
+                '/monitoring',
+                'monitoring'
+            )->name('monitoring');
+
+            Route::post(
+                '/monitoring/refresh',
+                'refresh'
+            )->name('refresh');
+
+            Route::get(
+                '/monitoring/data',
+                'data'
+            )->name('data');
+
+            Route::get(
+                '/cari/{nrp}',
+                'cariNRP'
+            )->name('cari');
+        });
 
     /*
     |--------------------------------------------------------------------------
@@ -277,57 +273,6 @@ Route::middleware('auth')->group(function () {
         '/manpower/mine-permit/monitoring-mine-permit',
         '/manpower/mine-permit/dashboard'
     );
-
- /*
-|--------------------------------------------------------------------------
-| Test BNN
-|--------------------------------------------------------------------------
-*/
-
-Route::prefix('manpower/bnn')
-    ->name('bnn.')
-    ->controller(BNNController::class)
-    ->group(function () {
-
-
-        // Form Input BNN
-        Route::get(
-            '/',
-            'index'
-        )->name('index');
-
-
-        // Simpan Data BNN
-        Route::post(
-            '/',
-            'store'
-        )->name('store');
-
-
-        // Dashboard BNN
-        Route::get(
-            '/dashboard',
-            'dashboard'
-        )->name('dashboard');
-
-
-        // Monitoring BNN
-        Route::get(
-            '/monitoring',
-            'monitoring'
-        )->name('monitoring');
-
-
-        // Cari NRP Master Database
-        Route::get(
-            '/cari/{nrp}',
-            'cariNRP'
-        )->name('cari');
-
-
-    });
-
-
 
 
     /*
@@ -676,6 +621,145 @@ Route::prefix('database/employees')
         ->name('admin-all.suggestion.detail');
 
 
+
+
+    Route::prefix('manpower/barang')
+    ->name('barang.')
+    ->controller(BarangController::class)
+    ->middleware('auth')
+    ->group(function () {
+        // Halaman Utama & Form Publik
+        Route::get('/', 'index')->name('index');
+        Route::get('/public-config', 'getPublicConfig')->name('config');
+        Route::post('/pickup/store', 'storePickup')->name('pickup.store');
+
+        // Dashboard Admin & Statistik
+        Route::get('/dashboard-data', 'getDashboardData')->name('dashboard.data');
+        
+        // CRUD Riwayat Pengambilan oleh Admin
+        Route::post('/admin/transaction/store', 'addDashboardTransaction')->name('admin.transaction.store');
+        Route::put('/admin/transaction/{id}', 'updateDashboardTransaction')->name('admin.transaction.update');
+        Route::delete('/pickup/{id}', 'destroyPickup')->name('admin.transaction.destroy');
+        Route::get('/admin/photo/{id}', 'getPhotoData')->name('admin.photo');
+
+        // Kelola Master Barang
+        Route::get('/admin/items', 'getAllAdminItems')->name('admin.items');
+        Route::post('/admin/item/store', 'addAdminItem')->name('admin.item.store');
+        Route::put('/admin/item/{code}', 'editAdminItem')->name('admin.item.edit');
+    });
+
+    
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | IFUTS TICKETING — SYNRGYPRO V1.0 FINAL
+    |--------------------------------------------------------------------------
+    | Dashboard  : Read only dari Google Spreadsheet IFUTS General Affair.
+    | Monitoring : Read only + filter + pagination + akses Detail Ticket.
+    | Detail     : Read only + direct link ke row Spreadsheet GA.
+    | Input      : Redirect/link ke Spreadsheet resmi General Affair.
+    |
+    | Laravel tidak melakukan write ke Spreadsheet IFUTS GA pada V1.0.
+    | Struktur Spreadsheet GA tidak diubah oleh SYNRGYPRO.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('admin-all/ifuts')
+        ->name('admin-all.ifuts.')
+        ->controller(IfutsController::class)
+        ->middleware('can:admin-all.view')
+        ->group(function (): void {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            Route::get(
+                '/monitoring',
+                'monitoring'
+            )->name('monitoring');
+
+            Route::get(
+                '/ticket/{sheetRow}',
+                'detail'
+            )
+                ->whereNumber('sheetRow')
+                ->name('detail');
+
+            Route::get(
+                '/input',
+                'input'
+            )->name('input');
+
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCU & FU INTERNAL — SYNRGYPRO
+    |--------------------------------------------------------------------------
+    | Sumber data:
+    | Spreadsheet ID : 11uKwAXRyLCo0XjQ3_sWP7FwpsT0-Vg1Kp7oUGIP_yww
+    | GID            : 1456862017
+    | Sheet          : MCU&FU
+    |
+    | Area write website:
+    | D = EXP MCU
+    | F = JADWAL MCU
+    | H = HASIL MCU
+    | I = FOLLOW UP 1
+    | J = FOLLOW UP 2
+    | K = FOLLOW UP 3
+    | L = JADWAL FU
+    | M = STATUS FU
+    |
+    | Module MCU lama /manpower/mcu-fu tetap dipertahankan.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('admin-all/mcu-fu')
+        ->name('admin-all.mcu-fu.')
+        ->controller(McuFuInternalController::class)
+        ->middleware('can:admin-all.view')
+        ->group(function (): void {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            Route::get(
+                '/mcu',
+                'mcu'
+            )->name('mcu');
+
+            Route::put(
+                '/mcu/{sheetRow}',
+                'updateMcu'
+            )
+                ->whereNumber('sheetRow')
+                ->middleware('throttle:30,1')
+                ->name('mcu.update');
+
+            Route::get(
+                '/follow-up',
+                'followUp'
+            )->name('follow-up');
+
+            Route::put(
+                '/follow-up/{sheetRow}',
+                'updateFollowUp'
+            )
+                ->whereNumber('sheetRow')
+                ->middleware('throttle:30,1')
+                ->name('follow-up.update');
+
+            Route::get(
+                '/history',
+                'history'
+            )->name('history');
+        });
+
+
     /*
     |--------------------------------------------------------------------------
     | Profil Pengguna
@@ -712,7 +796,6 @@ Route::prefix('database/employees')
         '/bast-asset/store',
         [BastAssetController::class, 'store']
     )->name('bast.store');
-
 
 
     /*
@@ -940,25 +1023,20 @@ Route::prefix('database/employees')
     });
 
 
-
    /*
     |--------------------------------------------------------------------------
     | NOTIFIKASI — Menandai Notifikasi sebagai Dibaca
     |--------------------------------------------------------------------------
     */
-        Route::get(
+    Route::get(
         '/notifications',
-        [NotificationController::class,'index']
-        )
-        ->name('notifications');
+        [NotificationController::class, 'index']
+    )->name('notifications');
 
-
-        Route::post(
+    Route::post(
         '/notifications/read/{id}',
-        [NotificationController::class,'read']
-        )
-        ->name('notifications.read');
-
+        [NotificationController::class, 'read']
+    )->name('notifications.read');
 
 
     /*

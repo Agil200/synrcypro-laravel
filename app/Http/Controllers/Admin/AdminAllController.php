@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class AdminAllController extends Controller
@@ -66,6 +67,14 @@ class AdminAllController extends Controller
         ];
 
         try {
+            // --- TAMBAHAN MODULE STOCK OPNAME ---
+            $totalStock = DB::table('pengambilan_barang')->count();
+            $controlCenter['stock'] = [
+                'connected' => true,
+                'total' => $totalStock,
+            ];
+            // ------------------------------------
+
             $suggestionData =
                 $suggestionService->getData();
 
