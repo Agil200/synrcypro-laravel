@@ -60,22 +60,36 @@ class IfutsService
 
         /*
         |--------------------------------------------------------------------------
-        | Cache READ ONLY IFUTS
+        | RESILIENT CACHE — IFUTS READ ONLY
         |--------------------------------------------------------------------------
         |
-        | Filter/search dashboard tidak perlu memanggil Google Sheets lagi pada
-        | setiap klik. Default 120 detik, dapat diubah melalui:
+        | Tujuan:
+        | 1. Fresh cache membuat filter/dashboard tidak memanggil Google terus.
+        | 2. Last-success cache menjaga dashboard tetap tampil saat Google lambat.
+        | 3. Jika fresh cache habis tetapi last-success masih ada, user langsung
+        |    mendapat data terakhir. Refresh ke Google dilakukan AFTER RESPONSE.
         |
-        | config('admin_all.ifuts.cache_seconds')
+        | Tidak ada write ke Spreadsheet GA.
+        | Tidak mengubah struktur/mapping data IFUTS.
         |
-        | Ini tidak mengubah data Google Sheet dan tidak menyentuh Suggestion.
+        | Config opsional:
+        | admin_all.ifuts.cache_seconds       default 300 detik
+        | admin_all.ifuts.stale_cache_seconds default 86400 detik
         |
         */
         $cacheSeconds = max(
             0,
             (int) config(
                 'admin_all.ifuts.cache_seconds',
-                120
+                300
+            )
+        );
+
+        $staleCacheSeconds = max(
+            $cacheSeconds,
+            (int) config(
+                'admin_all.ifuts.stale_cache_seconds',
+                86400
             )
         );
 
@@ -95,7 +109,8 @@ class IfutsService
             $spreadsheetId,
             $sheetGid,
             $columns,
-            $cacheSeconds
+            $cacheSeconds,
+            $staleCacheSeconds
         ): array {
             $values = $this->googleSheets->getValuesBySheetId(
                 $spreadsheetId,
@@ -115,11 +130,14 @@ class IfutsService
                         'header_row' => null,
                         'column_map' => [],
                         'cache_seconds' => $cacheSeconds,
+                        'stale_cache_seconds' => $staleCacheSeconds,
                     ],
                 ];
             }
 
-            $headerIndex = $this->findHeaderRowIndex($values);
+            $headerIndex = $this->findHeaderRowIndex(
+                $values
+            );
 
             if ($headerIndex === null) {
                 throw new RuntimeException(
@@ -128,7 +146,9 @@ class IfutsService
                 );
             }
 
-            $headerRow = is_array($values[$headerIndex] ?? null)
+            $headerRow = is_array(
+                $values[$headerIndex] ?? null
+            )
                 ? $values[$headerIndex]
                 : [];
 
@@ -157,16 +177,36 @@ class IfutsService
                     'columns' => $columns,
                     'spreadsheet_url' => self::SPREADSHEET_URL,
                     'header_row' => $headerIndex + 1,
-                    'column_map' => $this->columnMapForDebug($columnMap),
+                    'column_map' => $this->columnMapForDebug(
+                        $columnMap
+                    ),
                     'cache_seconds' => $cacheSeconds,
+                    'stale_cache_seconds' => $staleCacheSeconds,
                 ],
             ];
         };
 
+        /*
+         * Cache dimatikan secara eksplisit:
+         * tetap gunakan perilaku live seperti sebelumnya.
+         */
         if ($cacheSeconds <= 0) {
-            return $loader();
+            return $this->withIfutsCacheMeta(
+                $loader(),
+                'LIVE',
+                false
+            );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Cache key
+        |--------------------------------------------------------------------------
+        |
+        | Key mapping tetap memakai versi flight-detail final.
+        | Last-success disimpan pada key terpisah.
+        |
+        */
         $cacheKey = implode(
             ':',
             [
@@ -179,11 +219,230 @@ class IfutsService
             ]
         );
 
-        return Cache::remember(
-            $cacheKey,
-            now()->addSeconds($cacheSeconds),
-            $loader
+        $lastSuccessKey =
+            $cacheKey.':last-success';
+
+        $refreshLockKey =
+            $cacheKey.':refresh-after-response';
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. FRESH CACHE
+        |--------------------------------------------------------------------------
+        |
+        | Jalur paling cepat. Tidak memanggil Google Sheets.
+        |
+        */
+        $fresh = Cache::get(
+            $cacheKey
         );
+
+        if (is_array($fresh)) {
+            return $this->withIfutsCacheMeta(
+                $fresh,
+                'FRESH_CACHE',
+                false
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. STALE-WHILE-REVALIDATE
+        |--------------------------------------------------------------------------
+        |
+        | Fresh cache sudah habis, tetapi snapshot terakhir masih tersedia.
+        |
+        | DATA LANGSUNG DIKEMBALIKAN KE USER.
+        | Google Sheets direfresh setelah response dikirim, sehingga user tidak
+        | perlu menunggu cURL timeout dan tidak perlu melakukan refresh manual.
+        |
+        */
+        $lastSuccess = Cache::get(
+            $lastSuccessKey
+        );
+
+        if (is_array($lastSuccess)) {
+            $this->refreshIfutsAfterResponse(
+                loader: $loader,
+                freshKey: $cacheKey,
+                lastSuccessKey: $lastSuccessKey,
+                refreshLockKey: $refreshLockKey,
+                freshSeconds: $cacheSeconds,
+                staleSeconds: $staleCacheSeconds
+            );
+
+            return $this->withIfutsCacheMeta(
+                $lastSuccess,
+                'LAST_SUCCESS_CACHE',
+                true
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. FIRST LOAD / CACHE BELUM PERNAH TERBENTUK
+        |--------------------------------------------------------------------------
+        |
+        | Hanya kondisi ini yang harus menunggu Google.
+        | Setelah satu load sukses, fresh + last-success langsung disimpan.
+        |
+        */
+        try {
+            $data = $loader();
+
+            return $this->storeIfutsSuccessfulCache(
+                data: $data,
+                freshKey: $cacheKey,
+                lastSuccessKey: $lastSuccessKey,
+                freshSeconds: $cacheSeconds,
+                staleSeconds: $staleCacheSeconds
+            );
+        } catch (Throwable $exception) {
+            /*
+             * Antisipasi race condition:
+             * bisa saja request lain baru saja berhasil mengisi last-success.
+             */
+            $fallback = Cache::get(
+                $lastSuccessKey
+            );
+
+            if (is_array($fallback)) {
+                report($exception);
+
+                return $this->withIfutsCacheMeta(
+                    $fallback,
+                    'LAST_SUCCESS_CACHE',
+                    true
+                );
+            }
+
+            throw $exception;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | IFUTS Cache Helpers
+    |--------------------------------------------------------------------------
+    */
+
+    private function storeIfutsSuccessfulCache(
+        array $data,
+        string $freshKey,
+        string $lastSuccessKey,
+        int $freshSeconds,
+        int $staleSeconds
+    ): array {
+        $data = $this->withIfutsCacheMeta(
+            $data,
+            'LIVE',
+            false
+        );
+
+        $data['source']['cached_at'] =
+            now()->toIso8601String();
+
+        Cache::put(
+            $freshKey,
+            $data,
+            now()->addSeconds(
+                $freshSeconds
+            )
+        );
+
+        Cache::put(
+            $lastSuccessKey,
+            $data,
+            now()->addSeconds(
+                $staleSeconds
+            )
+        );
+
+        return $data;
+    }
+
+    private function refreshIfutsAfterResponse(
+        callable $loader,
+        string $freshKey,
+        string $lastSuccessKey,
+        string $refreshLockKey,
+        int $freshSeconds,
+        int $staleSeconds
+    ): void {
+        /*
+         * Cegah beberapa request men-trigger refresh Google bersamaan.
+         * Jika lock sudah ada, cukup gunakan snapshot yang sama.
+         */
+        $shouldRefresh = Cache::add(
+            $refreshLockKey,
+            now()->timestamp,
+            now()->addSeconds(60)
+        );
+
+        if (!$shouldRefresh) {
+            return;
+        }
+
+        /*
+         * Laravel menjalankan callback terminating setelah response dikirim.
+         * User sudah melihat dashboard sebelum request Google background selesai.
+         */
+        app()->terminating(
+            function () use (
+                $loader,
+                $freshKey,
+                $lastSuccessKey,
+                $refreshLockKey,
+                $freshSeconds,
+                $staleSeconds
+            ): void {
+                try {
+                    $data = $loader();
+
+                    $this->storeIfutsSuccessfulCache(
+                        data: $data,
+                        freshKey: $freshKey,
+                        lastSuccessKey: $lastSuccessKey,
+                        freshSeconds: $freshSeconds,
+                        staleSeconds: $staleSeconds
+                    );
+                } catch (Throwable $exception) {
+                    /*
+                     * Google timeout / unavailable:
+                     * jangan hapus last-success cache.
+                     * Dashboard tetap punya snapshot yang valid.
+                     */
+                    report($exception);
+                } finally {
+                    Cache::forget(
+                        $refreshLockKey
+                    );
+                }
+            }
+        );
+    }
+
+    private function withIfutsCacheMeta(
+        array $data,
+        string $mode,
+        bool $fallback
+    ): array {
+        $source = is_array(
+            $data['source'] ?? null
+        )
+            ? $data['source']
+            : [];
+
+        $source['cache_mode'] =
+            $mode;
+
+        $source['is_fallback_cache'] =
+            $fallback;
+
+        $data['source'] =
+            $source;
+
+        return $data;
     }
 
     /*
