@@ -443,7 +443,10 @@ class BNNController extends Controller
         return $find($freshSnapshot['rows']);
     }
 
-    private function monitoringSnapshot(): array
+    /**
+     * Diubah menjadi public agar dapat dipanggil dari OperatorPortalController untuk pengecekan notifikasi BNN.
+     */
+    public function monitoringSnapshot(): array
     {
         $cachedRows = Cache::get(self::MONITORING_CACHE_KEY);
         $meta = Cache::get(self::MONITORING_META_KEY, []);

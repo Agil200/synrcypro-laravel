@@ -6,6 +6,7 @@ use App\Models\ApdRequest;
 use App\Models\CoachingCounselling;
 use App\Models\StSpRecord;
 use App\Services\EmployeeMasterService;
+use App\Services\McuFuInternalService;
 use App\Services\SafetyShoeService;
 use Carbon\Carbon;
 use DateTimeImmutable;
@@ -20,9 +21,6 @@ class OperatorPortalController extends Controller
     private const SESSION_KEY = 'operator_portal';
     private const SESSION_LIFETIME_MINUTES = 120;
 
-    /**
-     * Tombol SIGN IN AS GUEST diarahkan ke halaman verifikasi operator.
-     */
     public function begin(Request $request): RedirectResponse
     {
         $request->session()->forget(self::SESSION_KEY);
@@ -30,9 +28,6 @@ class OperatorPortalController extends Controller
         return redirect()->route('operator.access');
     }
 
-    /**
-     * Form NRP dan tanggal lahir sebelum data operator ditampilkan.
-     */
     public function accessForm(Request $request): View|RedirectResponse
     {
         if ($this->verifiedNrp($request) !== null) {
@@ -42,9 +37,6 @@ class OperatorPortalController extends Controller
         return view('operator.access');
     }
 
-    /**
-     * Memverifikasi operator terhadap MASTER_DATABASE Google Sheets.
-     */
     public function verify(
         Request $request,
         EmployeeMasterService $employeeMaster
@@ -113,10 +105,6 @@ class OperatorPortalController extends Controller
             )
             : null;
 
-        /*
-         * Pesan sengaja dibuat sama agar sistem tidak membocorkan apakah
-         * NRP atau tanggal lahir yang salah.
-         */
         if (
             ! is_array($employee)
             || $storedBirthDate === null
@@ -139,13 +127,12 @@ class OperatorPortalController extends Controller
         return redirect()->route('operator.dashboard');
     }
 
-    /**
-     * Dashboard pribadi operator. Seluruh data bersifat read-only.
-     */
     public function dashboard(
         Request $request,
         EmployeeMasterService $employeeMaster,
-        SafetyShoeService $safetyShoes
+        SafetyShoeService $safetyShoes,
+        McuFuInternalService $mcuFuService,
+        BNNController $bnnController
     ): View|RedirectResponse {
         $nrp = $this->verifiedNrp($request);
 
@@ -300,6 +287,69 @@ class OperatorPortalController extends Controller
             }
         }
 
+        /*
+         * Pengecekan Status Realtime MCU & Follow Up
+         */
+        $mcuReminder = null;
+        try {
+            $mcuRows = $mcuFuService->rows();
+            $mcuItem = collect($mcuRows)->first(function ($r) use ($nrp) {
+                return $this->normalizeNrp((string) ($r['nrp'] ?? '')) === $nrp;
+            });
+
+            if ($mcuItem) {
+                $statusFu = strtoupper(trim((string) ($mcuItem['status_fu'] ?? '')));
+                $hasilMcu = strtoupper(trim((string) ($mcuItem['hasil_mcu'] ?? '')));
+                $jadwalFu = trim((string) ($mcuItem['jadwal_fu'] ?? ''));
+                $expMcu = trim((string) ($mcuItem['exp_mcu'] ?? ''));
+
+                if ($statusFu !== 'COMPLETED' && $statusFu !== 'FIT TO WORK' && $hasilMcu !== 'FIT TO WORK') {
+                    $mcuReminder = [
+                        'active' => true,
+                        'hasil_mcu' => $mcuItem['hasil_mcu'] ?? '-',
+                        'follow_up_1' => $mcuItem['follow_up_1'] ?? null,
+                        'follow_up_2' => $mcuItem['follow_up_2'] ?? null,
+                        'follow_up_3' => $mcuItem['follow_up_3'] ?? null,
+                        'jadwal_fu' => $jadwalFu ?: null,
+                        'exp_mcu' => $expMcu ?: null,
+                        'status_fu' => $statusFu ?: 'MENUNGGU TINDAK LANJUT',
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        /*
+         * Pengecekan Status Realtime BNN / Follow Up BNN
+         */
+        $bnnReminder = null;
+        try {
+            // Memanggil langsung method public monitoringSnapshot dari BNNController
+            $bnnSnapshot = $bnnController->monitoringSnapshot();
+            $bnnRows = $bnnSnapshot['rows'] ?? [];
+
+            $bnnItem = collect($bnnRows)->first(function ($r) use ($nrp) {
+                return $this->normalizeNrp((string) ($r['nrp'] ?? '')) === $nrp;
+            });
+
+            if ($bnnItem) {
+                $statusTest = strtoupper(trim((string) ($bnnItem['status_test'] ?? '')));
+                $tglPemeriksaan = trim((string) ($bnnItem['tanggal_pemeriksaan'] ?? ''));
+
+                if ($statusTest !== 'SUDAH TEST' && $statusTest !== 'DONE' && $statusTest !== 'COMPLETED') {
+                    $bnnReminder = [
+                        'active' => true,
+                        'tanggal_pemeriksaan' => $tglPemeriksaan ?: null,
+                        'akomodasi' => $bnnItem['akomodasi'] ?? '-',
+                        'status_test' => $statusTest ?: 'BELUM TEST',
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            report($e);
+        }
+
         return view('operator.dashboard', [
             'employee' => $employee,
             'apdRequests' => $apdRequests,
@@ -308,6 +358,8 @@ class OperatorPortalController extends Controller
             'peringatanRecords' => $peringatanRecords,
             'summary' => $summary,
             'shoeEligibility' => $shoeEligibility,
+            'mcuReminder' => $mcuReminder,
+            'bnnReminder' => $bnnReminder,
             'snapshotStale' => (bool) data_get(
                 $snapshot,
                 'meta.is_stale',
@@ -316,9 +368,6 @@ class OperatorPortalController extends Controller
         ]);
     }
 
-    /**
-     * Keluar dari portal operator tanpa memengaruhi akun Google/admin.
-     */
     public function logout(Request $request): RedirectResponse
     {
         $request->session()->forget(self::SESSION_KEY);
@@ -381,9 +430,6 @@ class OperatorPortalController extends Controller
         );
     }
 
-    /**
-     * Mengubah input operator DDMMYYYY menjadi Y-m-d.
-     */
     private function normalizeBirthDateInput(string $value): ?string
     {
         $digits = preg_replace('/\D+/', '', $value) ?? '';
@@ -411,9 +457,6 @@ class OperatorPortalController extends Controller
         return $date->format('Y-m-d');
     }
 
-    /**
-     * Mengubah berbagai format tanggal dari Spreadsheet menjadi Y-m-d.
-     */
     private function normalizeBirthDate(mixed $value): ?string
     {
         $value = trim((string) $value);

@@ -228,6 +228,107 @@
             font-size: 12px;
             line-height: 1.45;
         }
+
+        /* Reminder Follow Up MCU */
+        .mcu-notification {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 14px;
+            padding: 16px 18px;
+            border: 1px solid #f87171;
+            border-radius: 13px;
+            color: #991b1b;
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            box-shadow: 0 8px 22px rgba(220, 38, 38, 0.08);
+        }
+        .mcu-notification-icon {
+            display: grid;
+            width: 46px;
+            height: 46px;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            font-size: 24px;
+        }
+        .mcu-notification-copy {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+        .mcu-notification-copy strong {
+            font-size: 15px;
+            line-height: 1.3;
+            color: #b91c1c;
+        }
+        .mcu-notification-copy span {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #7f1d1d;
+        }
+        .mcu-badge-status {
+            min-width: 120px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            text-align: center;
+            color: #fff;
+            background: #dc2626;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        /* Reminder Test BNN */
+        .bnn-notification {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 14px;
+            padding: 16px 18px;
+            border: 1px solid #38bdf8;
+            border-radius: 13px;
+            color: #0369a1;
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            box-shadow: 0 8px 22px rgba(2, 132, 199, 0.08);
+        }
+        .bnn-notification-icon {
+            display: grid;
+            width: 46px;
+            height: 46px;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            font-size: 24px;
+        }
+        .bnn-notification-copy {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+        .bnn-notification-copy strong {
+            font-size: 15px;
+            line-height: 1.3;
+            color: #0369a1;
+        }
+        .bnn-notification-copy span {
+            font-size: 12px;
+            line-height: 1.45;
+            color: #0c4a6e;
+        }
+        .bnn-badge-status {
+            min-width: 120px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            text-align: center;
+            color: #fff;
+            background: #0284c7;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
         .shoe-eligibility {
             display: grid;
             grid-template-columns: auto minmax(0, 1fr) auto;
@@ -419,12 +520,14 @@
         .badge.ready { color: #166534; background: #ecfdf3; }
         .badge.picked { color: #3730a3; background: #eeedff; }
         .empty { padding: 30px; color: #667085; text-align: center; }
+
         @media (max-width: 900px) {
             .profile { grid-template-columns: 1fr; }
             .profile-side { min-height: auto; }
             .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
+
         @media (max-width: 560px) {
             .profile-head h1 { font-size: 22px; }
             .info-grid, .stats { grid-template-columns: 1fr; }
@@ -434,6 +537,13 @@
                 padding: 13px 14px;
             }
             .birthday-notification-icon { font-size: 27px; }
+            .mcu-notification, .bnn-notification {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+            .mcu-badge-status, .bnn-badge-status {
+                grid-column: 1 / -1;
+                width: 100%;
+            }
             .shoe-eligibility {
                 grid-template-columns: auto minmax(0, 1fr);
             }
@@ -443,39 +553,32 @@
             }
         }
 
-
         /* =========================================================
            SYNRGY ASSISTANT
            ========================================================= */
-        
-      #synrgyChatButton {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 9998;
+        #synrgyChatButton {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 9998;
+            display: grid;
+            width: 60px;
+            height: 60px;
+            place-items: center;
+            border: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #172033, #b64d29);
+            box-shadow: 0 10px 28px rgba(15,23,42,.28);
+            cursor: pointer;
+        }
 
-    display: grid;
-    width: 60px;
-    height: 60px;
-    place-items: center;
-
-    border: 0;
-    border-radius: 50%;
-    overflow: hidden;
-
-    background: linear-gradient(135deg, #172033, #b64d29);
-    box-shadow: 0 10px 28px rgba(15,23,42,.28);
-
-    cursor: pointer;
-}
-
-
-#synrgyChatButton img {
-    width: 52px;
-    height: 52px;
-    object-fit: cover;
-    border-radius: 50%;
-}
+        #synrgyChatButton img {
+            width: 52px;
+            height: 52px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
 
         #synrgyChatButton:hover {
             transform: translateY(-2px);
@@ -521,41 +624,36 @@
             align-items: center;
             gap: 8px;
         }
-        
         .synrgy-chat-icon {
-    display:flex;
-    width:42px;
-    height:42px;
-    flex:0 0 42px;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    border-radius:50%;
-    background:transparent;
-}
+            display:flex;
+            width:42px;
+            height:42px;
+            flex:0 0 42px;
+            align-items:center;
+            justify-content:center;
+            overflow:hidden;
+            border-radius:50%;
+            background:transparent;
+        }
 
-.synrgy-chat-icon img {
-    width:42px;
-    height:42px;
-    object-fit:contain;
-}
+        .synrgy-chat-icon img {
+            width:42px;
+            height:42px;
+            object-fit:contain;
+        }
 
-
-
-        
-                .synrgy-chat-title strong {
+        .synrgy-chat-title strong {
             display:block;
             font-size:15px;
             line-height:1.1;
         }
-
        
         .synrgy-chat-title small {
-    display:block;
-    margin-top:3px;
-    font-size:9px;
-    line-height:1.1;
-}
+            display:block;
+            margin-top:3px;
+            font-size:9px;
+            line-height:1.1;
+        }
 
         .synrgy-chat-actions {
             display: flex;
@@ -705,25 +803,23 @@
             border-radius: 50%;
         }
 
-
-.mina-link{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    margin-top:8px;
-    padding:8px 12px;
-    border-radius:8px;
-    background:#eef6ff;
-    color:#0066ff!important;
-    border:1px solid #cfe2ff;
-    font-weight:700;
-    text-decoration:none;
-}
-.mina-link:hover{
-    opacity:.85;
-}
-
-</style>
+        .mina-link{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            margin-top:8px;
+            padding:8px 12px;
+            border-radius:8px;
+            background:#eef6ff;
+            color:#0066ff!important;
+            border:1px solid #cfe2ff;
+            font-weight:700;
+            text-decoration:none;
+        }
+        .mina-link:hover{
+            opacity:.85;
+        }
+    </style>
 </head>
 <body>
     <header class="topbar">
@@ -775,6 +871,63 @@
                         Semoga selalu diberikan kesehatan, keselamatan,
                         dan kesuksesan dalam bekerja.
                     </span>
+                </div>
+            </section>
+        @endif
+
+        {{-- Banner Reminder Follow Up MCU --}}
+        @if (!empty($mcuReminder) && ($mcuReminder['active'] ?? false))
+            <section class="mcu-notification" role="status" aria-live="polite">
+                <span class="mcu-notification-icon" aria-hidden="true">
+                    🩺
+                </span>
+                <div class="mcu-notification-copy">
+                    <strong>Pemberitahuan: Wajib Tindak Lanjut / Follow Up MCU</strong>
+                    <span>
+                        Hasil MCU: <b>{{ $mcuReminder['hasil_mcu'] }}</b>
+                        @if (!empty($mcuReminder['follow_up_1']))
+                            · Rujukan: <b>{{ $mcuReminder['follow_up_1'] }}</b>
+                        @endif
+                        @if (!empty($mcuReminder['jadwal_fu']))
+                            · Jadwal FU: <b>{{ $formatDate($mcuReminder['jadwal_fu']) }}</b>
+                        @elseif (!empty($mcuReminder['exp_mcu']))
+                            · Batas Exp MCU: <b>{{ $formatDate($mcuReminder['exp_mcu']) }}</b>
+                        @endif
+                    </span>
+                    <span style="font-size: 11px; margin-top: 2px;">
+                        Silakan segera kunjungi klinik / faskes rujukan untuk pemeriksaan follow up kesehatan Anda.
+                    </span>
+                </div>
+                <div class="mcu-badge-status">
+                    {{ $mcuReminder['status_fu'] }}
+                </div>
+            </section>
+        @endif
+
+        {{-- Banner Reminder Test BNN --}}
+        @if (!empty($bnnReminder) && ($bnnReminder['active'] ?? false))
+            <section class="bnn-notification" role="status" aria-live="polite">
+                <span class="bnn-notification-icon" aria-hidden="true">
+                    🧪
+                </span>
+                <div class="bnn-notification-copy">
+                    <strong>Pemberitahuan: Jadwal Pemeriksaan / Test BNN</strong>
+                    <span>
+                        @if (!empty($bnnReminder['tanggal_pemeriksaan']))
+                            Jadwal Test: <b>{{ $formatDate($bnnReminder['tanggal_pemeriksaan']) }}</b>
+                        @else
+                            Jadwal Test: <b>Belum ditentukan / Segera dikonfirmasi</b>
+                        @endif
+                        @if (!empty($bnnReminder['akomodasi']))
+                            · Akomodasi: <b>{{ $bnnReminder['akomodasi'] }}</b>
+                        @endif
+                    </span>
+                    <span style="font-size: 11px; margin-top: 2px;">
+                        Harap hadir sesuai jadwal pemeriksaan BNN yang telah ditentukan oleh perusahaan.
+                    </span>
+                </div>
+                <div class="bnn-badge-status">
+                    {{ $bnnReminder['status_test'] }}
                 </div>
             </section>
         @endif
@@ -844,7 +997,7 @@
                             alt="Foto {{ $employee['nama'] ?? 'operator' }}"
                             referrerpolicy="no-referrer"
                             onerror="this.remove(); this.parentElement.textContent='{{ $initials ?: 'OP' }}';"
-                        >
+                        />
                     @else
                         {{ $initials ?: 'OP' }}
                     @endif
@@ -990,23 +1143,22 @@
         @endforeach
     </main>
 
-
     <!-- =====================================================
          SYNRGY ASSISTANT
          ===================================================== -->
     <button
-    id="synrgyChatButton"
-    type="button"
-    title="Buka MINA Assistant"
-    aria-label="Buka MINA Assistant"
-    aria-controls="synrgyChatPanel"
-    aria-expanded="false"
->
-    <img 
-        src="{{ asset('assets/images/chatminers-logo.png') }}" 
-        alt="MINA Logo"
+        id="synrgyChatButton"
+        type="button"
+        title="Buka MINA Assistant"
+        aria-label="Buka MINA Assistant"
+        aria-controls="synrgyChatPanel"
+        aria-expanded="false"
     >
-</button>
+        <img 
+            src="{{ asset('assets/images/chatminers-logo.png') }}" 
+            alt="MINA Logo"
+        >
+    </button>
 
     <section
         id="synrgyChatPanel"
@@ -1017,10 +1169,9 @@
         <header class="synrgy-chat-header">
             <div class="synrgy-chat-title">
                 <div class="synrgy-chat-icon">
-        <img src="{{ asset('assets/images/chatminers-logo.png') }}" 
-         alt="MINA Logo">
-            </div>    
-
+                    <img src="{{ asset('assets/images/chatminers-logo.png') }}" alt="MINA Logo">
+                </div>    
+                <div>
                     <strong>MINA</strong>
                     <small>Mining Intelligence Assistant<br>Powered by SYNRGYPRO PPA SITE BA</small>
                 </div>
@@ -1100,130 +1251,100 @@ Silakan tanyakan kebutuhan Anda.</div>
                 setPanel(false);
             });
 
-           
-function addMessage(text, type) {
+            function addMessage(text, type) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'synrgy-chat-message ' + type;
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'synrgy-chat-message ' + type;
+                const bubble = document.createElement('div');
+                bubble.className = 'synrgy-chat-bubble';
 
-    const bubble = document.createElement('div');
-    bubble.className = 'synrgy-chat-bubble';
+                let safeText = String(text ?? '');
 
+                safeText = safeText
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
 
-    let safeText = String(text ?? '');
+                safeText = safeText.replace(
+                    /(https?:\/\/[^\s<]+)/g,
+                    function(url) {
+                        const cleanUrl = url.replace(/&amp;/g, "&");
+                        let label = cleanUrl;
 
+                        if (cleanUrl.includes('whatsapp.com')) {
+                            label = 'Buka WhatsApp';
+                        } else if (cleanUrl.includes('play.google.com')) {
+                            label = 'Download Google Play';
+                        } else if (cleanUrl.includes('testflight.apple.com')) {
+                            label = 'Buka TestFlight iOS';
+                        } else if (cleanUrl.includes('docs.google.com/forms')) {
+                            label = 'Buka Form Online';
+                        } else if (cleanUrl.includes('drive.google.com')) {
+                            label = 'Buka Google Drive';
+                        }
 
-    // Escape HTML untuk keamanan
-    safeText = safeText
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+                        return `
+                            <div style="margin-top:8px;">
+                                <a href="${cleanUrl}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   style="
+                                     display:inline-flex;
+                                     align-items:center;
+                                     gap:6px;
+                                     padding:7px 12px;
+                                     border-radius:8px;
+                                     background:#eef6ff;
+                                     color:#0066ff;
+                                     font-weight:700;
+                                     text-decoration:none;
+                                     border:1px solid #cfe2ff;
+                                     word-break:break-word;
+                                   ">
+                                   🔗 ${label}
+                                </a>
+                            </div>
+                        `;
+                    }
+                );
 
+                safeText = safeText.replace(/\n/g, "<br>");
+                bubble.innerHTML = safeText;
+                wrapper.appendChild(bubble);
+                messages.appendChild(wrapper);
+                messages.scrollTop = messages.scrollHeight;
 
-    // Deteksi URL dan ubah menjadi link aktif
-    safeText = safeText.replace(
-        /(https?:\/\/[^\s<]+)/g,
-        function(url) {
-
-            const cleanUrl = url.replace(/&amp;/g, "&");
-
-            let label = cleanUrl;
-
-            if (cleanUrl.includes('whatsapp.com')) {
-                label = 'Buka WhatsApp';
-            } else if (cleanUrl.includes('play.google.com')) {
-                label = 'Download Google Play';
-            } else if (cleanUrl.includes('testflight.apple.com')) {
-                label = 'Buka TestFlight iOS';
-            } else if (cleanUrl.includes('docs.google.com/forms')) {
-                label = 'Buka Form Online';
-            } else if (cleanUrl.includes('drive.google.com')) {
-                label = 'Buka Google Drive';
+                return wrapper;
             }
 
-            return `
-                <div style="margin-top:8px;">
-                    <a href="${cleanUrl}"
-                       target="_blank"
-                       rel="noopener noreferrer"
-                       style="
-                         display:inline-flex;
-                         align-items:center;
-                         gap:6px;
-                         padding:7px 12px;
-                         border-radius:8px;
-                         background:#eef6ff;
-                         color:#0066ff;
-                         font-weight:700;
-                         text-decoration:none;
-                         border:1px solid #cfe2ff;
-                         word-break:break-word;
-                       ">
-                       🔗 ${label}
-                    </a>
-                </div>
-            `;
-        }
-    );
+            function appendLinks(messageWrapper, links = []) {
+                if (!messageWrapper || !Array.isArray(links)) {
+                    return;
+                }
 
+                const bubble = messageWrapper.querySelector('.synrgy-chat-bubble');
 
-    // Pertahankan enter
-    safeText = safeText.replace(/\n/g, "<br>");
+                links.forEach(function (link) {
+                    try {
+                        const url = new URL(String(link.url || ''));
 
+                        if (!['http:', 'https:'].includes(url.protocol)) {
+                            return;
+                        }
 
-    bubble.innerHTML = safeText;
+                        const anchor = document.createElement('a');
+                        anchor.href = url.href;
+                        anchor.target = '_blank';
+                        anchor.rel = 'noopener noreferrer';
+                        anchor.className = 'mina-link';
+                        anchor.textContent = '🔗 ' + (link.label || 'Buka Link Resmi');
 
-    wrapper.appendChild(bubble);
-    messages.appendChild(wrapper);
-
-    messages.scrollTop = messages.scrollHeight;
-
-    return wrapper;
-}
-
-
-function appendLinks(messageWrapper, links = []) {
-    if (!messageWrapper || !Array.isArray(links)) {
-        return;
-    }
-
-    const bubble = messageWrapper.querySelector('.synrgy-chat-bubble');
-
-    links.forEach(function (link) {
-        try {
-            const url = new URL(String(link.url || ''));
-
-            if (!['http:', 'https:'].includes(url.protocol)) {
-                return;
+                        bubble.appendChild(anchor);
+                    } catch (error) {
+                        console.warn('URL chatbot tidak valid:', link.url);
+                    }
+                });
             }
-
-            const anchor = document.createElement('a');
-            anchor.href = url.href;
-            anchor.target = '_blank';
-            anchor.rel = 'noopener noreferrer';
-            anchor.className = 'mina-link';
-            anchor.textContent = '🔗 ' + (link.label || 'Buka Link Resmi');
-
-            bubble.appendChild(anchor);
-        } catch (error) {
-            console.warn('URL chatbot tidak valid:', link.url);
-        }
-    });
-}
-
-async function parseJsonResponse(response) {
-    const contentType = response.headers.get('content-type') || '';
-
-    if (!contentType.includes('application/json')) {
-        throw new Error(
-            'Server tidak mengembalikan JSON. HTTP ' + response.status
-        );
-    }
-
-    return response.json();
-}
-
-
 
             async function parseJsonResponse(response) {
                 const contentType = response.headers.get('content-type') || '';
@@ -1310,6 +1431,5 @@ async function parseJsonResponse(response) {
             });
         });
     </script>
-
 </body>
 </html>
