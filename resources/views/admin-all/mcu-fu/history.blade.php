@@ -203,6 +203,13 @@
                 >
                     UPDATE FOLLOW UP
                 </option>
+
+                <option
+                    value="MCU_FU_UPDATE"
+                    @selected(request('action') === 'MCU_FU_UPDATE')
+                >
+                    UPDATE MCU & FOLLOW UP
+                </option>
             </select>
 
             <button
@@ -247,26 +254,57 @@
                             $before = $history->before_data ?? [];
                             $after = $history->after_data ?? [];
 
-                            $fields = $history->action === 'MCU_UPDATE'
-                                ? [
-                                    'exp_mcu' => 'EXP MCU',
-                                    'jadwal_mcu' => 'JADWAL MCU',
-                                    'hasil_mcu' => 'HASIL MCU',
-                                ]
-                                : [
-                                    'follow_up_1' => 'FOLLOW UP 1',
-                                    'follow_up_2' => 'FOLLOW UP 2',
-                                    'follow_up_3' => 'FOLLOW UP 3',
-                                    'jadwal_fu' => 'JADWAL FU',
-                                    'status_fu' => 'STATUS FU',
-                                ];
+                            $storedChanges = is_array(
+                                $after['_changes'] ?? null
+                            )
+                                ? $after['_changes']
+                                : [];
 
-                            $changes = collect($fields)
-                                ->filter(
-                                    fn ($label, $field) =>
-                                        (string) ($before[$field] ?? '') !==
-                                        (string) ($after[$field] ?? '')
-                                );
+                            if ($storedChanges !== []) {
+                                $changes = collect($storedChanges);
+                            } else {
+                                $fields = match ($history->action) {
+                                    'MCU_UPDATE' => [
+                                        'exp_mcu' => 'EXP MCU',
+                                        'jadwal_mcu' => 'JADWAL MCU',
+                                        'hasil_mcu' => 'HASIL MCU',
+                                    ],
+
+                                    'FOLLOW_UP_UPDATE' => [
+                                        'follow_up_1' => 'FOLLOW UP 1',
+                                        'follow_up_2' => 'FOLLOW UP 2',
+                                        'follow_up_3' => 'FOLLOW UP 3',
+                                        'jadwal_fu' => 'JADWAL FU',
+                                        'status_fu' => 'STATUS FU',
+                                    ],
+
+                                    default => [
+                                        'exp_mcu' => 'EXP MCU',
+                                        'jadwal_mcu' => 'JADWAL MCU',
+                                        'hasil_mcu' => 'HASIL MCU',
+                                        'follow_up_1' => 'FOLLOW UP 1',
+                                        'follow_up_2' => 'FOLLOW UP 2',
+                                        'follow_up_3' => 'FOLLOW UP 3',
+                                        'jadwal_fu' => 'JADWAL FU',
+                                        'status_fu' => 'STATUS FU',
+                                        'expired_sim_dlt' => 'EXP SIM/SIB DLT',
+                                    ],
+                                };
+
+                                $changes = collect($fields)
+                                    ->filter(
+                                        fn ($label, $field) =>
+                                            (string) ($before[$field] ?? '') !==
+                                            (string) ($after[$field] ?? '')
+                                    )
+                                    ->map(
+                                        fn ($label, $field) => [
+                                            'label' => $label,
+                                            'before' => $before[$field] ?? '',
+                                            'after' => $after[$field] ?? '',
+                                        ]
+                                    );
+                            }
                         @endphp
 
                         <tr>
@@ -280,7 +318,11 @@
                                 <span
                                     class="mfi-badge {{ $history->action === 'FOLLOW_UP_UPDATE' ? 'fu' : '' }}"
                                 >
-                                    {{ $history->action === 'MCU_UPDATE' ? 'UPDATE MCU' : 'UPDATE FOLLOW UP' }}
+                                    {{ match ($history->action) {
+        'MCU_UPDATE' => 'UPDATE MCU',
+        'FOLLOW_UP_UPDATE' => 'UPDATE FOLLOW UP',
+        default => 'UPDATE MCU & FOLLOW UP',
+    } }}
                                 </span>
                             </td>
 
@@ -297,13 +339,15 @@
 
                             <td>
                                 <div class="mfi-change">
-                                    @forelse ($changes as $field => $label)
+                                    @forelse ($changes as $field => $change)
                                         <div class="mfi-change-row">
-                                            <strong>{{ $label }}</strong>
+                                            <strong>
+                                                {{ is_array($change) ? ($change['label'] ?? $field) : $change }}
+                                            </strong>
                                             <span>
-                                                {{ $before[$field] ?? '-' }}
+                                                {{ is_array($change) ? (($change['before'] ?? '') !== '' ? $change['before'] : '-') : ($before[$field] ?? '-') }}
                                                 →
-                                                {{ $after[$field] ?? '-' }}
+                                                {{ is_array($change) ? (($change['after'] ?? '') !== '' ? $change['after'] : '-') : ($after[$field] ?? '-') }}
                                             </span>
                                         </div>
                                     @empty

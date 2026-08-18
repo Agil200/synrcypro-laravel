@@ -225,6 +225,11 @@
         background: #fff;
     }
 
+    .aa-submenu-link.active {
+        box-shadow: inset 3px 0 0 var(--aa-red);
+        font-weight: 900;
+    }
+
     .aa-submenu-link.active .aa-submenu-mini-icon {
         color: var(--aa-red);
     }
@@ -713,12 +718,12 @@
                 ? route('admin-all.mcu-fu.index')
                 : '#';
 
-            $mcuFuInternalMcuUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.mcu')
-                ? route('admin-all.mcu-fu.mcu')
+            $mcuFuInternalUpdateUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.update')
+                ? route('admin-all.mcu-fu.update')
                 : '#';
 
-            $mcuFuInternalFollowUpUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.follow-up')
-                ? route('admin-all.mcu-fu.follow-up')
+            $mcuFuInternalPriorityUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.priority')
+                ? route('admin-all.mcu-fu.priority')
                 : '#';
 
             $mcuFuInternalHistoryUrl = \Illuminate\Support\Facades\Route::has('admin-all.mcu-fu.history')
@@ -836,8 +841,7 @@
                             'icon' => 'edit',
                             'label' => 'Input Ticket',
                             'url' => $ifutsInputUrl,
-                            'active' => request()->routeIs('admin-all.ifuts.input')
-                                || request()->routeIs('admin-all.ifuts.input.validate'),
+                            'active' => request()->routeIs('admin-all.ifuts.input'),
                         ],
                     ],
                 ],
@@ -853,24 +857,20 @@
                             'active' => request()->routeIs('admin-all.mcu-fu.index'),
                         ],
                         [
-                            'icon' => 'calendar',
-                            'label' => 'Input / Update MCU',
-                            'url' => $mcuFuInternalMcuUrl,
-                            'active' => request()->routeIs('admin-all.mcu-fu.mcu')
-                                || request()->routeIs('admin-all.mcu-fu.mcu.update'),
-                        ],
-                        [
-                            'icon' => 'repeat',
-                            'label' => 'Input Follow Up',
-                            'url' => $mcuFuInternalFollowUpUrl,
-                            'active' => request()->routeIs('admin-all.mcu-fu.follow-up')
+                            'icon' => 'edit',
+                            'label' => 'Update MCU & Follow Up',
+                            'url' => $mcuFuInternalUpdateUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.update*')
+                                || request()->routeIs('admin-all.mcu-fu.mcu')
+                                || request()->routeIs('admin-all.mcu-fu.mcu.update')
+                                || request()->routeIs('admin-all.mcu-fu.follow-up')
                                 || request()->routeIs('admin-all.mcu-fu.follow-up.update'),
                         ],
                         [
-                            'icon' => 'history',
-                            'label' => 'Riwayat Update',
-                            'url' => $mcuFuInternalHistoryUrl,
-                            'active' => request()->routeIs('admin-all.mcu-fu.history'),
+                            'icon' => 'calendar',
+                            'label' => 'Prioritas & Reminder',
+                            'url' => $mcuFuInternalPriorityUrl,
+                            'active' => request()->routeIs('admin-all.mcu-fu.priority*'),
                         ],
                     ],
                 ],

@@ -102,11 +102,94 @@ class McuFuInternalController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | Input / Update MCU
+    | Prioritas & Reminder
     |--------------------------------------------------------------------------
     */
 
-    public function mcu(Request $request): View
+    public function priority(
+        Request $request
+    ): View {
+        $error = null;
+
+        try {
+            $priority = $this->mcuFu->priorityData(
+                [
+                    'type' => $request->query(
+                        'type',
+                        'all'
+                    ),
+                    'bucket' => $request->query(
+                        'bucket'
+                    ),
+                    'search' => $request->query(
+                        'q'
+                    ),
+                ]
+            );
+        } catch (Throwable $e) {
+            report($e);
+
+            $priority = [
+                'tasks' => [],
+                'summary' => [
+                    'total' => 0,
+                    'urgent' => 0,
+                    'expired' => 0,
+                    'overdue_fu' => 0,
+                    'h7' => 0,
+                    'h14' => 0,
+                    'h30' => 0,
+                    'h40' => 0,
+                    'pending_fu' => 0,
+                ],
+                'filters' => [
+                    'type' => 'all',
+                    'bucket' => '',
+                    'search' => null,
+                ],
+            ];
+
+            $error = $e->getMessage();
+        }
+
+        $requestedPerPage = (int) $request->query(
+            'per_page',
+            20
+        );
+
+        $perPage = in_array(
+            $requestedPerPage,
+            [20, 50, 100],
+            true
+        )
+            ? $requestedPerPage
+            : 20;
+
+        $data = $this->paginateArray(
+            $priority['tasks'],
+            $request,
+            $perPage
+        );
+
+        return view(
+            'admin-all.mcu-fu.priority',
+            [
+                'data' => $data,
+                'summary' => $priority['summary'],
+                'filters' => $priority['filters'],
+                'perPage' => $perPage,
+                'error' => $error,
+            ]
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unified Update MCU & Follow Up
+    |--------------------------------------------------------------------------
+    */
+
+    public function update(Request $request): View
     {
         $error = null;
         $rows = [];
@@ -118,32 +201,245 @@ class McuFuInternalController extends Controller
 
         try {
             $rows = $this->mcuFu->rows();
+
             $options = $this->mcuFu->options(
                 $rows
             );
         } catch (Throwable $e) {
             report($e);
+
             $error = $e->getMessage();
         }
 
-        $filtered = $this->filterRows(
+        $filterData = $this->mcuFu->updatePageData(
             $rows,
-            $request
+            [
+                'date_type' => $request->query(
+                    'date_type',
+                    'jadwal_mcu'
+                ),
+
+                'year' => $request->query(
+                    'year',
+                    now()->year
+                ),
+
+                'month' => $request->query(
+                    'month'
+                ),
+
+                'search' => $request->query(
+                    'q'
+                ),
+
+                'simper_exp' => $request->query(
+                    'simper_exp'
+                ),
+
+                /*
+                 * Drill-down Dashboard.
+                 */
+                'hasil_mcu' => $request->query(
+                    'hasil_mcu'
+                ),
+                'status_mcu' => $request->query(
+                    'status_mcu'
+                ),
+                'status_fu' => $request->query(
+                    'status_fu'
+                ),
+                'jabatan' => $request->query(
+                    'jabatan'
+                ),
+                'fu_stage' => $request->query(
+                    'fu_stage'
+                ),
+                'follow_up_value' => $request->query(
+                    'follow_up_value'
+                ),
+            ]
         );
 
+        $requestedPerPage = (int) $request->query(
+            'per_page',
+            20
+        );
+
+        $perPage = in_array(
+            $requestedPerPage,
+            [20, 50, 100],
+            true
+        )
+            ? $requestedPerPage
+            : 20;
+
         $data = $this->paginateArray(
-            $filtered,
+            $filterData['rows'],
             $request,
-            30
+            $perPage
         );
 
         return view(
-            'admin-all.mcu-fu.mcu',
-            compact(
-                'data',
-                'options',
-                'error'
+            'admin-all.mcu-fu.update',
+            [
+                'data' => $data,
+                'options' => $options,
+                'years' => $filterData['years'],
+                'filters' => $filterData['filters'],
+                'perPage' => $perPage,
+                'error' => $error,
+            ]
+        );
+    }
+
+    public function saveUpdate(
+        Request $request,
+        int $sheetRow
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'exp_mcu' => [
+                'nullable',
+                'date',
+            ],
+            'jadwal_mcu' => [
+                'nullable',
+                'date',
+            ],
+            'hasil_mcu' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'follow_up_1' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'follow_up_2' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'follow_up_3' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'jadwal_fu' => [
+                'nullable',
+                'date',
+            ],
+            'status_fu' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+            'manual_expired_sim_dlt' => [
+                'nullable',
+                'date',
+            ],
+            'manual_simper_note' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+        ]);
+
+        /*
+         * Preserve filter/search/page setelah save.
+         */
+        $returnQuery = collect(
+            [
+                'date_type' => $request->input('_return_date_type'),
+                'year' => $request->input('_return_year'),
+                'month' => $request->input('_return_month'),
+                'simper_exp' => $request->input('_return_simper_exp'),
+                'q' => $request->input('_return_q'),
+                'hasil_mcu' => $request->input('_return_hasil_mcu'),
+                'status_mcu' => $request->input('_return_status_mcu'),
+                'status_fu' => $request->input('_return_status_fu'),
+                'jabatan' => $request->input('_return_jabatan'),
+                'fu_stage' => $request->input('_return_fu_stage'),
+                'follow_up_value' => $request->input('_return_follow_up_value'),
+                'page' => $request->input('_return_page'),
+                'per_page' => $request->input('_return_per_page'),
+            ]
+        )
+            ->reject(
+                fn ($value) =>
+                    $value === null ||
+                    $value === ''
             )
+            ->all();
+
+        try {
+            $user = Auth::user();
+
+            $change = $this->mcuFu->updateUnified(
+                $sheetRow,
+                $validated,
+                $user?->name,
+                $user?->email
+            );
+
+            if (
+                (int) ($change['change_count'] ?? 0) <= 0
+            ) {
+                return redirect()
+                    ->route(
+                        'admin-all.mcu-fu.update',
+                        $returnQuery
+                    )
+                    ->with(
+                        'success',
+                        'Tidak ada perubahan data untuk disimpan.'
+                    );
+            }
+
+            $this->storeHistory(
+                'MCU_FU_UPDATE',
+                $change
+            );
+
+            return redirect()
+                ->route(
+                    'admin-all.mcu-fu.update',
+                    $returnQuery
+                )
+                ->with(
+                    'success',
+                    sprintf(
+                        '%d perubahan berhasil disimpan.',
+                        (int) $change['change_count']
+                    )
+                );
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route(
+                    'admin-all.mcu-fu.update',
+                    $returnQuery
+                )
+                ->withInput()
+                ->with(
+                    'error',
+                    $e->getMessage()
+                );
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Input / Update MCU
+    |--------------------------------------------------------------------------
+    */
+
+    public function mcu(Request $request): RedirectResponse
+    {
+        return redirect()->route(
+            'admin-all.mcu-fu.update',
+            $request->query()
         );
     }
 
@@ -200,66 +496,17 @@ class McuFuInternalController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function followUp(Request $request): View
+    public function followUp(Request $request): RedirectResponse
     {
-        $error = null;
-        $rows = [];
-        $options = [
-            'hasil_mcu' => [],
-            'follow_up' => [],
-            'status_fu' => [],
-        ];
+        $query = $request->query();
 
-        try {
-            $rows = $this->mcuFu->rows();
-            $options = $this->mcuFu->options(
-                $rows
-            );
-        } catch (Throwable $e) {
-            report($e);
-            $error = $e->getMessage();
-        }
+        $query['date_type'] =
+            $query['date_type']
+            ?? 'follow_up';
 
-        /*
-         * Halaman Follow Up hanya berisi orang yang memang terkait FU.
-         */
-        $rows = collect($rows)
-            ->filter(function (array $row): bool {
-                $hasilMcu = strtoupper(
-                    trim(
-                        (string) ($row['hasil_mcu'] ?? '')
-                    )
-                );
-
-                return
-                    str_contains($hasilMcu, 'FOLLOW UP') ||
-                    trim((string) ($row['follow_up_1'] ?? '')) !== '' ||
-                    trim((string) ($row['follow_up_2'] ?? '')) !== '' ||
-                    trim((string) ($row['follow_up_3'] ?? '')) !== '' ||
-                    trim((string) ($row['jadwal_fu'] ?? '')) !== '' ||
-                    trim((string) ($row['status_fu'] ?? '')) !== '';
-            })
-            ->values()
-            ->all();
-
-        $filtered = $this->filterRows(
-            $rows,
-            $request
-        );
-
-        $data = $this->paginateArray(
-            $filtered,
-            $request,
-            30
-        );
-
-        return view(
-            'admin-all.mcu-fu.follow-up',
-            compact(
-                'data',
-                'options',
-                'error'
-            )
+        return redirect()->route(
+            'admin-all.mcu-fu.update',
+            $query
         );
     }
 
@@ -366,6 +613,7 @@ class McuFuInternalController extends Controller
                 [
                     'MCU_UPDATE',
                     'FOLLOW_UP_UPDATE',
+                    'MCU_FU_UPDATE',
                 ],
                 true
             )
@@ -718,6 +966,10 @@ class McuFuInternalController extends Controller
             : [];
 
         $user = Auth::user();
+
+        if (isset($change['changes']) && is_array($change['changes'])) {
+            $after['_changes'] = $change['changes'];
+        }
 
         McuFuInternalHistory::create([
             'sheet_row' => (int) (

@@ -730,10 +730,29 @@ Route::prefix('admin-all/stock-opname')
         ->controller(McuFuInternalController::class)
         ->middleware('can:admin-all.view')
         ->group(function (): void {
+
+    
+    Route::get(
+        '/priority',
+        'priority'
+    )->name('priority');
+        
             Route::get(
                 '/',
                 'index'
             )->name('index');
+        Route::get(
+        '/update',
+        'update'
+    )->name('update');
+
+    Route::put(
+        '/update/{sheetRow}',
+        'saveUpdate'
+    )
+        ->whereNumber('sheetRow')
+        ->middleware('throttle:30,1')
+        ->name('update.save');
 
             Route::get(
                 '/mcu',

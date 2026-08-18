@@ -147,6 +147,7 @@
         white-space: nowrap;
     }
 
+
     .mfi-filter-info strong {
         display: block;
         margin-bottom: 2px;
@@ -841,7 +842,7 @@
             'value' => $summary['total_data'],
             'note' => 'Data sesuai filter',
             'color' => '#173b63',
-            'url' => $dataUrl('admin-all.mcu-fu.mcu'),
+            'url' => $dataUrl('admin-all.mcu-fu.update'),
         ],
         [
             'label' => 'MCU Done',
@@ -849,7 +850,7 @@
             'note' => 'Status MCU DONE',
             'color' => '#1f9d66',
             'url' => $dataUrl(
-                'admin-all.mcu-fu.mcu',
+                'admin-all.mcu-fu.update',
                 ['status_mcu' => 'DONE']
             ),
         ],
@@ -859,7 +860,7 @@
             'note' => 'Lihat data FIT TO WORK',
             'color' => '#1976d2',
             'url' => $dataUrl(
-                'admin-all.mcu-fu.mcu',
+                'admin-all.mcu-fu.update',
                 ['hasil_mcu' => 'FIT TO WORK']
             ),
         ],
@@ -869,7 +870,7 @@
             'note' => 'Lihat data FOLLOW UP',
             'color' => '#e18a17',
             'url' => $dataUrl(
-                'admin-all.mcu-fu.follow-up',
+                'admin-all.mcu-fu.update',
                 ['hasil_mcu' => 'FOLLOW UP']
             ),
         ],
@@ -879,7 +880,7 @@
             'note' => 'Lihat data Follow Up',
             'color' => '#8b5cf6',
             'url' => $dataUrl(
-                'admin-all.mcu-fu.follow-up'
+                'admin-all.mcu-fu.update'
             ),
         ],
         [
@@ -888,7 +889,7 @@
             'note' => 'Lihat COMPLETED',
             'color' => '#0f8f83',
             'url' => $dataUrl(
-                'admin-all.mcu-fu.follow-up',
+                'admin-all.mcu-fu.update',
                 ['status_fu' => 'COMPLETED']
             ),
         ],
@@ -907,17 +908,17 @@
 
         <div class="mfi-title-actions">
             <a
-                href="{{ route('admin-all.mcu-fu.mcu') }}"
+                href="{{ route('admin-all.mcu-fu.update') }}"
                 class="mfi-action primary"
             >
-                INPUT / UPDATE MCU
+                UPDATE MCU & FOLLOW UP
             </a>
 
             <a
-                href="{{ route('admin-all.mcu-fu.follow-up') }}"
+                href="{{ route('admin-all.mcu-fu.priority') }}"
                 class="mfi-action"
             >
-                INPUT FOLLOW UP
+                PRIORITAS & REMINDER
             </a>
 
             <a
@@ -1017,30 +1018,6 @@
                 RESET
             </a>
         </form>
-
-        <div class="mfi-filter-info">
-            <strong>
-                Acuan filter: {{ $filters['date_field'] }}
-            </strong>
-
-            Tahun
-            {{ $filters['year'] ?? 'Semua' }}
-
-            @if ($filters['month'])
-                · {{ $monthNames[$filters['month']] ?? '' }}
-            @else
-                · Semua Bulan
-            @endif
-
-            @if (!empty($filters['jabatan']))
-                · {{ $filters['jabatan'] }}
-            @else
-                · Semua Jabatan
-            @endif
-
-            · {{ number_format($summary['total_data']) }}
-            dari {{ number_format($filters['total_all']) }} data
-        </div>
     </div>
 
     <div class="mfi-kpis">
@@ -1142,8 +1119,8 @@
                                         );
 
                                         $targetRoute = $isFollowUp
-                                            ? 'admin-all.mcu-fu.follow-up'
-                                            : 'admin-all.mcu-fu.mcu';
+                                            ? 'admin-all.mcu-fu.update'
+                                            : 'admin-all.mcu-fu.update';
 
                                         $targetUrl = $dataUrl(
                                             $targetRoute,
@@ -1206,8 +1183,8 @@
                                     );
 
                                     $targetRoute = $isFollowUp
-                                        ? 'admin-all.mcu-fu.follow-up'
-                                        : 'admin-all.mcu-fu.mcu';
+                                        ? 'admin-all.mcu-fu.update'
+                                        : 'admin-all.mcu-fu.update';
 
                                     $targetUrl = $dataUrl(
                                         $targetRoute,
@@ -1277,7 +1254,7 @@
                             @endphp
 
                             <a
-                                href="{{ $dataUrl('admin-all.mcu-fu.mcu', ['status_mcu' => $item['label']]) }}"
+                                href="{{ $dataUrl('admin-all.mcu-fu.update', ['status_mcu' => $item['label']]) }}"
                                 class="mfi-hbar"
                                 title="Klik untuk melihat {{ $item['label'] }}"
                             >
@@ -1339,7 +1316,7 @@
                             @endphp
 
                             <a
-                                href="{{ $dataUrl('admin-all.mcu-fu.follow-up', ['fu_stage' => $stage]) }}"
+                                href="{{ $dataUrl('admin-all.mcu-fu.update', ['date_type' => 'follow_up', 'fu_stage' => $stage]) }}"
                                 class="mfi-vbar"
                                 title="Klik untuk melihat {{ $item['label'] }}"
                             >
@@ -1437,8 +1414,8 @@
                                             ];
 
                                         $targetUrl = $dataUrl(
-                                            'admin-all.mcu-fu.follow-up',
-                                            ['status_fu' => $item['label']]
+                                            'admin-all.mcu-fu.update',
+                                            ['date_type' => 'follow_up', 'status_fu' => $item['label']]
                                         );
                                     @endphp
 
@@ -1495,7 +1472,7 @@
                                 @endphp
 
                                 <a
-                                    href="{{ $dataUrl('admin-all.mcu-fu.follow-up', ['status_fu' => $item['label']]) }}"
+                                    href="{{ $dataUrl('admin-all.mcu-fu.update', ['date_type' => 'follow_up', 'status_fu' => $item['label']]) }}"
                                     class="mfi-legend-item"
                                     title="Klik untuk lihat {{ $item['label'] }}"
                                 >
@@ -1582,7 +1559,8 @@
                                 @endphp
 
                                 <a
-                                    href="{{ $dataUrl('admin-all.mcu-fu.follow-up', [
+                                    href="{{ $dataUrl('admin-all.mcu-fu.update', [
+                                        'date_type' => 'follow_up',
                                         'fu_stage' => $chart['stage'],
                                         'follow_up_value' => $item['label'],
                                     ]) }}"
@@ -1653,7 +1631,7 @@
                             @endphp
 
                             <a
-                                href="{{ $dataUrl('admin-all.mcu-fu.mcu', ['jabatan' => $item['label']]) }}"
+                                href="{{ $dataUrl('admin-all.mcu-fu.update', ['jabatan' => $item['label']]) }}"
                                 class="mfi-job-vbar"
                                 title="Klik untuk melihat {{ $item['label'] }}"
                             >
@@ -1685,4 +1663,46 @@
     </div>{{-- /.mfi-dashboard-scroll --}}
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const intervalMs = 60 * 1000;
+    let lastReloadAt = Date.now();
+
+    const userIsInteracting = function () {
+        const active = document.activeElement;
+
+        return !!active && (
+            active.matches('input, select, textarea, button') ||
+            active.closest('form')
+        );
+    };
+
+    const safeReload = function () {
+        if (document.hidden || userIsInteracting()) {
+            return;
+        }
+
+        lastReloadAt = Date.now();
+        window.location.reload();
+    };
+
+    window.setInterval(
+        safeReload,
+        intervalMs
+    );
+
+    document.addEventListener('visibilitychange', function () {
+        if (
+            !document.hidden &&
+            (Date.now() - lastReloadAt) >= intervalMs
+        ) {
+            window.setTimeout(
+                safeReload,
+                350
+            );
+        }
+    });
+});
+</script>
+
 @endsection
