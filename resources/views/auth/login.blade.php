@@ -40,10 +40,10 @@
         <div class="auth-login-actions">
 
             {{-- LOGIN GOOGLE --}}
-<a
-    href="{{ route('auth.google') }}"
-    class="auth-login-button auth-login-google"
->
+            <a
+                href="{{ route('auth.google') }}"
+                class="auth-login-button auth-login-google"
+            >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path
                         fill="#4285F4"
@@ -81,20 +81,28 @@
                 </button>
             </form>
 
+            {{-- AKSES FORM PENGAMBILAN BARANG (TANPA LOGIN) --}}
+            <a
+                href="{{ route('barang.public.form') }}"
+                class="auth-login-button"
+                style="background: #0f766e; color: #ffffff; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; box-shadow: 0 4px 14px rgba(15, 118, 110, 0.28);"
+            >
+                <span>📦 FORM PENGAMBILAN BARANG</span>
+            </a>
+
         </div>
 
-     <p class="auth-login-help">
-    JIKA TERDAPAT PERTANYAAN ATAU MEMBUTUHKAN SESUATU?
+        <p class="auth-login-help">
+            JIKA TERDAPAT PERTANYAAN ATAU MEMBUTUHKAN SESUATU?
 
-<a
-    href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode(config('access.contact_email', 'mpe.ppaba@ppa.co.id')) }}&su=SYNRCYPRO%20Support"
-    target="_blank"
-    rel="noopener noreferrer"
->
-    CONTACT US
-</a>
-
-</p>
+            <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to={{ urlencode(config('access.contact_email', 'mpe.ppaba@ppa.co.id')) }}&su=SYNRCYPRO%20Support"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                CONTACT US
+            </a>
+        </p>
 
     </section>
 </main>

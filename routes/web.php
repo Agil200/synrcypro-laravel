@@ -176,6 +176,23 @@ Route::post(
 
 /*
 |--------------------------------------------------------------------------
+| Form Publik Pengambilan Barang (Tanpa Login / Dari Halaman Login)
+|--------------------------------------------------------------------------
+| Dapat diakses umum/karyawan tanpa login akun email.
+*/
+Route::prefix('public/stock-opname')
+    ->name('barang.public.')
+    ->group(function (): void {
+        Route::get('/form', [BarangController::class, 'form'])->name('form');
+        Route::get('/config', [BarangController::class, 'getPublicConfig'])->name('config');
+        Route::post('/pickup/store', [BarangController::class, 'storePickup'])->name('pickup.store');
+        Route::get('/employee-lookup', [ApdController::class, 'employeeLookup'])
+            ->middleware('throttle:60,1')
+            ->name('employee.lookup');
+    });
+
+/*
+|--------------------------------------------------------------------------
 | Halaman yang Membutuhkan Login
 |--------------------------------------------------------------------------
 */
@@ -623,18 +640,16 @@ Route::prefix('database/employees')
 
     /*
     |--------------------------------------------------------------------------
-    | Stock Opname Gudang (Barang)
+    | Stock Opname Gudang (Barang) — Khusus Admin
     |--------------------------------------------------------------------------
     */
-    
-    // UBAH PREFIX DI SINI: dari manpower/barang menjadi admin-all/stock-opname
     
 Route::prefix('admin-all/stock-opname')
     ->name('barang.')
     ->controller(BarangController::class)
     ->middleware('auth')
     ->group(function () {
-        // Halaman Utama & Form
+        // Halaman Utama & Form Internal Admin
         Route::get('/', 'index')->name('index');
         Route::get('/form', 'form')->name('form');
         Route::get('/public-config', 'getPublicConfig')->name('config');
@@ -642,6 +657,8 @@ Route::prefix('admin-all/stock-opname')
 
         // Dashboard Admin & Statistik
         Route::get('/dashboard-data', 'getDashboardData')->name('dashboard.data');
+        Route::get('/chart-top-items', 'getTopItemsChart')->name('chart.top-items');
+        Route::get('/export-excel', 'exportExcel')->name('export.excel');
         
         // CRUD Riwayat Pengambilan oleh Admin
         Route::post('/admin/transaction/store', 'addDashboardTransaction')->name('admin.transaction.store');
@@ -649,14 +666,12 @@ Route::prefix('admin-all/stock-opname')
         Route::delete('/pickup/{id}', 'destroyPickup')->name('admin.transaction.destroy');
         Route::get('/admin/photo/{id}', 'getPhotoData')->name('admin.photo');
 
-        // Kelola Master Barang
+        // Kelola Master Barang (Tambah, Edit, Hapus)
         Route::get('/admin/items', 'getAllAdminItems')->name('admin.items');
         Route::post('/admin/item/store', 'addAdminItem')->name('admin.item.store');
         Route::put('/admin/item/{code}', 'editAdminItem')->name('admin.item.edit');
-    }); // <--- PASTIKAN BARIS PENUTUP INI ADA
-
-
-    
+        Route::delete('/admin/item/{code}', 'deleteAdminItem')->name('admin.item.destroy');
+    });
 
 
     /*

@@ -438,6 +438,23 @@
         text-align: center;
     }
 
+    .cc-filter-select {
+        height: 26px;
+        padding: 2px 8px;
+        border: 1px solid #cfd8e2;
+        border-radius: 6px;
+        background: #fff;
+        color: #172b43;
+        font-size: 8px;
+        font-weight: 800;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .cc-filter-select:focus {
+        border-color: #0f78ef;
+    }
+
     @media (max-width: 1200px) {
         .cc-module-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -658,6 +675,31 @@
             </div>
         </section>
 
+        <!-- PANEL GRAFIK STOCK OPNAME / PENGAMBILAN BARANG -->
+        <section class="cc-panel">
+            <div class="cc-panel-head">
+                <div>
+                    <h2>Top Barang Paling Banyak Diambil</h2>
+                    <p>
+                        Grafik frekuensi dan jumlah pengambilan barang inventaris gudang.
+                    </p>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 7px;">
+                    <select id="filterChartPeriod" class="cc-filter-select">
+                        <option value="week">1 Minggu Terakhir</option>
+                        <option value="month" selected>1 Bulan Terakhir</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="cc-panel-body">
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="topItemsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
         <section class="cc-panel">
             <div class="cc-panel-head">
                 <div>
@@ -784,6 +826,91 @@
             </div>
         </section>
     </div>
-
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let topBarangChart = null;
+
+    async function loadTopItemsChart(period = 'month') {
+        try {
+            const res = await fetch(`{{ route('barang.chart.top-items') }}?period=${period}`);
+            const data = await res.json();
+
+            if (!data.success) return;
+
+            const ctx = document.getElementById('topItemsChart').getContext('2d');
+
+            if (topBarangChart) {
+                topBarangChart.destroy();
+            }
+
+            const hasData = data.labels && data.labels.length > 0;
+
+            topBarangChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: hasData ? data.labels : ['Belum ada transaksi'],
+                    datasets: [{
+                        label: 'Total Qty Diambil',
+                        data: hasData ? data.totals : [0],
+                        backgroundColor: 'rgba(15, 120, 239, 0.85)',
+                        borderColor: '#0f78ef',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        maxBarThickness: 38
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' Jumlah diambil: ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                                font: { size: 9, family: 'Arial, sans-serif' }
+                            },
+                            grid: {
+                                color: '#f1f4f7'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 9, family: 'Arial, sans-serif' },
+                                maxRotation: 20,
+                                minRotation: 0
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error('Gagal mengambil data grafik barang:', err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadTopItemsChart('month');
+
+        document.getElementById('filterChartPeriod')?.addEventListener('change', function (e) {
+            loadTopItemsChart(e.target.value);
+        });
+    });
+</script>
+@endpush

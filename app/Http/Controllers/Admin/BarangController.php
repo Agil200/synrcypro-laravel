@@ -34,17 +34,31 @@ class BarangController extends Controller
     public function getPublicConfig()
     {
         try {
+            // Ambil semua barang yang berstatus aktif (mendukung boolean, integer 1, atau string '1')
             $items = DB::table('master_barangs')
-                ->where('aktif', true)
-                ->orderBy('urutan')
+                ->where(function ($query) {
+                    $query->where('aktif', true)
+                        ->orWhere('aktif', 1)
+                        ->orWhere('aktif', '1');
+                })
+                ->orderBy('urutan', 'asc')
                 ->pluck('nama_barang')
                 ->toArray();
 
+            // Jika hasil filter aktif kosong (misal flag belum terset), ambil semua barang yang ada di tabel master
+            if (empty($items)) {
+                $items = DB::table('master_barangs')
+                    ->orderBy('urutan', 'asc')
+                    ->pluck('nama_barang')
+                    ->toArray();
+            }
+
+            // Jika tabel master_barangs di database benar-benar kosong, gunakan fallback default
             if (empty($items)) {
                 $items = [
                     'Pulpen Gel', 'Pulpen Pilot', 'Spidol Putih Permanen',
                     'Spidol Hitam Permanen', 'Spidol Hitam Whiteboard',
-                    'Buku Saku', 'Isolasi Bening Kecil', 'Isolasi Bening Besar'
+                    'Buku Saku', 'Isolasi Bening Kecil', 'Isolasi Bening Besar', 'TISUE'
                 ];
             }
 
@@ -245,7 +259,7 @@ class BarangController extends Controller
     public function getDashboardData(Request $request)
     {
         try {
-            $period = $request->query('period', 'week');
+            $period = $request->query('period', 'month');
             $anchorDateText = $request->query('anchorDate', Carbon::now('Asia/Jakarta')->format('Y-m-d'));
             $anchorDate = Carbon::parse($anchorDateText, 'Asia/Jakarta')->startOfDay();
 
@@ -262,10 +276,24 @@ class BarangController extends Controller
 
             $transactions = DB::table('pengambilan_barang')
                 ->whereBetween('tanggal', [$start->format('Y-m-d'), $endExclusive->copy()->subDay()->format('Y-m-d')])
+                ->orderBy('tanggal', 'desc')
                 ->orderBy('timestamp', 'desc')
                 ->get();
 
-            $activeItems = DB::table('master_barangs')->where('aktif', true)->pluck('nama_barang')->toArray();
+            $activeItems = DB::table('master_barangs')
+                ->where(function ($query) {
+                    $query->where('aktif', true)
+                        ->orWhere('aktif', 1)
+                        ->orWhere('aktif', '1');
+                })
+                ->orderBy('urutan', 'asc')
+                ->pluck('nama_barang')
+                ->toArray();
+
+            if (empty($activeItems)) {
+                $activeItems = DB::table('master_barangs')->orderBy('urutan', 'asc')->pluck('nama_barang')->toArray();
+            }
+
             $breakdown = array_fill_keys($activeItems, 0);
             
             $trendMap = [];
@@ -275,8 +303,8 @@ class BarangController extends Controller
 
             foreach ($transactions as $row) {
                 $item = $row->barang;
-                preg_match('/^(\d+)/', $row->jumlah, $matches);
-                $numericQty = isset($matches[1]) ? (int)$matches[1] : 1;
+                preg_match('/^(\d+)/', (string) $row->jumlah, $matches);
+                $numericQty = isset($matches[1]) ? (int) $matches[1] : 1;
 
                 $totalQtySum += $numericQty;
                 $uniqueNrp[$row->nrp] = true;
@@ -358,6 +386,107 @@ class BarangController extends Controller
     }
 
     /**
+     * Endpoint data grafik top barang terbanyak (mingguan / bulanan).
+     */
+    public function getTopItemsChart(Request $request)
+    {
+        try {
+            $period = $request->query('period', 'month'); // 'week' atau 'month'
+            $now = Carbon::now('Asia/Jakarta');
+
+            if ($period === 'week') {
+                $startDate = $now->copy()->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
+                $endDate = $now->copy()->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
+            } else {
+                $startDate = $now->copy()->startOfMonth()->format('Y-m-d');
+                $endDate = $now->copy()->endOfMonth()->format('Y-m-d');
+            }
+
+            $rows = DB::table('pengambilan_barang')
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->select('barang', 'jumlah')
+                ->get();
+
+            $totals = [];
+            foreach ($rows as $row) {
+                preg_match('/^(\d+)/', (string) $row->jumlah, $matches);
+                $qty = isset($matches[1]) ? (int) $matches[1] : 1;
+                $totals[$row->barang] = ($totals[$row->barang] ?? 0) + $qty;
+            }
+
+            arsort($totals);
+
+            // Ambil Top 8 Barang Terbanyak
+            $topItems = array_slice($totals, 0, 8, true);
+
+            return response()->json([
+                'success' => true,
+                'period' => $period,
+                'labels' => array_keys($topItems),
+                'totals' => array_values($topItems),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export riwayat pengambilan barang ke file Excel/Spreadsheet (.csv).
+     */
+    public function exportExcel(Request $request)
+    {
+        $startDate = $request->query('start_date', Carbon::now('Asia/Jakarta')->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->query('end_date', Carbon::now('Asia/Jakarta')->format('Y-m-d'));
+
+        $rows = DB::table('pengambilan_barang')
+            ->whereBetween('tanggal', [$startDate, $endDate])
+            ->orderBy('tanggal', 'asc')
+            ->orderBy('timestamp', 'asc')
+            ->get();
+
+        $fileName = 'Riwayat_Pengambilan_Barang_' . $startDate . '_sd_' . $endDate . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        $callback = function () use ($rows) {
+            $file = fopen('php://output', 'w');
+            
+            // BOM UTF-8 agar karakter rapi di Microsoft Excel
+            fputs($file, "\xEF\xBB\xBF");
+
+            // Header Kolom Spreadsheet
+            fputcsv($file, ['No', 'Tanggal', 'NRP', 'Nama Karyawan', 'Jabatan', 'Barang', 'Jumlah', 'Lokasi Tujuan', 'Waktu Submit']);
+
+            foreach ($rows as $index => $row) {
+                fputcsv($file, [
+                    $index + 1,
+                    $row->tanggal,
+                    $row->nrp,
+                    $row->nama,
+                    $row->jabatan ?? '-',
+                    $row->barang,
+                    $row->jumlah,
+                    $row->lokasi ?? '-',
+                    Carbon::parse($row->timestamp)->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
      * Menghapus riwayat transaksi dari dashboard admin.
      */
     public function destroyPickup($id)
@@ -384,7 +513,7 @@ class BarangController extends Controller
     {
         try {
             $items = DB::table('master_barangs')
-                ->orderBy('urutan')
+                ->orderBy('urutan', 'asc')
                 ->get()
                 ->map(function ($row) {
                     return [
@@ -458,6 +587,24 @@ class BarangController extends Controller
             return response()->json(['success' => true, 'message' => 'Barang berhasil diperbarui.']);
         } catch (Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Menghapus barang dari master_barangs.
+     */
+    public function deleteAdminItem($code)
+    {
+        try {
+            $deleted = DB::table('master_barangs')->where('kode', $code)->delete();
+
+            if (!$deleted) {
+                return response()->json(['success' => false, 'message' => 'Barang tidak ditemukan.'], 404);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Barang berhasil dihapus dari master.']);
+        } catch (Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
