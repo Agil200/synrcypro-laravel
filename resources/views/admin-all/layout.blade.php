@@ -755,6 +755,48 @@
 
             $adminMenus = [
                 [
+                    'icon' => 'suggestion',
+                    'title' => 'Suggestion System',
+                    'active' => request()->routeIs('admin-all.suggestion.*'),
+                    'items' => [
+                        [
+                            'icon' => 'chart',
+                            'label' => 'Dashboard Suggestion',
+                            'url' => $suggestionUrl,
+                            'active' => request()->routeIs('admin-all.suggestion.index'),
+                        ],
+                        [
+                            'icon' => 'table',
+                            'label' => 'Monitoring Data SS',
+                            'url' => $suggestionMonitoringUrl,
+                            'active' => request()->routeIs('admin-all.suggestion.monitoring')
+                                || (
+                                    request()->routeIs('admin-all.suggestion.detail')
+                                    && ! $detailFromSh
+                                ),
+                        ],
+                        [
+                            'icon' => 'check',
+                            'label' => 'Verifikasi GL',
+                            'url' => $suggestionVerificationGlUrl,
+                            'active' => request()->routeIs('admin-all.suggestion.verification-gl'),
+                        ],
+                        [
+                            'icon' => 'shield',
+                            'label' => 'Persetujuan SH',
+                            'url' => $suggestionApprovalShUrl,
+                            'active' => request()->routeIs('admin-all.suggestion.approval-sh')
+                                || $detailFromSh,
+                        ],
+                        [
+                            'icon' => 'shield',
+                            'label' => 'Persetujuan DH / PM',
+                            'url' => $suggestionApprovalDhPmUrl,
+                            'active' => request()->routeIs('admin-all.suggestion.approval-dh-pm'),
+                        ],
+                    ],
+                ],
+                [
                     'icon' => 'box',
                     'title' => 'Stock Opname Gudang',
                     'active' => request()->routeIs('barang.*'),
