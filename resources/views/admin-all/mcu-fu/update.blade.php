@@ -640,6 +640,84 @@
         cursor: pointer;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Employee Lifecycle
+    |--------------------------------------------------------------------------
+    */
+
+    .mfu-employee-button {
+        border-color: #157050;
+        color: #fff;
+        background: #157050;
+    }
+
+    .mfu-employee-button.status {
+        border-color: #d18416;
+        color: #7b4a07;
+        background: #fff7e8;
+    }
+
+    .mfu-lookup-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 92px;
+        gap: 7px;
+        padding: 9px;
+    }
+
+    .mfu-lookup-result {
+        margin: 0 9px 9px;
+        padding: 8px 10px;
+        border: 1px solid #d8e0e7;
+        border-radius: 8px;
+        color: #54677a;
+        background: #f8fafc;
+        font-size: 7px;
+        line-height: 1.5;
+    }
+
+    .mfu-lookup-result.found {
+        border-color: #a9e3c6;
+        color: #12643b;
+        background: #edfff5;
+    }
+
+    .mfu-lookup-result.missing {
+        border-color: #efcf99;
+        color: #8b5708;
+        background: #fff8e9;
+    }
+
+    .mfu-lookup-result.error {
+        border-color: #f0c2c5;
+        color: #9b1c25;
+        background: #fff1f2;
+    }
+
+    .mfu-employee-manual[hidden],
+    .mfu-employee-found[hidden] {
+        display: none !important;
+    }
+
+    .mfu-employee-hint {
+        padding: 0 9px 9px;
+        color: #66788b;
+        font-size: 7px;
+        line-height: 1.5;
+    }
+
+    .mfu-readonly-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+        padding: 9px;
+    }
+
+    .mfu-lifecycle-submit:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+    }
+
     @media (max-width: 1100px) {
         .mfu-filter-shell {
             grid-template-columns:
@@ -698,6 +776,22 @@
         </div>
 
         <div class="aa-title-actions">
+            <button
+                type="button"
+                class="mfu-button mfu-employee-button"
+                data-open-employee-add
+            >
+                + TAMBAH KARYAWAN
+            </button>
+
+            <button
+                type="button"
+                class="mfu-button mfu-employee-button status"
+                data-open-employee-lifecycle
+            >
+                STATUS / MUTASI
+            </button>
+
             <a
                 href="{{ route('admin-all.mcu-fu.index') }}"
                 class="mfu-button"
@@ -737,6 +831,429 @@
             {{ $errors->first() }}
         </div>
     @endif
+
+
+    {{-- ============================================================
+         TAMBAH KARYAWAN — PIPELINE UPDATE_DATA_KARYAWAN
+         ============================================================ --}}
+    <dialog
+        class="mfu-dialog"
+        id="employeeAddDialog"
+    >
+        <form
+            method="POST"
+            action="{{ route('admin-all.mcu-fu.employee.store') }}"
+            class="mfu-dialog-shell"
+            data-employee-add-form
+        >
+            @csrf
+
+            <div class="mfu-dialog-head">
+                <div>
+                    <h2>Tambah Karyawan</h2>
+                    <p>
+                        NRP dicek ke MASTER_DATABASE. Input manual hanya dibuka jika NRP belum ditemukan.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="mfu-close"
+                    data-close-dialog
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="mfu-dialog-body">
+                <div class="mfu-section">
+                    <div class="mfu-section-title">
+                        CEK NRP MASTER_DATABASE
+                    </div>
+
+                    <div class="mfu-lookup-row">
+                        <div class="mfu-form-field">
+                            <label>NRP</label>
+                            <input
+                                type="text"
+                                name="nrp"
+                                id="employeeAddNrp"
+                                maxlength="40"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+
+                        <button
+                            type="button"
+                            class="mfu-button primary"
+                            data-lookup-add
+                        >
+                            CEK NRP
+                        </button>
+                    </div>
+
+                    <div
+                        class="mfu-lookup-result"
+                        data-add-lookup-result
+                    >
+                        Masukkan NRP lalu klik CEK NRP.
+                    </div>
+                </div>
+
+                <div
+                    class="mfu-section mfu-employee-found"
+                    data-add-found
+                    hidden
+                >
+                    <div class="mfu-section-title">
+                        SUDAH TERDAFTAR
+                    </div>
+
+                    <div class="mfu-readonly-grid">
+                        <div class="mfu-info-box">
+                            <span>Nama</span>
+                            <strong data-add-found-name>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Jabatan</span>
+                            <strong data-add-found-position>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Site</span>
+                            <strong data-add-found-site>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Status</span>
+                            <strong data-add-found-status>-</strong>
+                        </div>
+                    </div>
+
+                    <div class="mfu-employee-hint">
+                        NRP sudah ada di MASTER_DATABASE sehingga tidak boleh ditambah ulang.
+                        Gunakan tombol <strong>STATUS / MUTASI</strong> jika ingin mengubah lifecycle.
+                    </div>
+                </div>
+
+                <div
+                    class="mfu-section mfu-employee-manual"
+                    data-add-manual
+                    hidden
+                >
+                    <div class="mfu-section-title mcu">
+                        DATA KARYAWAN BARU
+                    </div>
+
+                    <div class="mfu-form-grid">
+                        <div class="mfu-form-field">
+                            <label>Nama Lengkap</label>
+                            <input
+                                type="text"
+                                name="nama"
+                                maxlength="150"
+                                data-add-required
+                            >
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Jabatan</label>
+                            <input
+                                type="text"
+                                name="jabatan"
+                                maxlength="150"
+                            >
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Departemen</label>
+                            <input
+                                type="text"
+                                name="departemen"
+                                value="PRODUKSI"
+                                maxlength="100"
+                                data-add-required
+                            >
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Site</label>
+                            <input
+                                type="text"
+                                name="site"
+                                value="BUKIT ASAM"
+                                maxlength="100"
+                                list="employeeSiteOptions"
+                                data-add-required
+                            >
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Status Karyawan</label>
+                            <select
+                                name="status_karyawan"
+                                data-add-required
+                            >
+                                <option value="NEW HIRE">
+                                    NEW HIRE
+                                </option>
+                                <option value="EXISTING DATA">
+                                    EXISTING DATA
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Catatan</label>
+                            <input
+                                type="text"
+                                name="catatan"
+                                maxlength="500"
+                                placeholder="Opsional"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="mfu-employee-hint">
+                        Data tidak ditulis langsung ke MASTER_DATABASE.
+                        Sistem mengirim lewat <strong>UPDATE_DATA_KARYAWAN</strong>,
+                        lalu MASTER_DATABASE tetap menjadi sumber final.
+                    </div>
+                </div>
+            </div>
+
+            <input
+                type="hidden"
+                name="_return_per_page"
+                value="{{ $perPage ?? 20 }}"
+            >
+
+            <div class="mfu-dialog-footer">
+                <button
+                    type="button"
+                    class="mfu-button"
+                    data-close-dialog
+                >
+                    BATAL
+                </button>
+
+                <button
+                    type="submit"
+                    class="mfu-save mfu-lifecycle-submit"
+                    data-add-submit
+                    disabled
+                >
+                    SIMPAN KARYAWAN
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    {{-- ============================================================
+         STATUS / MUTASI — PIPELINE UPDATE_STATUS_KARYAWAN
+         ============================================================ --}}
+    <dialog
+        class="mfu-dialog"
+        id="employeeLifecycleDialog"
+    >
+        <form
+            method="POST"
+            action="{{ route('admin-all.mcu-fu.employee.lifecycle') }}"
+            class="mfu-dialog-shell"
+            data-employee-lifecycle-form
+        >
+            @csrf
+
+            <div class="mfu-dialog-head">
+                <div>
+                    <h2>Status / Mutasi Karyawan</h2>
+                    <p>
+                        Cari dengan NRP. Nama/Jabatan/Site diambil otomatis dari MASTER_DATABASE.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="mfu-close"
+                    data-close-dialog
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="mfu-dialog-body">
+                <div class="mfu-section">
+                    <div class="mfu-section-title">
+                        CARI KARYAWAN
+                    </div>
+
+                    <div class="mfu-lookup-row">
+                        <div class="mfu-form-field">
+                            <label>NRP</label>
+                            <input
+                                type="text"
+                                name="nrp"
+                                id="employeeLifecycleNrp"
+                                maxlength="40"
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+
+                        <button
+                            type="button"
+                            class="mfu-button primary"
+                            data-lookup-lifecycle
+                        >
+                            CARI
+                        </button>
+                    </div>
+
+                    <div
+                        class="mfu-lookup-result"
+                        data-lifecycle-lookup-result
+                    >
+                        Masukkan NRP lalu klik CARI.
+                    </div>
+                </div>
+
+                <div
+                    class="mfu-section"
+                    data-lifecycle-found
+                    hidden
+                >
+                    <div class="mfu-section-title">
+                        DATA MASTER
+                    </div>
+
+                    <div class="mfu-readonly-grid">
+                        <div class="mfu-info-box">
+                            <span>Nama</span>
+                            <strong data-life-name>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Jabatan</span>
+                            <strong data-life-position>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Site Saat Ini</span>
+                            <strong data-life-site>-</strong>
+                        </div>
+                        <div class="mfu-info-box">
+                            <span>Status Saat Ini</span>
+                            <strong data-life-status>-</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="mfu-section"
+                    data-lifecycle-fields
+                    hidden
+                >
+                    <div class="mfu-section-title fu">
+                        PERUBAHAN LIFECYCLE
+                    </div>
+
+                    <div class="mfu-form-grid">
+                        <div class="mfu-form-field">
+                            <label>Status Karyawan</label>
+                            <select
+                                name="status_baru"
+                                id="employeeLifecycleStatus"
+                                required
+                            >
+                                <option value="">
+                                    -- PILIH STATUS --
+                                </option>
+                                <option value="NEW HIRE">
+                                    NEW HIRE
+                                </option>
+                                <option value="EXISTING DATA">
+                                    EXISTING DATA
+                                </option>
+                                <option value="RESIGN">
+                                    RESIGN
+                                </option>
+                                <option value="MUTASI">
+                                    MUTASI
+                                </option>
+                                <option value="TERMINATED">
+                                    TERMINATED
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label id="employeeLifecycleSiteLabel">
+                                Site Baru / Tujuan
+                            </label>
+                            <input
+                                type="text"
+                                name="site_baru"
+                                id="employeeLifecycleSite"
+                                maxlength="100"
+                                list="employeeSiteOptions"
+                                placeholder="Kosongkan jika tidak berubah"
+                            >
+                        </div>
+
+                        <div class="mfu-form-field">
+                            <label>Tanggal Efektif</label>
+                            <input
+                                type="date"
+                                name="tanggal_efektif"
+                                value="{{ now()->format('Y-m-d') }}"
+                                required
+                            >
+                        </div>
+
+                        <div
+                            class="mfu-form-field"
+                            style="grid-column: span 3;"
+                        >
+                            <label>Catatan</label>
+                            <input
+                                type="text"
+                                name="catatan"
+                                maxlength="500"
+                                placeholder="Contoh: Mutasi Bukit Asam ke BIB"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="mfu-employee-hint">
+                        <strong>MUTASI / RESIGN / TERMINATED</strong>
+                        langsung dieliminasi dari data operasional aktif MCU &amp; FU.
+                        Data lama dan history tidak dihapus.
+                    </div>
+                </div>
+            </div>
+
+            <div class="mfu-dialog-footer">
+                <button
+                    type="button"
+                    class="mfu-button"
+                    data-close-dialog
+                >
+                    BATAL
+                </button>
+
+                <button
+                    type="submit"
+                    class="mfu-save mfu-lifecycle-submit"
+                    data-lifecycle-submit
+                    disabled
+                >
+                    SIMPAN STATUS
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <datalist id="employeeSiteOptions">
+        <option value="BUKIT ASAM"></option>
+        <option value="BIB"></option>
+    </datalist>
 
     <form
         method="GET"
@@ -1802,6 +2319,458 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     refreshAutoSyncBadge();
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const lookupUrl = @json(
+        route('admin-all.mcu-fu.employee.lookup')
+    );
+
+    const addDialog =
+        document.getElementById(
+            'employeeAddDialog'
+        );
+
+    const lifecycleDialog =
+        document.getElementById(
+            'employeeLifecycleDialog'
+        );
+
+    const openDialog = function (dialog) {
+        if (!dialog) {
+            return;
+        }
+
+        if (typeof dialog.showModal === 'function') {
+            dialog.showModal();
+        }
+    };
+
+    document
+        .querySelector('[data-open-employee-add]')
+        ?.addEventListener(
+            'click',
+            function () {
+                openDialog(addDialog);
+            }
+        );
+
+    document
+        .querySelector('[data-open-employee-lifecycle]')
+        ?.addEventListener(
+            'click',
+            function () {
+                openDialog(lifecycleDialog);
+            }
+        );
+
+    document
+        .querySelectorAll('[data-close-dialog]')
+        .forEach(function (button) {
+            button.addEventListener(
+                'click',
+                function () {
+                    button
+                        .closest('dialog')
+                        ?.close();
+                }
+            );
+        });
+
+    const lookup = async function (nrp) {
+        const url = new URL(
+            lookupUrl,
+            window.location.origin
+        );
+
+        url.searchParams.set(
+            'nrp',
+            nrp
+        );
+
+        const response = await fetch(
+            url.toString(),
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With':
+                        'XMLHttpRequest',
+                },
+            }
+        );
+
+        const payload =
+            await response.json();
+
+        if (
+            !response.ok
+            || payload.ok === false
+        ) {
+            throw new Error(
+                payload.message
+                || 'Lookup NRP gagal.'
+            );
+        }
+
+        return payload;
+    };
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tambah Karyawan
+    |--------------------------------------------------------------------------
+    */
+
+    const addNrp =
+        document.getElementById(
+            'employeeAddNrp'
+        );
+
+    const addResult =
+        document.querySelector(
+            '[data-add-lookup-result]'
+        );
+
+    const addFound =
+        document.querySelector(
+            '[data-add-found]'
+        );
+
+    const addManual =
+        document.querySelector(
+            '[data-add-manual]'
+        );
+
+    const addSubmit =
+        document.querySelector(
+            '[data-add-submit]'
+        );
+
+    const resetAddState = function () {
+        if (addFound) {
+            addFound.hidden = true;
+        }
+
+        if (addManual) {
+            addManual.hidden = true;
+        }
+
+        if (addSubmit) {
+            addSubmit.disabled = true;
+        }
+
+        addResult?.classList.remove(
+            'found',
+            'missing',
+            'error'
+        );
+    };
+
+    addNrp?.addEventListener(
+        'input',
+        resetAddState
+    );
+
+    document
+        .querySelector('[data-lookup-add]')
+        ?.addEventListener(
+            'click',
+            async function () {
+                resetAddState();
+
+                const nrp =
+                    addNrp?.value.trim()
+                    || '';
+
+                if (nrp === '') {
+                    if (addResult) {
+                        addResult.textContent =
+                            'NRP wajib diisi.';
+                        addResult.classList.add(
+                            'error'
+                        );
+                    }
+
+                    return;
+                }
+
+                if (addResult) {
+                    addResult.textContent =
+                        'Mengecek MASTER_DATABASE...';
+                }
+
+                try {
+                    const payload =
+                        await lookup(nrp);
+
+                    if (payload.found) {
+                        const employee =
+                            payload.employee
+                            || {};
+
+                        if (addResult) {
+                            addResult.textContent =
+                                'NRP ditemukan di MASTER_DATABASE. Data tidak boleh diduplikasi.';
+                            addResult.classList.add(
+                                'found'
+                            );
+                        }
+
+                        if (addFound) {
+                            addFound.hidden =
+                                false;
+                        }
+
+                        document.querySelector(
+                            '[data-add-found-name]'
+                        ).textContent =
+                            employee.nama || '-';
+
+                        document.querySelector(
+                            '[data-add-found-position]'
+                        ).textContent =
+                            employee.jabatan || '-';
+
+                        document.querySelector(
+                            '[data-add-found-site]'
+                        ).textContent =
+                            employee.site || '-';
+
+                        document.querySelector(
+                            '[data-add-found-status]'
+                        ).textContent =
+                            employee.status_karyawan
+                            || '-';
+
+                        return;
+                    }
+
+                    if (addResult) {
+                        addResult.textContent =
+                            'NRP belum ada di MASTER_DATABASE. Form input manual dibuka.';
+                        addResult.classList.add(
+                            'missing'
+                        );
+                    }
+
+                    if (addManual) {
+                        addManual.hidden = false;
+                    }
+
+                    if (addSubmit) {
+                        addSubmit.disabled = false;
+                    }
+                } catch (error) {
+                    if (addResult) {
+                        addResult.textContent =
+                            error.message;
+                        addResult.classList.add(
+                            'error'
+                        );
+                    }
+                }
+            }
+        );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status / Mutasi
+    |--------------------------------------------------------------------------
+    */
+
+    const lifeNrp =
+        document.getElementById(
+            'employeeLifecycleNrp'
+        );
+
+    const lifeResult =
+        document.querySelector(
+            '[data-lifecycle-lookup-result]'
+        );
+
+    const lifeFound =
+        document.querySelector(
+            '[data-lifecycle-found]'
+        );
+
+    const lifeFields =
+        document.querySelector(
+            '[data-lifecycle-fields]'
+        );
+
+    const lifeSubmit =
+        document.querySelector(
+            '[data-lifecycle-submit]'
+        );
+
+    const lifeStatus =
+        document.getElementById(
+            'employeeLifecycleStatus'
+        );
+
+    const lifeSite =
+        document.getElementById(
+            'employeeLifecycleSite'
+        );
+
+    const resetLifeState = function () {
+        if (lifeFound) {
+            lifeFound.hidden = true;
+        }
+
+        if (lifeFields) {
+            lifeFields.hidden = true;
+        }
+
+        if (lifeSubmit) {
+            lifeSubmit.disabled = true;
+        }
+
+        lifeResult?.classList.remove(
+            'found',
+            'missing',
+            'error'
+        );
+    };
+
+    lifeNrp?.addEventListener(
+        'input',
+        resetLifeState
+    );
+
+    document
+        .querySelector(
+            '[data-lookup-lifecycle]'
+        )
+        ?.addEventListener(
+            'click',
+            async function () {
+                resetLifeState();
+
+                const nrp =
+                    lifeNrp?.value.trim()
+                    || '';
+
+                if (nrp === '') {
+                    if (lifeResult) {
+                        lifeResult.textContent =
+                            'NRP wajib diisi.';
+                        lifeResult.classList.add(
+                            'error'
+                        );
+                    }
+
+                    return;
+                }
+
+                if (lifeResult) {
+                    lifeResult.textContent =
+                        'Membaca MASTER_DATABASE...';
+                }
+
+                try {
+                    const payload =
+                        await lookup(nrp);
+
+                    if (!payload.found) {
+                        if (lifeResult) {
+                            lifeResult.textContent =
+                                'NRP belum terdaftar. Gunakan + TAMBAH KARYAWAN terlebih dahulu.';
+                            lifeResult.classList.add(
+                                'missing'
+                            );
+                        }
+
+                        return;
+                    }
+
+                    const employee =
+                        payload.employee
+                        || {};
+
+                    if (lifeResult) {
+                        lifeResult.textContent =
+                            'NRP ditemukan. Identitas diambil otomatis dari MASTER_DATABASE.';
+                        lifeResult.classList.add(
+                            'found'
+                        );
+                    }
+
+                    if (lifeFound) {
+                        lifeFound.hidden = false;
+                    }
+
+                    if (lifeFields) {
+                        lifeFields.hidden = false;
+                    }
+
+                    if (lifeSubmit) {
+                        lifeSubmit.disabled = false;
+                    }
+
+                    document.querySelector(
+                        '[data-life-name]'
+                    ).textContent =
+                        employee.nama || '-';
+
+                    document.querySelector(
+                        '[data-life-position]'
+                    ).textContent =
+                        employee.jabatan || '-';
+
+                    document.querySelector(
+                        '[data-life-site]'
+                    ).textContent =
+                        employee.site || '-';
+
+                    document.querySelector(
+                        '[data-life-status]'
+                    ).textContent =
+                        employee.status_karyawan
+                        || '-';
+
+                    if (lifeSite) {
+                        lifeSite.value =
+                            employee.site === '-'
+                                ? ''
+                                : (
+                                    employee.site
+                                    || ''
+                                );
+                    }
+                } catch (error) {
+                    if (lifeResult) {
+                        lifeResult.textContent =
+                            error.message;
+                        lifeResult.classList.add(
+                            'error'
+                        );
+                    }
+                }
+            }
+        );
+
+    lifeStatus?.addEventListener(
+        'change',
+        function () {
+            const mutation =
+                lifeStatus.value ===
+                'MUTASI';
+
+            if (lifeSite) {
+                lifeSite.required =
+                    mutation;
+
+                lifeSite.placeholder =
+                    mutation
+                        ? 'Wajib isi site tujuan, contoh BIB'
+                        : 'Kosongkan jika tidak berubah';
+            }
+        }
+    );
 });
 </script>
 

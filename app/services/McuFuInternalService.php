@@ -29,7 +29,8 @@ class McuFuInternalService
     private const REFRESH_LOCK_SECONDS = 60;
 
     public function __construct(
-        private readonly GoogleSheetsService $googleSheets
+        private readonly GoogleSheetsService $googleSheets,
+        private readonly EmployeeLifecycleService $employeeLifecycle
     ) {
     }
 
@@ -221,7 +222,9 @@ class McuFuInternalService
         );
 
         if (is_array($fresh)) {
-            return $fresh;
+            return $this->filterActiveMasterEmployees(
+                $fresh
+            );
         }
 
         $lastSuccess = Cache::get(
@@ -231,7 +234,9 @@ class McuFuInternalService
         if (is_array($lastSuccess)) {
             $this->scheduleRowsRefresh();
 
-            return $lastSuccess;
+            return $this->filterActiveMasterEmployees(
+                $lastSuccess
+            );
         }
 
         try {
@@ -241,7 +246,9 @@ class McuFuInternalService
                 $rows
             );
 
-            return $rows;
+            return $this->filterActiveMasterEmployees(
+                $rows
+            );
         } catch (Throwable $exception) {
             $fallback = Cache::get(
                 $lastSuccessKey
@@ -250,11 +257,54 @@ class McuFuInternalService
             if (is_array($fallback)) {
                 report($exception);
 
-                return $fallback;
+                return $this->filterActiveMasterEmployees(
+                    $fallback
+                );
             }
 
             throw $exception;
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filter karyawan aktif berdasarkan MASTER_DATABASE
+    |--------------------------------------------------------------------------
+    |
+    | MCU & FU Internal = Produksi site Bukit Asam.
+    | Status RESIGN / MUTASI / TERMINATED di-hide.
+    | Data history dan row Google MCU&FU TIDAK dihapus.
+    */
+
+    private function filterActiveMasterEmployees(
+        array $rows
+    ): array {
+        return collect($rows)
+            ->filter(
+                fn (array $row): bool =>
+                    $this->employeeLifecycle
+                        ->activeForMcuFu(
+                            (string) (
+                                $row['nrp'] ?? ''
+                            )
+                        )
+            )
+            ->values()
+            ->all();
+    }
+
+    public function invalidateReadCache(): void
+    {
+        Cache::forget(
+            $this->rowsFreshCacheKey()
+        );
+
+        /*
+         * Last-success tetap dipertahankan untuk fallback Google timeout.
+         * Karena filter master dilakukan setiap rows(), perubahan status/site
+         * tetap langsung memengaruhi visibility walau snapshot MCU berasal
+         * dari cache last-success.
+         */
     }
 
     private function loadRowsFromSheet(): array

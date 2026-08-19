@@ -736,6 +736,12 @@ Route::prefix('admin-all/stock-opname')
     | L = JADWAL FU
     | M = STATUS FU
     |
+    | Employee Lifecycle:
+    | - MASTER_DATABASE tetap menjadi single source of truth.
+    | - Tambah/update data karyawan melalui UPDATE_DATA_KARYAWAN.
+    | - Status/mutasi melalui UPDATE_STATUS_KARYAWAN.
+    | - Website tidak menulis langsung ke tab MASTER_DATABASE.
+    |
     | Module MCU lama /manpower/mcu-fu tetap dipertahankan.
     |--------------------------------------------------------------------------
     */
@@ -746,28 +752,99 @@ Route::prefix('admin-all/stock-opname')
         ->middleware('can:admin-all.view')
         ->group(function (): void {
 
-    
-    Route::get(
-        '/priority',
-        'priority'
-    )->name('priority');
-        
+            /*
+            |--------------------------------------------------------------------------
+            | Dashboard MCU & FU
+            |--------------------------------------------------------------------------
+            */
+
             Route::get(
                 '/',
                 'index'
             )->name('index');
-        Route::get(
-        '/update',
-        'update'
-    )->name('update');
 
-    Route::put(
-        '/update/{sheetRow}',
-        'saveUpdate'
-    )
-        ->whereNumber('sheetRow')
-        ->middleware('throttle:30,1')
-        ->name('update.save');
+            /*
+            |--------------------------------------------------------------------------
+            | Prioritas & Reminder
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/priority',
+                'priority'
+            )->name('priority');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Unified Update MCU & Follow Up
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/update',
+                'update'
+            )->name('update');
+
+            Route::put(
+                '/update/{sheetRow}',
+                'saveUpdate'
+            )
+                ->whereNumber('sheetRow')
+                ->middleware('throttle:30,1')
+                ->name('update.save');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Employee Lifecycle — MASTER_DATABASE
+            |--------------------------------------------------------------------------
+            | NRP menjadi key utama.
+            |
+            | employee-lookup:
+            | - Lookup NRP ke MASTER_DATABASE.
+            | - Nama/Jabatan/Site/Status diambil otomatis.
+            |
+            | employees:
+            | - Tambah karyawan melalui pipeline UPDATE_DATA_KARYAWAN.
+            |
+            | employees/lifecycle:
+            | - NEW HIRE
+            | - EXISTING DATA
+            | - RESIGN
+            | - MUTASI
+            | - TERMINATED
+            | melalui pipeline UPDATE_STATUS_KARYAWAN.
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/employee-lookup',
+                'employeeLookup'
+            )
+                ->middleware('throttle:60,1')
+                ->name('employee.lookup');
+
+            Route::post(
+                '/employees',
+                'storeEmployee'
+            )
+                ->middleware('throttle:20,1')
+                ->name('employee.store');
+
+            Route::post(
+                '/employees/lifecycle',
+                'updateEmployeeLifecycle'
+            )
+                ->middleware('throttle:20,1')
+                ->name('employee.lifecycle');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Legacy Route — Dipertahankan untuk Backward Compatibility
+            |--------------------------------------------------------------------------
+            | UI utama sudah menggunakan Update MCU & Follow Up.
+            | Route lama tetap dipertahankan agar link lama tidak rusak.
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
                 '/mcu',
@@ -794,6 +871,12 @@ Route::prefix('admin-all/stock-opname')
                 ->whereNumber('sheetRow')
                 ->middleware('throttle:30,1')
                 ->name('follow-up.update');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Riwayat Update — Audit
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
                 '/history',
