@@ -738,9 +738,6 @@
                 ? route('admin-all.e-arsip.create')
                 : '#';
 
-            $eArchiveTrashReady = \Illuminate\Support\Facades\Route::has('admin-all.e-arsip.trash');
-            $eArchiveTrashUrl = $eArchiveTrashReady ? route('admin-all.e-arsip.trash') : '#';
-
             $suggestionMonitoringUrl = \Illuminate\Support\Facades\Route::has('admin-all.suggestion.monitoring')
                 ? route('admin-all.suggestion.monitoring')
                 : '#';
@@ -965,20 +962,6 @@
                             {{ $adminAllIcon('edit', 'aa-submenu-mini-icon') }}
                             <span>Tambah Arsip</span>
                         </a>
-
-                        @if($eArchiveTrashReady)
-                            <a href="{{ $eArchiveTrashUrl }}"
-                               class="aa-submenu-link {{ request()->routeIs('admin-all.e-arsip.trash') ? 'active' : '' }}">
-                                {{ $adminAllIcon('folder', 'aa-submenu-mini-icon') }}
-                                <span>Sampah</span>
-                            </a>
-                        @else
-                            <span class="aa-submenu-planned" title="Frontend siap — backend Trash/Restore berikutnya">
-                                {{ $adminAllIcon('folder', 'aa-submenu-mini-icon') }}
-                                <span>Sampah</span>
-                                <span class="aa-step-badge">NEXT</span>
-                            </span>
-                        @endif
                     </div>
                 </div>
             </div>

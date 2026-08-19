@@ -1,4 +1,4 @@
-﻿@extends('admin-all.layout')
+@extends('admin-all.layout')
 
 @section('title', 'IFUTS TICKETING')
 
@@ -203,7 +203,7 @@
 
 <style>
     /* =========================================================
-       IFUTS DASHBOARD â€” FIXED INNER SHELL
+       IFUTS DASHBOARD — FIXED INNER SHELL
        Header/sidebar/footer berasal dari admin-all.layout.
        Title, status, filter, 3 KPI utama dan chart tetap.
        Dashboard ini PURE ANALYTIC: tidak merender rows data.
@@ -803,7 +803,7 @@
 
     .if-chart-drill::after {
         color: #09879a;
-        content: 'â†—';
+        content: '↗';
         font-size: 8px;
         font-weight: 900;
     }
@@ -904,7 +904,7 @@
         </div>
 
         <div class="if-actions">
-            <a href="{{ route('admin-all') }}" class="if-btn">â† Admin All</a>
+            <a href="{{ route('admin-all') }}" class="if-btn">← Admin All</a>
 
             <a
                 href="{{ $spreadsheetUrl }}"
@@ -912,7 +912,7 @@
                 rel="noopener noreferrer"
                 class="if-btn primary"
             >
-                â–£ Spreadsheet
+                ▣ Spreadsheet
             </a>
 
         </div>
@@ -926,7 +926,7 @@
                 <span>
                     {{ number_format($dashboard['data_total'] ?? 0) }} data tahun {{ $selectedYear }}
                     @if(!empty($ifutsSource['header_row']))
-                        â€¢ header row {{ $ifutsSource['header_row'] }}
+                        • header row {{ $ifutsSource['header_row'] }}
                     @endif
                 </span>
             </div>
@@ -942,7 +942,7 @@
             <div class="if-status-left">
                 <span class="if-dot"></span>
                 <strong>Google Sheets IFUTS belum terhubung.</strong>
-                <span>Sedang mengambil data IFUTS. Data akan muncul otomatis tanpa refresh manual.</span>
+                <span>{{ $ifutsIntegration['message'] ?? 'Integrasi belum tersedia.' }}</span>
             </div>
 
             <div class="if-status-badges">
@@ -1040,7 +1040,7 @@
                     href="{{ route('admin-all.ifuts.index') }}"
                     class="if-filter-reset"
                 >
-                    â†» Reset
+                    ↻ Reset
                 </a>
             </div>
         </div>
@@ -1048,7 +1048,7 @@
 
     <div class="if-summary-grid">
         <div class="if-summary" style="--sum-color:#09879a">
-            <span class="if-summary-icon">Î£</span>
+            <span class="if-summary-icon">Σ</span>
             <small>Total Data</small>
             <strong>{{ number_format($summary['total'] ?? 0) }}</strong>
             <span>
@@ -1272,5 +1272,4 @@
     </div>
 
 </div>
-@include('admin-all.ifuts._silent-sync')
 @endsection

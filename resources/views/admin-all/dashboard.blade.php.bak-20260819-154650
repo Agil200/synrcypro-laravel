@@ -98,23 +98,6 @@
         ? ($monthNames[(int) $period['month']] ?? 'Bulan').' '.($period['year'] ?? '')
         : 'YTD '.($period['year'] ?? '');
 
-    $dashboardActivityFeed = collect($activityFeed ?? []);
-
-    if ($dashboardActivityFeed->isEmpty()) {
-        $dashboardActivityFeed = collect($ss['latest'] ?? [])->map(
-            function ($row) use ($suggestionUrl) {
-                return [
-                    'source_key' => 'suggestion',
-                    'source' => 'Suggestion',
-                    'time' => $row['SUBMIT_AT'] ?? '-',
-                    'title' => ($row['NO_SS'] ?? '-').' — '.($row['NAMA_KARYAWAN'] ?? '-'),
-                    'description' => $row['JUDUL_SS'] ?? '-',
-                    'url' => $suggestionUrl,
-                ];
-            }
-        );
-    }
-
     $moduleCards = [
         [
             'key' => 'suggestion',
@@ -668,16 +651,6 @@
         white-space: nowrap;
     }
 
-    .cc-source-badge.mcu{color:#0b6b43;background:#e5f7ee}
-    .cc-source-badge.archive{color:#6541a0;background:#f1eafe}
-    .cc-source-badge.stock{color:#2f5e87;background:#eaf3fb}
-    .cc-activity-tools{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-    .cc-activity-filter{min-height:24px;padding:3px 7px;border:1px solid #d2dce5;border-radius:999px;color:#5f7082;background:#fff;font-size:6px;font-weight:900;cursor:pointer}
-    .cc-activity-filter.active{border-color:#163f68;color:#fff;background:#163f68}
-    .cc-activity-open{display:inline-flex;min-height:24px;align-items:center;justify-content:center;padding:0 7px;border:1px solid #d2dce5;border-radius:6px;color:#17304e;background:#fff;font-size:6px;font-weight:900;text-decoration:none}
-    .cc-activity-filter-empty{display:none;padding:16px 8px;color:#7b8797;font-size:8px;text-align:center}
-    .cc-activity-filter-empty.show{display:block}
-
     .cc-empty {
         padding: 16px 8px;
         color: #7b8797;
@@ -1112,58 +1085,50 @@
             <div class="cc-panel-head">
                 <div>
                     <h2>Aktivitas Terbaru</h2>
-                    <p>Frontend feed lintas modul — backend aggregator disambungkan pada fase berikutnya.</p>
+                    <p>
+                        Feed Suggestion System sesuai periode {{ $periodLabel }}.
+                    </p>
                 </div>
 
-                <div class="cc-activity-tools">
-                    <button type="button" class="cc-activity-filter active" data-activity-filter="all">SEMUA</button>
-                    <button type="button" class="cc-activity-filter" data-activity-filter="suggestion">SUGGESTION</button>
-                    <button type="button" class="cc-activity-filter" data-activity-filter="mcu">MCU & FU</button>
-                    <button type="button" class="cc-activity-filter" data-activity-filter="archive">E-ARSIP</button>
-                    <button type="button" class="cc-activity-filter" data-activity-filter="stock">STOCK</button>
-                </div>
+                <a
+                    href="{{ $suggestionUrl }}"
+                    class="cc-action-button"
+                >
+                    Buka Suggestion
+                </a>
             </div>
 
             <div class="cc-panel-body">
-                @if($dashboardActivityFeed->count() > 0)
+                @if(count($ss['latest'] ?? []) > 0)
                     <div class="cc-activity-list">
-                        @foreach($dashboardActivityFeed as $row)
-                            @php
-                                $sourceKey = strtolower(trim((string)($row['source_key'] ?? 'suggestion')));
-                                $sourceLabel = $row['source'] ?? strtoupper($sourceKey);
-                                $sourceClass = match ($sourceKey) {
-                                    'mcu', 'mcu-fu', 'mcu_fu' => 'mcu',
-                                    'archive', 'e-arsip', 'e_arsip' => 'archive',
-                                    'stock', 'stock-opname', 'stock_opname' => 'stock',
-                                    default => '',
-                                };
-                            @endphp
-
-                            <div class="cc-activity-row"
-                                 data-activity-row
-                                 data-activity-source="{{ $sourceKey }}">
-                                <span class="cc-activity-time">{{ $row['time'] ?? '-' }}</span>
-
-                                <span>
-                                    <strong>{{ $row['title'] ?? '-' }}</strong>
-                                    <small>{{ $row['description'] ?? '-' }}</small>
+                        @foreach($ss['latest'] as $row)
+                            <div class="cc-activity-row">
+                                <span class="cc-activity-time">
+                                    {{ $row['SUBMIT_AT'] ?? '-' }}
                                 </span>
 
-                                <span style="display:flex;align-items:center;gap:5px;">
-                                    <span class="cc-source-badge {{ $sourceClass }}">{{ $sourceLabel }}</span>
-                                    @if(!empty($row['url']))
-                                        <a href="{{ $row['url'] }}" class="cc-activity-open">BUKA</a>
-                                    @endif
+                                <span>
+                                    <strong>
+                                        {{ $row['NO_SS'] ?? '-' }}
+                                        —
+                                        {{ $row['NAMA_KARYAWAN'] ?? '-' }}
+                                    </strong>
+
+                                    <small>
+                                        {{ $row['JUDUL_SS'] ?? '-' }}
+                                    </small>
+                                </span>
+
+                                <span class="cc-source-badge">
+                                    Suggestion
                                 </span>
                             </div>
                         @endforeach
                     </div>
-
-                    <div class="cc-activity-filter-empty" data-activity-filter-empty>
-                        Belum ada aktivitas real untuk modul ini.
-                    </div>
                 @else
-                    <div class="cc-empty">Belum ada aktivitas real yang dapat ditampilkan.</div>
+                    <div class="cc-empty">
+                        Belum ada aktivitas real yang dapat ditampilkan.
+                    </div>
                 @endif
             </div>
         </section>
@@ -1254,33 +1219,6 @@
 
         document.getElementById('filterChartPeriod')?.addEventListener('change', function (e) {
             loadTopItemsChart(e.target.value);
-        });
-
-        const activityButtons = document.querySelectorAll('[data-activity-filter]');
-        const activityRows = document.querySelectorAll('[data-activity-row]');
-        const activityEmpty = document.querySelector('[data-activity-filter-empty]');
-
-        activityButtons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                const selected = button.dataset.activityFilter || 'all';
-                let visibleCount = 0;
-
-                activityButtons.forEach(function (item) {
-                    item.classList.toggle('active', item === button);
-                });
-
-                activityRows.forEach(function (row) {
-                    const visible =
-                        selected === 'all'
-                        || row.dataset.activitySource === selected;
-
-                    row.style.display = visible ? '' : 'none';
-
-                    if (visible) visibleCount++;
-                });
-
-                activityEmpty?.classList.toggle('show', visibleCount === 0);
-            });
         });
     });
 </script>

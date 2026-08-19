@@ -4,10 +4,28 @@
 
 @push('styles')
 <style>
+    /*
+    |--------------------------------------------------------------------------
+    | PRIORITY PAGE — FIXED SHELL
+    |--------------------------------------------------------------------------
+    | Header / sidebar / footer tetap diam.
+    | Scroll hanya terjadi pada area tabel.
+    */
+
+    .aa-main {
+        overflow: hidden !important;
+    }
+
+    .aa-content {
+        height: 100%;
+        min-height: 0;
+    }
+
     .mpr-page {
         display: flex;
         width: 100%;
         height: 100%;
+        max-height: 100%;
         min-height: 0;
         flex-direction: column;
         gap: 8px;
@@ -514,7 +532,12 @@
                 <span>rows</span>
             </form>
 
-            <span class="mpr-sync">AUTO SYNC 60s</span>
+            <span
+                class="mpr-sync"
+                data-priority-sync-state
+                hidden
+                aria-live="polite"
+            ></span>
         </div>
 
         <div class="mpr-table-wrap">
@@ -674,31 +697,176 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    /*
+    |--------------------------------------------------------------------------
+    | SILENT AUTO SYNC
+    |--------------------------------------------------------------------------
+    | Tidak lagi memakai window.location.reload().
+    | Laravel tetap dibaca setiap 60 detik, tetapi browser hanya mengganti
+    | KPI + tabel di background sehingga shell SYNRGYPRO tidak berkedip.
+    */
+
     const intervalMs = 60 * 1000;
-    let lastReloadAt = Date.now();
+
+    let lastSyncAt = Date.now();
+    let syncing = false;
 
     const userIsInteracting = function () {
         const active = document.activeElement;
 
-        return !!active && active.matches(
-            'input, select, textarea'
-        );
+        if (
+            active &&
+            active.matches(
+                'input, select, textarea, button'
+            )
+        ) {
+            return true;
+        }
+
+        const selection =
+            window.getSelection?.();
+
+        return !!selection &&
+            String(selection).trim() !== '';
     };
 
-    const safeReload = function () {
+    const setSyncState = function (message) {
+        const state =
+            document.querySelector(
+                '[data-priority-sync-state]'
+            );
+
+        if (state) {
+            state.textContent = message;
+        }
+    };
+
+    const syncFragments = async function () {
         if (
+            syncing ||
             document.hidden ||
             userIsInteracting()
         ) {
             return;
         }
 
-        lastReloadAt = Date.now();
-        window.location.reload();
+        syncing = true;
+        setSyncState('SYNCING');
+
+        const currentTableWrap =
+            document.querySelector(
+                '.mpr-table-wrap'
+            );
+
+        const tableScrollTop =
+            currentTableWrap?.scrollTop || 0;
+
+        const tableScrollLeft =
+            currentTableWrap?.scrollLeft || 0;
+
+        try {
+            const response = await fetch(
+                window.location.href,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'text/html',
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+                    },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    'Priority sync failed.'
+                );
+            }
+
+            const html =
+                await response.text();
+
+            const parser =
+                new DOMParser();
+
+            const nextDocument =
+                parser.parseFromString(
+                    html,
+                    'text/html'
+                );
+
+            const currentKpis =
+                document.querySelector(
+                    '.mpr-kpis'
+                );
+
+            const nextKpis =
+                nextDocument.querySelector(
+                    '.mpr-kpis'
+                );
+
+            const currentTableCard =
+                document.querySelector(
+                    '.mpr-table-card'
+                );
+
+            const nextTableCard =
+                nextDocument.querySelector(
+                    '.mpr-table-card'
+                );
+
+            if (
+                currentKpis &&
+                nextKpis
+            ) {
+                currentKpis.innerHTML =
+                    nextKpis.innerHTML;
+            }
+
+            if (
+                currentTableCard &&
+                nextTableCard
+            ) {
+                currentTableCard.innerHTML =
+                    nextTableCard.innerHTML;
+            }
+
+            const refreshedTableWrap =
+                document.querySelector(
+                    '.mpr-table-wrap'
+                );
+
+            if (refreshedTableWrap) {
+                refreshedTableWrap.scrollTop =
+                    tableScrollTop;
+
+                refreshedTableWrap.scrollLeft =
+                    tableScrollLeft;
+            }
+
+            lastSyncAt = Date.now();
+            setSyncState('SYNCED');
+        } catch (error) {
+            /*
+             * Silent failure:
+             * jangan merusak data yang sedang tampil.
+             * Resilient cache backend tetap menjadi fallback.
+             */
+            console.warn(
+                '[MCU/FU Priority] silent sync skipped:',
+                error
+            );
+
+            setSyncState('SYNC ERROR');
+        } finally {
+            syncing = false;
+        }
     };
 
     window.setInterval(
-        safeReload,
+        syncFragments,
         intervalMs
     );
 
@@ -707,11 +875,11 @@ document.addEventListener('DOMContentLoaded', function () {
         function () {
             if (
                 !document.hidden &&
-                (Date.now() - lastReloadAt) >= intervalMs
+                (Date.now() - lastSyncAt) >= intervalMs
             ) {
                 window.setTimeout(
-                    safeReload,
-                    350
+                    syncFragments,
+                    500
                 );
             }
         }

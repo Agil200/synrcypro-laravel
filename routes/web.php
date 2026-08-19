@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\IfutsController;
 use App\Http\Controllers\Admin\McuFuInternalController;
+use App\Http\Controllers\Admin\EArchiveController;
 use App\Http\Controllers\ApdController;
 use App\Http\Controllers\AtrController;
 use App\Http\Controllers\AtrPicRosterController;
@@ -882,6 +883,70 @@ Route::prefix('admin-all/stock-opname')
                 '/history',
                 'history'
             )->name('history');
+        });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | E-ARSIP — Registry Google Drive
+    |--------------------------------------------------------------------------
+    | SYNRGYPRO hanya menyimpan registry link.
+    | DELETE = soft delete registry, BUKAN delete folder/file Google Drive.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::prefix('admin-all/e-arsip')
+        ->name('admin-all.e-arsip.')
+        ->controller(EArchiveController::class)
+        ->middleware('can:admin-all.view')
+        ->group(function (): void {
+            Route::get(
+                '/',
+                'index'
+            )->name('index');
+
+            Route::get(
+                '/create',
+                'create'
+            )->name('create');
+
+            Route::post(
+                '/',
+                'store'
+            )
+                ->middleware('throttle:20,1')
+                ->name('store');
+
+            Route::get(
+                '/{eArchiveLink}/edit',
+                'edit'
+            )
+                ->whereNumber('eArchiveLink')
+                ->name('edit');
+
+            Route::put(
+                '/{eArchiveLink}',
+                'update'
+            )
+                ->whereNumber('eArchiveLink')
+                ->middleware('throttle:20,1')
+                ->name('update');
+
+            Route::patch(
+                '/{eArchiveLink}/toggle',
+                'toggle'
+            )
+                ->whereNumber('eArchiveLink')
+                ->middleware('throttle:30,1')
+                ->name('toggle');
+
+            Route::delete(
+                '/{eArchiveLink}',
+                'destroy'
+            )
+                ->whereNumber('eArchiveLink')
+                ->middleware('throttle:20,1')
+                ->name('destroy');
         });
 
 

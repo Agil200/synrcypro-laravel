@@ -138,35 +138,6 @@
         background: #fff1f2;
     }
 
-    .mfu-lifecycle-preview {
-        display:grid;
-        grid-template-columns:34px minmax(0,1fr);
-        gap:9px;
-        align-items:center;
-        margin-top:10px;
-        padding:9px 10px;
-        border:1px solid #d9e2e9;
-        border-radius:8px;
-        background:#f8fafc;
-    }
-    .mfu-lifecycle-preview[hidden]{display:none!important}
-    .mfu-lifecycle-preview-icon{
-        display:grid;width:34px;height:34px;place-items:center;border-radius:9px;
-        background:#eaf0f5;color:#31506e;font-size:12px;font-weight:900
-    }
-    .mfu-lifecycle-preview strong{display:block;color:#17324d;font-size:8px}
-    .mfu-lifecycle-preview p{margin:3px 0 0;color:#67798b;font-size:7px;line-height:1.45}
-    .mfu-lifecycle-preview.existing{border-color:#b7dfca;background:#effbf5}
-    .mfu-lifecycle-preview.existing .mfu-lifecycle-preview-icon{color:#11643b;background:#d9f3e5}
-    .mfu-lifecycle-preview.new-hire{border-color:#b8d7f6;background:#eef7ff}
-    .mfu-lifecycle-preview.new-hire .mfu-lifecycle-preview-icon{color:#1d64a7;background:#d8ebfd}
-    .mfu-lifecycle-preview.mutasi{border-color:#efd39e;background:#fff8e9}
-    .mfu-lifecycle-preview.mutasi .mfu-lifecycle-preview-icon{color:#945d08;background:#ffe7b8}
-    .mfu-lifecycle-preview.resign,.mfu-lifecycle-preview.terminated{border-color:#efb6bc;background:#fff1f2}
-    .mfu-lifecycle-preview.resign .mfu-lifecycle-preview-icon,
-    .mfu-lifecycle-preview.terminated .mfu-lifecycle-preview-icon{color:#a51e2b;background:#ffdce0}
-    .mfu-form-field input.lifecycle-locked{color:#647486;background:#f2f5f7;cursor:not-allowed}
-
     .mfu-table-toolbar {
         display: flex;
         flex: 0 0 auto;
@@ -1248,14 +1219,6 @@
                                 placeholder="Contoh: Mutasi Bukit Asam ke BIB"
                             >
                         </div>
-                    </div>
-
-                    <div class="mfu-lifecycle-preview" data-lifecycle-preview hidden>
-                        <span class="mfu-lifecycle-preview-icon" data-lifecycle-preview-icon>i</span>
-                        <span>
-                            <strong data-lifecycle-preview-title>Pilih status lifecycle</strong>
-                            <p data-lifecycle-preview-text>Dampak perubahan akan tampil di sini sebelum disimpan.</p>
-                        </span>
                     </div>
 
                     <div class="mfu-employee-hint">
@@ -2653,14 +2616,6 @@ document.addEventListener('DOMContentLoaded', function () {
             'employeeLifecycleSite'
         );
 
-    const lifeSiteLabel = document.getElementById('employeeLifecycleSiteLabel');
-    const lifeForm = document.querySelector('[data-employee-lifecycle-form]');
-    const lifePreview = document.querySelector('[data-lifecycle-preview]');
-    const lifePreviewIcon = document.querySelector('[data-lifecycle-preview-icon]');
-    const lifePreviewTitle = document.querySelector('[data-lifecycle-preview-title]');
-    const lifePreviewText = document.querySelector('[data-lifecycle-preview-text]');
-    let lifeCurrentSite = '';
-
     const resetLifeState = function () {
         if (lifeFound) {
             lifeFound.hidden = true;
@@ -2786,13 +2741,6 @@ document.addEventListener('DOMContentLoaded', function () {
                                     || ''
                                 );
                     }
-
-                    lifeCurrentSite =
-                        employee.site === '-'
-                            ? ''
-                            : (employee.site || '');
-
-                    lifeStatus?.dispatchEvent(new Event('change'));
                 } catch (error) {
                     if (lifeResult) {
                         lifeResult.textContent =
@@ -2808,91 +2756,18 @@ document.addEventListener('DOMContentLoaded', function () {
     lifeStatus?.addEventListener(
         'change',
         function () {
-            const status = lifeStatus.value;
-
-            const configs = {
-                'NEW HIRE': ['new-hire', '+', 'NEW HIRE',
-                    'Employee aktif baru. Pastikan identitas dan site sesuai MASTER_DATABASE.'],
-                'EXISTING DATA': ['existing', '✓', 'EXISTING DATA',
-                    'Employee tetap masuk populasi aktif MCU & FU sesuai site yang berlaku.'],
-                'MUTASI': ['mutasi', '↗', 'MUTASI SITE',
-                    'Site tujuan wajib diisi. Mutasi dari Bukit Asam ke site lain seperti BIB mengeluarkan employee dari populasi aktif MCU & FU Site BA.'],
-                'RESIGN': ['resign', '!', 'RESIGN',
-                    'Employee akan dieliminasi dari data operasional aktif MCU & FU. Data lama dan history tetap dipertahankan.'],
-                'TERMINATED': ['terminated', '!', 'TERMINATED',
-                    'Employee akan dieliminasi dari data operasional aktif MCU & FU. Data lama dan history tetap dipertahankan.'],
-            };
-
-            const config = configs[status] || null;
-            const mutation = status === 'MUTASI';
-            const lockSite = status === 'RESIGN' || status === 'TERMINATED';
+            const mutation =
+                lifeStatus.value ===
+                'MUTASI';
 
             if (lifeSite) {
-                lifeSite.required = mutation;
-                lifeSite.readOnly = lockSite;
-                lifeSite.classList.toggle('lifecycle-locked', lockSite);
+                lifeSite.required =
+                    mutation;
 
-                if (lockSite) {
-                    lifeSite.value = lifeCurrentSite;
-                    lifeSite.placeholder = 'Site tidak diubah pada status ini';
-                } else if (mutation) {
-                    if (lifeSite.value === lifeCurrentSite) {
-                        lifeSite.value = '';
-                    }
-                    lifeSite.placeholder = 'Wajib isi site tujuan, contoh BIB';
-                } else {
-                    if (lifeSite.value === '' && lifeCurrentSite !== '') {
-                        lifeSite.value = lifeCurrentSite;
-                    }
-                    lifeSite.placeholder = 'Kosongkan jika tidak berubah';
-                }
-            }
-
-            if (lifeSiteLabel) {
-                lifeSiteLabel.textContent = mutation
-                    ? 'Site Baru / Tujuan *'
-                    : (lockSite ? 'Site Saat Ini' : 'Site Baru / Tujuan');
-            }
-
-            if (lifePreview) {
-                if (!config) {
-                    lifePreview.hidden = true;
-                    lifePreview.className = 'mfu-lifecycle-preview';
-                } else {
-                    lifePreview.hidden = false;
-                    lifePreview.className = 'mfu-lifecycle-preview ' + config[0];
-                    lifePreviewIcon.textContent = config[1];
-                    lifePreviewTitle.textContent = config[2];
-                    lifePreviewText.textContent = config[3];
-                }
-            }
-        }
-    );
-
-    lifeForm?.addEventListener(
-        'submit',
-        function (event) {
-            const status = lifeStatus?.value || '';
-
-            if (!['MUTASI', 'RESIGN', 'TERMINATED'].includes(status)) {
-                return;
-            }
-
-            const name =
-                document.querySelector('[data-life-name]')?.textContent?.trim()
-                || 'karyawan';
-
-            let message =
-                'Konfirmasi perubahan lifecycle ' + name + ' menjadi ' + status + '.';
-
-            if (status === 'MUTASI' && lifeSite?.value) {
-                message += '\nSite tujuan: ' + lifeSite.value;
-            }
-
-            message += '\n\nData lama/history tidak dihapus. Lanjutkan?';
-
-            if (!window.confirm(message)) {
-                event.preventDefault();
+                lifeSite.placeholder =
+                    mutation
+                        ? 'Wajib isi site tujuan, contoh BIB'
+                        : 'Kosongkan jika tidak berubah';
             }
         }
     );
